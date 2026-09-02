@@ -249,6 +249,55 @@ and roughly triples the measured decode time; and because the floor is uniform,
 stages that do little real work all read as roughly the floor.  Prefer
 `DS4_GLM_DECODE_ABLATE` for attribution and use the stage profiler to localise.
 
+## What is left, priced
+
+With KDA split and the residual row split, every large line in the budget has a
+measured cost and a measured bandwidth.  Byte counts are exact, read from the
+GGUF tensor table; the ceiling is 736.9 GB/s.
+
+| stage | bytes/token | ms | GB/s | % of ceiling |
+|---|---:|---:|---:|---:|
+| kda q/k/v (3 x [4096,8192] BF16 x34) | 6.845 GB | 9.68 | **707** | **96%** |
+| kda_output ([8192,4096] BF16 x34) | 2.282 GB | 3.16 | **722** | **98%** |
+| kda gate/beta (f_a, f_b, beta, g_a, g_b) | 0.232 GB | 1.37 | 169 | 23% |
+| kda recurrence (136 MiB state, r+w) | 0.285 GB | 1.23 | 232 | 31% |
+
+**The KDA projections are finished.**  At 96% and 98% of the ceiling there is
+nothing left in them.  Specialising the BF16 matvec for the 4096 and 8192
+shapes -- function constants to unroll the loops, two output rows per
+simdgroup, staging the activation row in threadgroup memory -- cannot pay,
+because the kernel already moves bytes about as fast as the machine will.
+
+This also corrects the 497 -> 547 GB/s figure recorded when the widened loads
+landed.  That came from the 18.37 ms KDA row, which was never measured; against
+the measured 9.68 ms the q/k/v projections run at 707 GB/s.
+
+**What is left is dispatch overhead, not bandwidth.**  The two stages far below
+the ceiling are the ones made of many small launches.  The mHC fusion prices a
+dispatch directly: 270 removed for 2.41 ms, about **8.9 us each**.
+
+The gate/beta chain moves 232 MB, which is 0.33 ms at the rate the big
+projections achieve, and costs 1.37 ms.  The other ~1.04 ms is 170 dispatches
+(5 matvecs x 34 layers) at ~6 us, agreeing with the mHC figure.  So the
+remaining KDA work is worth about **1.0 ms, 2.3% of decode**:
+
+- `f_a` and `g_a` are both [4096 -> 128] from the same `attn_norm` input, so
+  they pair the way `ds4_gpu_glm53_matmul_bf16_qkv` already pairs q/k/v.
+  `beta` is [4096 -> 64] off the same input at a different width.
+- `f_b` and `g_b` are both [128 -> 8192] but read different activations, so
+  pairing them needs a two-input kernel.
+- Both need a second low-rank buffer: `g->kda_lowrank` is written by `f_a`,
+  read by `f_b`, then overwritten by `g_a`.
+
+Fusing the projection consumers with the HC expansion
+(`ds4_gpu_hc_expand_tensor`, 90 dispatches per token) is the same kind of play
+in the ~3.0 ms "everything else" bucket -- dispatch count, not bandwidth.
+
+**FP16 storage for the recurrent state is not worth pursuing.**  At 31% of
+ceiling the state is latency-bound rather than bandwidth-bound, so halving it
+would not halve the 1.23 ms; the whole stage is 2.8% of decode, and the upside
+is well under 1% against an accumulating-error risk over long contexts.
+
 ## Two tuning knobs that turn out not to matter
 
 Both were expected to be worth something on an 80-core GPU and neither is.
