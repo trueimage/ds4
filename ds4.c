@@ -37291,6 +37291,46 @@ static uint32_t glm53_graph_resume_prefill_min_tokens(void) {
 #define DS4_GLM53_INDEX_POOL_SIZE 4u
 #define DS4_GLM53_PREFILL_CHUNK_TOKENS 2048u
 
+/* These four were compile-time constants with no way to try another value.
+ * They interact -- the prefill chunk and the layer-flush threshold are both
+ * 2048 and the flush comparison is a strict >, so raising the chunk to 4096
+ * also switches per-layer flushing on across every layer -- so each is
+ * separately overridable, which is the only way to sweep one at a time. */
+static uint32_t glm_env_u32(const char *name, uint32_t fallback) {
+    const char *env = getenv(name);
+    if (!env || !env[0]) return fallback;
+    char *end = NULL;
+    errno = 0;
+    const unsigned long v = strtoul(env, &end, 10);
+    if (end == env || errno != 0 || v == 0ul || v > UINT32_MAX) return fallback;
+    return (uint32_t)v;
+}
+
+static uint32_t glm53_prefill_chunk_tokens(void) {
+    return glm_env_u32("DS4_GLM_PREFILL_CHUNK_TOKENS",
+                       DS4_GLM53_PREFILL_CHUNK_TOKENS);
+}
+
+static uint32_t glm_full_attn_layer_flush_tokens(void) {
+    return glm_env_u32("DS4_GLM_FULL_ATTN_LAYER_FLUSH_TOKENS",
+                       DS4_GLM_METAL_FULL_ATTN_LAYER_FLUSH_CONTEXT);
+}
+
+static uint32_t glm_full_attn_resident_cap(void) {
+    return glm_env_u32("DS4_GLM_FULL_ATTN_CAP",
+                       DS4_GLM_METAL_FULL_ATTN_DEFAULT_CONTEXT);
+}
+
+static uint32_t glm_full_attn_streaming_cap(void) {
+    return glm_env_u32("DS4_GLM_FULL_ATTN_STREAMING_CAP",
+                       DS4_GLM_METAL_STREAMING_FULL_ATTN_CONTEXT);
+}
+
+static uint32_t glm_indexed_prefill_score_scratch_mb(void) {
+    return glm_env_u32("DS4_GLM_PREFILL_SCORE_SCRATCH_MB",
+                       DS4_GLM_METAL_INDEXED_PREFILL_SCORE_SCRATCH_MB);
+}
+
 static uint32_t glm_graph_full_attention_cap(uint32_t ctx_size,
                                              bool     ssd_streaming);
 static uint32_t glm_graph_indexed_prefill_chunk_tokens(
@@ -37568,8 +37608,9 @@ static uint32_t glm_graph_batch_row_cap(
         bool     expanded_kv) {
     if (ds4_model_is_glm53()) {
         uint32_t cap = full_attention_cap;
-        if (cap > DS4_GLM53_PREFILL_CHUNK_TOKENS) {
-            cap = DS4_GLM53_PREFILL_CHUNK_TOKENS;
+        const uint32_t glm53_chunk = glm53_prefill_chunk_tokens();
+        if (cap > glm53_chunk) {
+            cap = glm53_chunk;
         }
         if (indexed_prefill_cap != 0 && cap > indexed_prefill_cap) {
             cap = indexed_prefill_cap;
@@ -41521,8 +41562,8 @@ static bool glm_graph_memory_guard_slice_with_transient(
 static uint32_t glm_graph_full_attention_cap(uint32_t ctx_size,
                                              bool     ssd_streaming) {
     uint32_t cap = ssd_streaming ?
-        DS4_GLM_METAL_STREAMING_FULL_ATTN_CONTEXT :
-        DS4_GLM_METAL_FULL_ATTN_DEFAULT_CONTEXT;
+        glm_full_attn_streaming_cap() :
+        glm_full_attn_resident_cap();
     if (ctx_size >= DS4_GLM_METAL_LONG_CONTEXT_THRESHOLD &&
         cap > DS4_GLM_METAL_LONG_CONTEXT_FULL_ATTN_CONTEXT) {
         cap = DS4_GLM_METAL_LONG_CONTEXT_FULL_ATTN_CONTEXT;
@@ -41540,8 +41581,9 @@ static uint32_t glm_graph_full_prefill_layer_flush_interval(
      * flush per layer: 76 command-buffer round-trips cost ~35ms while the
      * whole pass is ~70ms of GPU work. Real prefill chunks keep the
      * interactive per-layer flush. */
-    return (n_tokens > DS4_GLM_METAL_FULL_ATTN_LAYER_FLUSH_CONTEXT ||
-            command_rows > DS4_GLM_METAL_FULL_ATTN_LAYER_FLUSH_CONTEXT ||
+    const uint32_t flush_tokens = glm_full_attn_layer_flush_tokens();
+    return (n_tokens > flush_tokens ||
+            command_rows > flush_tokens ||
             (logits_requested && n_tokens > 8u)) ? 1u : 0u;
 }
 
@@ -41763,7 +41805,7 @@ static uint32_t glm_graph_indexed_prefill_chunk_tokens(
                 getenv("DS4_GLM53_DISABLE_INDEXED_PREFILL"))) {
             return 0;
         }
-        uint32_t chunk = DS4_GLM53_PREFILL_CHUNK_TOKENS;
+        uint32_t chunk = glm53_prefill_chunk_tokens();
         if (compact_cap != 0 && chunk > compact_cap) chunk = compact_cap;
         return chunk;
     }
@@ -41777,7 +41819,7 @@ static uint32_t glm_graph_indexed_prefill_score_tokens(
         uint32_t indexed_prefill_cap,
         uint32_t compact_cap) {
     if (indexed_prefill_cap == 0 || compact_cap == 0) return 0;
-    const uint32_t scratch_mb = DS4_GLM_METAL_INDEXED_PREFILL_SCORE_SCRATCH_MB;
+    const uint32_t scratch_mb = glm_indexed_prefill_score_scratch_mb();
     const uint64_t budget_bytes = (uint64_t)scratch_mb * 1024ull * 1024ull;
     const uint64_t score_columns = ds4_model_is_glm53() ?
         glm53_graph_indexer_pool_cap(compact_cap) : compact_cap;
@@ -43397,7 +43439,7 @@ static bool glm53_graph_prefill_workspace_ensure(
         ds4_glm_gpu_graph *g,
         uint32_t rows) {
     if (!g || !g->glm53 || rows == 0 ||
-        rows > DS4_GLM53_PREFILL_CHUNK_TOKENS) {
+        rows > glm53_prefill_chunk_tokens()) {
         return false;
     }
     if (g->glm53_prefill_cap >= rows) return true;
@@ -48009,7 +48051,7 @@ static bool glm_graph_forward_tokens(
         uint32_t           work_total) {
     if (!g || !model || !weights || !tokens ||
         n_tokens == 0 ||
-        (g->glm53 && n_tokens > DS4_GLM53_PREFILL_CHUNK_TOKENS) ||
+        (g->glm53 && n_tokens > glm53_prefill_chunk_tokens()) ||
         g->layer_count == 0 ||
         !glm_graph_span_fits_context(g, pos0, n_tokens)) {
         return false;
@@ -50981,8 +51023,9 @@ static bool glm_graph_prefill_range(
         while (done < n_tokens) {
             const uint32_t pos = pos0 + done;
             uint32_t chunk = n_tokens - done;
-            if (chunk > DS4_GLM53_PREFILL_CHUNK_TOKENS) {
-                chunk = DS4_GLM53_PREFILL_CHUNK_TOKENS;
+            const uint32_t glm53_chunk = glm53_prefill_chunk_tokens();
+            if (chunk > glm53_chunk) {
+                chunk = glm53_chunk;
             }
             if (pos < g->ctx_cap) {
                 const uint32_t dense_left = g->ctx_cap - pos;

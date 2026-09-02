@@ -483,25 +483,89 @@ this reason before it was caught.
   Q4_K on attention projections is a materially bigger quality question than
   Q8_0 and was not attempted.
 
+## Prefill, measured
+
+Prefill had never been swept.  Five constants that shape it were compile-time
+`#define`s with no override, and two of them interact, so each is now
+separately settable -- `DS4_GLM_PREFILL_CHUNK_TOKENS`,
+`DS4_GLM_FULL_ATTN_LAYER_FLUSH_TOKENS`, `DS4_GLM_FULL_ATTN_CAP`,
+`DS4_GLM_FULL_ATTN_STREAMING_CAP`, `DS4_GLM_PREFILL_SCORE_SCRATCH_MB`.
+Defaults are unchanged: logits with the knobs unset and with them set to the
+old constants match at max|delta| = 0.
+
+### Chunk size, with layer flushing held constant
+
+The document previously warned that the chunk (2048) and the layer-flush
+threshold (2048) are the same number against a strict `>`, so raising the chunk
+also switches per-layer flushing on -- two changes, not one.  Pinning the flush
+threshold separates them.  Prefill tok/s at ctx 16384:
+
+| chunk | flush off | flush on | default |
+|---:|---:|---:|---:|
+| 1024 | 354.40 | 355.00 | 354.34 |
+| 2048 | 394.30 | 394.57 | 394.17 |
+| 4096 | 393.98 | 394.45 | 394.12 |
+| 8192 | 394.05 | 394.43 | 393.97 |
+
+Two results.  **Layer flushing does not matter at all** -- every column agrees
+to 0.2%, so the coupling the doc warned about is real in the code and
+immaterial in practice.  And **the default chunk of 2048 is already optimal**:
+1024 costs 10%, while 4096 and 8192 buy nothing.  Confirmed at ctx 32768, where
+2048/4096/8192 give 388.68/388.31/388.50.
+
+Raising the chunk is not free elsewhere, either.  Context buffers at ctx 4096
+grow 1.62 -> 3.04 -> 5.88 GiB across chunk 1024/2048/4096, so 4096 would cost
+nearly 2 GiB for no throughput.  The GLM 5.2 path's 4096 is not an argument for
+changing this one.
+
+### The full-attention cap asymmetry is backwards
+
+`glm_graph_full_attention_cap` gives the SSD-streaming path 8192 and the
+fully-resident path 4096, which looked like the memory-constrained machine
+getting the larger window.  Forcing each value on the resident path, ctx 16384,
+interleaved, n=6:
+
+| cap | prefill | decode |
+|---:|---:|---:|
+| 4096 | 394.23 (sd 0.03) | 23.17 (sd 0.02) |
+| 8192 | 379.23 (sd 0.10) | 23.15 (sd 0.02) |
+
+**The larger window costs 3.81% of prefill and nothing on decode.**  So 4096 is
+not the conservative choice, it is the fast one, and the resident default is
+right.  Whether 8192 pays for itself on the streaming path by reducing
+re-streaming is untested here -- `DS4_GLM_FULL_ATTN_STREAMING_CAP` exists to
+try it.
+
+### The 256 MiB score scratch does bind, but not where it hurts yet
+
+`DS4_GLM_METAL_INDEXED_PREFILL_SCORE_SCRATCH_MB` clamps rows scored per
+dispatch.  It is not dead: score columns are `compact_cap / 4`, so the budget
+starts biting above 131072 allocated context.  Observed, chunk 2048 throughout:
+
+| ctx_alloc | score_rows | scratch |
+|---:|---:|---:|
+| 65536 | 2048 | 128 MiB |
+| 131072 | 2048 | 256 MiB |
+| 262144 | **1024** | 256 MiB |
+| 524288 | **512** | 256 MiB |
+
+Raising the budget to 1024 MiB restores 2048 rows at a 524288 allocation.  The
+model context limit is 1048576, so this is reachable, not theoretical.
+
+It does not currently cost anything measurable, though: holding the allocation
+at 524288 and varying only the budget, a 16384-token prefill runs at 393.84
+tok/s with score_rows=512 against 394.30 with 2048 -- **0.12%, noise**.  A
+prefill long enough for scoring to dominate was not measured; each run at ctx
+65536 with that allocation exceeds ten minutes.  So: the clamp is real, the
+knob to lift it exists, and nobody has yet shown it matters.
+
 ## Untested constants noticed while reading
 
 Recorded so the next person does not re-derive them.  None were measured.
 
-- `glm_graph_full_attention_cap` gives the **SSD-streaming** path a full
-  attention cap of 8192 and the **fully-resident** path 4096.  The
-  memory-constrained machine gets the larger window.  Above a 65536 context
-  both clamp to 4096, so the asymmetry is only reachable below that -- and
-  `ds4-bench` defaults `--ctx-alloc` to `ctx-max + gen-tokens + 1`, which
-  exceeds 65536 on a 65536 sweep, hiding it.
-- `DS4_GLM53_PREFILL_CHUNK_TOKENS` is a flat 2048 with no device, memory or
-  residency input; the GLM 5.2 path uses 4096.
-- `DS4_GLM_METAL_INDEXED_PREFILL_SCORE_SCRATCH_MB` is a fixed 256 MiB that
-  clamps how many rows are scored per dispatch.  Observed as
-  `score_scratch=64.00 MiB` at runtime, so something derives it down; worth
-  checking which value actually binds.
-- A trap for anyone testing the prefill chunk: `DS4_GLM53_PREFILL_CHUNK_TOKENS`
-  (2048) and `DS4_GLM_METAL_FULL_ATTN_LAYER_FLUSH_CONTEXT` (2048) are the same
-  number and the comparison is a strict `>`, so the default chunk sits exactly
-  on the boundary where per-layer command-buffer flushing switches off.
-  Raising the chunk to 4096 also switches flushing on across 46 layers.  Those
-  are two changes, not one.
+All four prefill entries that used to sit here have been measured; see
+"Prefill, measured" above.  In summary: the chunk default of 2048 is optimal,
+per-layer flushing does not matter, the 8192 full-attention cap is 3.81% slower
+than 4096 rather than more generous, and the 256 MiB score scratch does clamp
+above 131072 allocated context but costs nothing measurable at the prefill
+lengths tested.
