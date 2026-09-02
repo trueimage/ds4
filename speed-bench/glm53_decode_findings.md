@@ -296,15 +296,18 @@ let exact bytes arbitrate when they disagree.
 ### The remaining bucket, partly split
 
 `hc_expand` measured **0.55 ms/token, 1.3% of decode** by repeat -- a
-dispatch-bound stage, so that figure was the reliable one.  All 90 sites are
+dispatch-bound stage, so that figure was the reliable one.  Of the 90 sites, 87 are
 now folded into whatever produces their input, and between them they returned
 0.37 ms of it:
 
 | site | count | mechanism | gain |
 |---|---:|---|---:|
 | kda_output (BF16 matvec) | 34 | new epilogue kernel | +0.46% |
-| attn_output (Q8_0 matvec) | ~12 | DeepSeek's existing fused kernel | +0.11% |
-| FFN tail (routed+shared add) | 43 | existing `has_add` path on the expand | +0.14% |
+| attn_output (Q8_0 matvec) | 11 | DeepSeek's existing fused kernel | +0.11% |
+| FFN tail (routed+shared add) | 42 | existing `has_add` path on the expand | +0.14% |
+
+That is 87 of the 90 sites; the three leading dense FFN layers have no
+routed/shared split to defer and keep the separate expand.
 
 The last two together are +0.48% (t=9.65, n=8), 0.199 ms over 54 sites, or
 3.7 us per site -- below the 4.6 us launch cost and the KDA epilogue's 5.6 us,
@@ -355,12 +358,12 @@ greedy output).
 
 | | ms | share of decode | share of the residual |
 |---|---:|---:|---:|
-| router (logits + top-k, 86 dispatches) | 0.95 | 2.3% | 28% |
+| router (logits + top-k, 84 dispatches) | 0.95 | 2.3% | 28% |
 | remaining hc_expand (FFN tail, dense attn) | 0.33 | 0.8% | 10% |
 | still unattributed | 2.13 | 5.1% | 62% |
 
-The router reads `ffn_gate_inp`, which is **F32** at [4096, 288] over 43
-layers: 202.9 MB/token, or 0.29 ms at the 707 GB/s the dense projections
+The router reads `ffn_gate_inp`, which is **F32** at [4096, 288] over 42
+layers: 198.3 MB/token, or 0.28 ms at the 707 GB/s the dense projections
 achieve.  So about a third of the router is weight streaming and the other
 ~0.66 ms is the top-k select over 288 experts plus launch cost.  Requantizing
 `ffn_gate_inp` is a model-artifact change and routing precision is the obvious
@@ -371,58 +374,65 @@ risk, but it is the only 200 MB/token F32 tensor left in the decode step.
 The original budget recorded the shared expert at 0.55 GiB/token and 279 GB/s,
 38% of ceiling -- far below every other kernel, and an obvious target.  **That
 byte count was under by about 2x.**  Summed from the tensor table, the shared
-expert reads three Q8_0 [4096, 2048] tensors per layer over 43 layers:
+expert reads three Q8_0 [4096, 2048] tensors per layer over 42 layers:
 
-    gate + up + down = 3 x 383.3 MB = 1.150 GB/token
+    gate + up + down = 3 x 374.2 MB = 1.123 GB/token
 
-Against the measured 2.07 ms that is **556 GB/s, 75% of ceiling** -- in the
+Against the measured 2.07 ms that is **542 GB/s, 74% of ceiling** -- in the
 same band as KDA overall (77%), not an outlier.  Its gate/up/SwiGLU is already
 fused via `ds4_gpu_shared_mid_swiglu_q8_0_tensor`.  Closing the remaining gap
 to 707 GB/s would be worth about 0.45 ms, 1.1%, not the large win the 38%
 figure implied.
 
-## The DSA attention core is the one stage with real headroom
+## The DSA attention core: corrected
 
-Every dense stage measured so far turned out to be at or near the memory
-ceiling.  The DSA attention core is not, and it is 18.9% of the decode step.
+An earlier revision of this section priced this stage at 135.4 MB/token and
+2.4% of the memory ceiling, and concluded that ~7.5 ms of its 7.7 was "not data
+movement".  **That was wrong by 23x on bytes**, for three reasons worth
+recording because each one is a trap:
 
-It is selection-capped, not context-scaled -- `indexer.top_k` is 2048 and
-`pool_size` 4, so at most 2051 rows are ever attended.  Measured cost is flat:
+- **`n_rot` is 0 for GLM 5.3** (`DS4_SHAPE_GLM53`), so a compact cache row is
+  the 512-wide lora part alone, 1024 B in f16 -- not 1152 B with a 64-wide
+  rope tail.
+- **There are 11 DSA layers in the trunk, not 12.**  `attn_v_b` appears 12
+  times because the MTP layer has one, and it is not in the decode path.
+- **The cache is not read once per layer.**  The generic kernel dispatches one
+  threadgroup per head -- 64 of them -- and each independently walks all
+  selected rows twice, once to score and once for the weighted sum.
 
-| ctx | attn_core |
-|---:|---:|
-| 2,048 | 7.77 ms |
-| 8,192 | 7.78 ms |
-| 16,384 | 7.68 ms |
+So the real traffic is:
 
-What it reads per token, from the tensor table and the cache geometry
-(`kv_lora_rank` 512, rope dim 64, f16 compact cache, 12 DSA layers):
+    compact cache  2051 rows x 1024 B x 2 passes x 64 heads x 11 layers  2.96 GB
+    attn_k_b + attn_v_b, Q8_0                                            0.20 GB
+    total                                                                3.15 GB
 
-    compact KV, 2051 rows x 1152 B x 12 layers     28.4 MB
-    attn_v_b value projection, Q8_0               107.0 MB
-    total                                         135.4 MB
+At 7.7 ms that is **409 GB/s, 56% of ceiling** -- real headroom, but nothing
+like the collapse the earlier figure implied, and the "7.5 ms of non-data work"
+budget it produced does not exist.
 
-    135.4 MB / 7.7 ms = 17.6 GB/s = 2.4% of ceiling
+The corrected number points at the same structural fix for a better reason.
+Every one of the 64 heads reloads the same 2051 cache rows, twice.  Loading
+each row once and sharing it across heads would take the cache term from
+2.96 GB to about 46 MB; that is where the 56% comes from, not from latency.
 
-At the 707 GB/s the dense projections achieve, that traffic would take
-**0.19 ms**.  So roughly **7.5 ms of the 7.7 is not data movement** -- it is
-latency, occupancy, and uncoalesced access.
+**The split-row sweep recorded in this document was a no-op.**
+`glm_graph_indexed_decode_split_group8_available()` requires `DS4_N_ROT == 64`,
+which GLM 5.3 never satisfies, so every arm of that sweep ran the same generic
+kernel.  The flat result was measuring nothing.  `DS4_GLM_DECODE_SPLIT_BLOCK_
+ROWS` remains as instrumentation but does not reach this model.
 
-That makes this the largest remaining opportunity on the path by a wide margin,
-and unlike the projections it is not capped by physics.  The shape of the work,
-which is not started:
+What the work actually is, none of it started:
 
-- **Sort the selected indices.** The indexer produces up to 2051 row ids that
-  are then gathered from the compact cache.  Unsorted ids make every gather a
-  scattered read of a 1152-byte row; sorted ids would let adjacent lanes touch
-  adjacent cache lines.
-- **Fuse the partial reduction with the value projection.** `attn_v_b` is 107
-  of the 135 MB and is read as a separate step from the score reduction.
-- **Revisit the score and cache layout** so the 512-wide lora part and the
-  64-wide rope part are not strided apart per row.
-
-None of these are measured; the 7.5 ms is the budget they are competing for,
-not a promise.
+- **A no-rope grouped DSA kernel.**  Adapt the group8 path for `n_rot == 0`,
+  split the 2051 rows across blocks, and share each loaded cache row across
+  several heads.  This is what lifts the dispatch above the current 64
+  threadgroups and removes the repeated loads at once.
+- **Separate `qk_low` from the attention timing** before optimising it -- the
+  `attn_core` ablation currently suppresses it too, so it is inside the 7.7 ms
+  and has never been priced on its own.
+- **Sort the selected row ids on GPU.**  Neighbouring lanes currently gather
+  unrelated rows.  Sorting changes the softmax reduction order, so it needs
+  numerical validation, not just a benchmark.
 
 ## Why the shared-down fusion was not done
 
@@ -582,9 +592,14 @@ Stacking the model-artifact changes on top of the same tip, all at ctx 2048:
 
 | model file | tok/s | vs base engine + original artifact |
 |---|---:|---:|
-| GLM-5.3-Flash-Q4_K | 23.59 | +11.2% |
-| GLM-5.3-Flash-Q4_K-kdaQ8 | 27.21 | +28.2% |
-| GLM-5.3-Flash-Q4_K-kdaHeadQ8 | 27.84 | +31.2% |
+| GLM-5.3-Flash-Q4_K | 23.99 | +13.2% |
+| GLM-5.3-Flash-Q4_K-kdaQ8 | 27.50 | +29.8% |
+| GLM-5.3-Flash-Q4_K-kdaHeadQ8 | 28.23 | +33.2% |
+
+All three re-measured on the current tip with the same harness as the
+engine-only figure above, so the first row agrees with it.  An earlier revision
+of this table was taken several commits back and disagreed with the headline by
+0.4 tok/s for that reason.
 
 Only the first row is an engine result.  The other two combine it with the
 requantized artifacts and should never be quoted as engine tuning.
