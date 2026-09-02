@@ -41605,7 +41605,19 @@ static uint32_t glm_graph_indexed_decode_split_blocks(void) {
     return (top_k + block_rows - 1u) / block_rows;
 }
 
+/* Rows per split block for indexed decode attention.  The 32/128 step at 1024
+ * selected rows was never swept; DS4_GLM_DECODE_SPLIT_BLOCK_ROWS forces one
+ * value so it can be.  A value the split path cannot honour is rejected by the
+ * availability guard below and falls back, so this cannot select a broken
+ * configuration. */
 static uint32_t glm_graph_indexed_decode_split_block_rows_for(uint32_t n_selected) {
+    static int forced = -1;
+    if (forced < 0) {
+        const char *env = getenv("DS4_GLM_DECODE_SPLIT_BLOCK_ROWS");
+        const int v = (env && env[0]) ? atoi(env) : 0;
+        forced = v > 0 ? v : 0;
+    }
+    if (forced > 0) return (uint32_t)forced;
     return n_selected <= 1024u ? 32u : 128u;
 }
 

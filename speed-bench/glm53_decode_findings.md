@@ -249,6 +249,35 @@ and roughly triples the measured decode time; and because the floor is uniform,
 stages that do little real work all read as roughly the floor.  Prefer
 `DS4_GLM_DECODE_ABLATE` for attribution and use the stage profiler to localise.
 
+## Two tuning knobs that turn out not to matter
+
+Both were expected to be worth something on an 80-core GPU and neither is.
+
+**Decode command-buffer flush cadence.**  Indexed decode flushes every 4
+layers, and `DS4_GLM_DECODE_FLUSH_INTERVAL` overrides it.  Sweeping 0, 2, 3, 4,
+6, 8, 12, 16, 32 at ctx 2048: everything from 3 to 12 lands in 22.25-22.31
+tok/s, inside the run-to-run spread.  Only the extremes lose -- 0 (never flush)
+at 21.91 and 32 at 22.06.  Confirmed at ctx 16384, where 2/4/8 give
+21.80/21.81/21.78.  **The default of 4 is already right.**
+
+**DSA split-attention rows per block.**  The choice steps straight from 32 to
+128 at 1024 selected rows and had never been swept, so
+`DS4_GLM_DECODE_SPLIT_BLOCK_ROWS` was added to force one value:
+
+| rows | ctx 2048 | ctx 16384 |
+|---:|---:|---:|
+| default (32/128) | 23.50 | 23.00 |
+| 32 | 23.51 | 22.97 |
+| 64 | 23.51 | 23.02 |
+| 96 | -- | 23.01 |
+| 128 | 23.51 | 23.02 |
+| 256 | 23.49 | 23.02 |
+
+Flat to within 0.2% at both contexts.  The selection count is capped by
+`glm53_graph_indexer_selected_limit()`, which does not grow with context, so
+this does not become interesting at longer contexts either.  The knob is kept
+as instrumentation for other GPUs, not because it found anything here.
+
 ## A trap when A/B-testing a shader change
 
 `ds4_gpu_full_source()` reads `metal/*.metal` from disk at run time and there
