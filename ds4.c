@@ -45009,6 +45009,10 @@ static bool glm_graph_encode_sparse_ffn_one(
         ds4_gpu_tensor          *tmp,
         bool                     add_residual,
         bool                     defer_final_sum,
+        /* Out: set when the shared down-projection was fused with the HC
+         * expand, so the caller must skip the expand entirely rather than
+         * merely the sum.  NULL if the caller cannot honour that. */
+        bool                    *hc_expand_done,
         bool                     stage_profile,
         double                  *stage_t0) {
     uint64_t gate_in = 0, gate_out = 0, gate_row_bytes = 0;
@@ -45296,16 +45300,53 @@ static bool glm_graph_encode_sparse_ffn_one(
                                                 g->ssd_streaming,
                                                 stage_profile,
                                                 stage_t0);
-        if (ok) ok = glm_graph_matmul_q8_0_decode_profiled_tensor(ffn_sum,
-                                                                  model,
-                                                                  l->ffn_down_shexp->abs_offset,
-                                                                  DS4_N_FF_EXP,
-                                                                  DS4_N_EMBD,
-                                                                  ffn_mid,
-                                                                  il,
-                                                                  pos,
-                                                                  "shared_down",
-                                                                  g->ssd_streaming) != 0;
+        bool shared_down_fused = false;
+#if defined(__APPLE__)
+        /* On this ordering the routed stage has already run, so ffn_mid still
+         * holds the shared mid and ffn_out holds the routed result -- exactly
+         * the input DeepSeek's fused kernel wants.  It does the shared
+         * down-projection, adds the routed output and expands into the HC
+         * streams in one dispatch, replacing this matvec and the caller's
+         * expand together.  Metal only, like the other epilogues. */
+        if (ok && hc_expand_done && defer_final_sum && g->glm53 &&
+            !g->ssd_streaming &&
+            l->ffn_down_shexp->type == DS4_TENSOR_Q8_0 &&
+            g->hc_next && g->hc_after_attn && g->hc_split &&
+            getenv("DS4_METAL_DISABLE_GLM53_SHARED_DOWN_HC_EXPAND") == NULL &&
+            ds4_gpu_shared_down_hc_expand_q8_0_tensor(
+                g->hc_next, ffn_sum,
+                model->map, model->size,
+                l->ffn_down_shexp->abs_offset,
+                DS4_N_FF_EXP, DS4_N_EMBD,
+                ffn_mid, ffn_out,
+                g->hc_after_attn, g->hc_split,
+                DS4_N_EMBD, DS4_N_HC) != 0) {
+            shared_down_fused = true;
+            *hc_expand_done = true;
+            if (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND) {
+                ok = ds4_gpu_shared_down_hc_expand_q8_0_tensor(
+                        g->hc_next, ffn_sum,
+                        model->map, model->size,
+                        l->ffn_down_shexp->abs_offset,
+                        DS4_N_FF_EXP, DS4_N_EMBD,
+                        ffn_mid, ffn_out,
+                        g->hc_after_attn, g->hc_split,
+                        DS4_N_EMBD, DS4_N_HC) != 0;
+            }
+        }
+#endif
+        if (ok && !shared_down_fused) {
+            ok = glm_graph_matmul_q8_0_decode_profiled_tensor(ffn_sum,
+                                                              model,
+                                                              l->ffn_down_shexp->abs_offset,
+                                                              DS4_N_FF_EXP,
+                                                              DS4_N_EMBD,
+                                                              ffn_mid,
+                                                              il,
+                                                              pos,
+                                                              "shared_down",
+                                                              g->ssd_streaming) != 0;
+        }
         if (ok) ok = glm_graph_profile_stage(stage_profile,
                                              "glm_decode_ffn",
                                              "shared_down",
@@ -45381,6 +45422,9 @@ static bool glm_graph_encode_ffn_one_normed_from(
          * fold it into the HC expand's has_add path instead of paying a
          * separate add dispatch for it. */
         bool                    *defer_final_sum,
+        /* Out: the shared down-projection and the HC expand were fused, so the
+         * caller must skip the expand as well as the sum. */
+        bool                    *hc_expand_done,
         bool                     stage_profile,
         double                  *stage_t0) {
     if (!g || !model || !l || !ffn_norm || !after_attn || !next ||
@@ -45392,6 +45436,7 @@ static bool glm_graph_encode_ffn_one_normed_from(
     if (il < DS4_N_LEADING_DENSE) {
         /* Dense layers have no routed/shared split to defer. */
         if (defer_final_sum) *defer_final_sum = false;
+        if (hc_expand_done) *hc_expand_done = false;
         const uint64_t hidden = l->ffn_gate->dim[1];
         const bool can_fuse_gate_up =
             glm_graph_weights_are_q8_0(model,
@@ -45516,6 +45561,7 @@ static bool glm_graph_encode_ffn_one_normed_from(
                                            tmp,
                                            add_residual,
                                            defer_final_sum && *defer_final_sum,
+                                           hc_expand_done,
                                            stage_profile,
                                            stage_t0);
 }
@@ -45532,6 +45578,7 @@ static bool glm53_graph_encode_ffn_tail_one(
      * kernel already has a has_add path, so on the decode tail they collapse
      * into one dispatch.  Directional steering would have to run on the summed
      * value in between, so it is required to be inactive. */
+    bool hc_expand_done = false;
     bool defer_sum = false;
 #if defined(__APPLE__)
     /* Metal only, like the two attention-side epilogues.  ds4_gpu_hc_expand_add_
@@ -45565,6 +45612,7 @@ static bool glm53_graph_encode_ffn_tail_one(
                                                    g->attn_out,
                                                    false,
                                                    &defer_sum,
+                                                   &hc_expand_done,
                                                    stage_profile,
                                                    stage_t0);
     if (ok) {
@@ -45575,7 +45623,11 @@ static bool glm53_graph_encode_ffn_tail_one(
                                       pos);
         ok = glm_graph_apply_directional_steering_ffn(g, g->next, il, 1);
     }
-    if (ok && defer_sum) {
+    if (ok && hc_expand_done) {
+        /* shared_down + routed add + HC expand all happened in one dispatch,
+         * and that dispatch carries its own repeat arm -- re-dispatching the
+         * standalone expand here would price a path that is not running. */
+    } else if (ok && defer_sum) {
         ok = ds4_gpu_hc_expand_add_tensor(g->hc_next,
                                           g->ffn_out,
                                           g->ffn_sum,
@@ -45662,6 +45714,7 @@ static bool glm_graph_encode_ffn_one_from(
                                                 ffn_sum,
                                                 tmp,
                                                 true,
+                                                NULL,
                                                 NULL,
                                                 stage_profile,
                                                 stage_t0);
@@ -50855,6 +50908,7 @@ glm53_indexed_attention_done:
                                                               g->attn_out,
                                                               true,
                                                               NULL,
+                                                              NULL,
                                                               false,
                                                               NULL);
                 } else if (ok) {
@@ -52575,6 +52629,7 @@ glm53_attention_done:
                                                       g->ffn_sum,
                                                       g->attn_out,
                                                       true,
+                                                      NULL,
                                                       NULL,
                                                       decode_stage_profile,
                                                       decode_stage_profile ? &decode_stage_t0 : NULL);
