@@ -43877,6 +43877,9 @@ static bool glm_ablate_names(const char *env, const char *name) {
  * which changes which experts the routed stage streams and so changes the very
  * cost being measured. */
 #define DS4_GLM_REPEAT_ROUTER    (1u << 6)
+/* qk_low sits inside the attn_core ablation arm, so its cost has only ever
+ * been measured as part of the 7.7 ms attention stage. */
+#define DS4_GLM_REPEAT_QKLOW     (1u << 7)
 
 static uint32_t glm_decode_repeat_mask(void) {
     static int cached = -1;
@@ -43891,6 +43894,7 @@ static uint32_t glm_decode_repeat_mask(void) {
             if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_REPEAT_KDA_GATE;
             if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_REPEAT_KDA_OUT;
             if (glm_ablate_names(env, "router"))    mask |= DS4_GLM_REPEAT_ROUTER;
+            if (glm_ablate_names(env, "qklow"))     mask |= DS4_GLM_REPEAT_QKLOW;
             if (mask) {
                 fprintf(stderr, "ds4: GLM decode stage repeat active (mask 0x%x) — output stays correct, timing only\n", mask);
             }
@@ -52204,6 +52208,16 @@ static bool glm_graph_forward_token(
                                                          DS4_N_KV_LORA,
                                                          (uint32_t)g->q_nope,
                                                          DS4_N_KEY_MLA) != 0;
+                if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_QKLOW)) {
+                    ok = ds4_gpu_glm_qk_lowrank_typed_tensor(
+                             tp_split_layer_heads ? tp_qk_low : g->qk_low,
+                             tp_split_layer_heads ? tp_q : g->q,
+                             model->map, model->size, k_weight_offset,
+                             l->attn_k_b->type,
+                             tp_split_layer_heads ? tp_head_count : DS4_N_HEAD,
+                             DS4_N_KV_LORA, (uint32_t)g->q_nope,
+                             DS4_N_KEY_MLA) != 0;
+                }
                 if (ok) metal_graph_debug_dump_tensor("glm_decode_qk_low",
                                                       g->qk_low,
                                                       (uint64_t)DS4_N_HEAD * DS4_N_KV_LORA,

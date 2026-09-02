@@ -427,9 +427,11 @@ What the work actually is, none of it started:
   split the 2051 rows across blocks, and share each loaded cache row across
   several heads.  This is what lifts the dispatch above the current 64
   threadgroups and removes the repeated loads at once.
-- **Separate `qk_low` from the attention timing** before optimising it -- the
-  `attn_core` ablation currently suppresses it too, so it is inside the 7.7 ms
-  and has never been priced on its own.
+- **`qk_low` is 0.55 ms of the 7.78 ms**, now measured.  The `attn_core`
+  ablation suppresses it too, so it had never been separated.  Both instruments
+  agree (`DS4_GLM_DECODE_ABLATE=qklow` 0.51-0.55 ms, `DS4_GLM_DECODE_REPEAT=
+  qklow` 0.56-0.58 ms), which leaves **7.23 ms in the indexed-attention kernel
+  itself** -- that is the figure the grouped-kernel work is competing for.
 - **Sort the selected row ids on GPU.**  Neighbouring lanes currently gather
   unrelated rows.  Sorting changes the softmax reduction order, so it needs
   numerical validation, not just a benchmark.
