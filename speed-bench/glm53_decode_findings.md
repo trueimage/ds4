@@ -92,14 +92,17 @@ win; the generic fallback is nearly free.
 
 ## Result of requantizing KDA to Q8_0
 
-`gguf-tools/glm53-requant-kda` converts the 136 KDA tensors from BF16 to Q8_0
+`gguf-tools/glm53-requant-bf16` converts the 136 KDA tensors from BF16 to Q8_0
 into a **new file**, copying every other byte verbatim, through the same
 `quants.c` facade the other tools use.  It refuses an output that resolves to
 the input (same path, hard link or symlink), because the input stays mmapped
 for the whole run; there is no in-place mode.
 
-    make -C gguf-tools glm53-requant-kda
-    ./gguf-tools/glm53-requant-kda in.gguf out.gguf q8_0
+    make -C gguf-tools glm53-requant-bf16
+    ./gguf-tools/glm53-requant-bf16 in.gguf out.gguf --type q8_0 --tensors kda
+
+`--tensors` also takes `head` (`output.weight`), `embd` (`token_embd.weight`)
+and `all`; it defaults to `kda`.
 
 8.50 GiB of KDA weights become 4.52 GiB; the file goes 177.8 -> 173.8 GiB.
 

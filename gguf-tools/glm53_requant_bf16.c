@@ -1,13 +1,17 @@
 /*
- * Requantize GLM 5.3 KDA projections in place from BF16 to a smaller type.
+ * Requantize GLM 5.3 dense BF16 tensors to a smaller type, in an existing GGUF.
  *
- * The shipped GLM-5.3-Flash Q4_K artifact stores blk.N.kda_{q,k,v,output}
- * as BF16 while its experts are Q4_K.  Those four tensors are dense -- every
- * one is read on every decoded token -- so at 34 KDA layers they account for
- * roughly 8.5 GiB of the per-token read traffic, more than all routed experts
- * combined.  glm53_quantize.py already emits Q8_0 for role="linear_attention"
- * on its q4 artifact, so this is a supported shape; this tool produces the
- * same thing from an existing GGUF without needing the source checkpoint.
+ * The shipped GLM-5.3-Flash Q4_K artifact stores blk.N.kda_{q,k,v,output},
+ * output.weight and token_embd.weight as BF16 while its experts are Q4_K.
+ * The KDA projections are dense -- every one is read on every decoded token --
+ * so at 34 KDA layers they alone account for roughly 8.5 GiB of the per-token
+ * read traffic, more than all routed experts combined.  output.weight is a
+ * further full matvec per token.
+ *
+ * glm53_quantize.py already assigns q8_0 to exactly these groups on its q4
+ * artifact (role="linear_attention", "embedding" and "output"), so the result
+ * is a shape the loader and the generic matmul already accept.  This tool
+ * produces it from an existing GGUF, without needing the source checkpoint.
  *
  * Everything other than the selected tensors is copied byte for byte, and the
  * quantization goes through the same quants.c facade the other tools use, so
@@ -53,7 +57,7 @@ static char *g_tmp_path;
 
 static void die(const char *msg) __attribute__((noreturn));
 static void die(const char *msg) {
-    fprintf(stderr, "glm53-requant-kda: %s\n", msg);
+    fprintf(stderr, "glm53-requant-bf16: %s\n", msg);
     if (g_tmp_path) unlink(g_tmp_path);
     exit(1);
 }
@@ -109,27 +113,71 @@ static void skip_value(uint32_t t, int *is_u32, uint32_t *u32_out) {
     g_cur += sz;
 }
 
-static int is_kda_target(const char *name, uint64_t len) {
-    static const char *suffix[] = {
-        ".kda_q.weight", ".kda_k.weight", ".kda_v.weight", ".kda_output.weight"
-    };
-    for (size_t i = 0; i < sizeof(suffix) / sizeof(suffix[0]); i++) {
-        size_t sl = strlen(suffix[i]);
-        if (len >= sl && memcmp(name + len - sl, suffix[i], sl) == 0) return 1;
+enum { SEL_KDA = 1u << 0, SEL_HEAD = 1u << 1, SEL_EMBD = 1u << 2 };
+
+static int name_is(const char *name, uint64_t len, const char *want) {
+    size_t wl = strlen(want);
+    return len == wl && memcmp(name, want, wl) == 0;
+}
+
+static int name_ends(const char *name, uint64_t len, const char *suffix) {
+    size_t sl = strlen(suffix);
+    return len >= sl && memcmp(name + len - sl, suffix, sl) == 0;
+}
+
+/* The groups glm53_quantize.py's q4 artifact assigns to Q8_0: the
+ * linear-attention projections (role="linear_attention") and the embedding and
+ * output tensors (role="embedding"/"output"). */
+static int selected(const char *name, uint64_t len, unsigned sel) {
+    if (sel & SEL_KDA) {
+        if (name_ends(name, len, ".kda_q.weight") ||
+            name_ends(name, len, ".kda_k.weight") ||
+            name_ends(name, len, ".kda_v.weight") ||
+            name_ends(name, len, ".kda_output.weight")) return 1;
     }
+    if ((sel & SEL_HEAD) && name_is(name, len, "output.weight")) return 1;
+    if ((sel & SEL_EMBD) && name_is(name, len, "token_embd.weight")) return 1;
     return 0;
 }
 
+static unsigned parse_selection(const char *spec) {
+    unsigned sel = 0;
+    const char *p = spec;
+    while (*p) {
+        const char *comma = strchr(p, ',');
+        size_t n = comma ? (size_t)(comma - p) : strlen(p);
+        if      (n == 3 && !memcmp(p, "kda",  3)) sel |= SEL_KDA;
+        else if (n == 4 && !memcmp(p, "head", 4)) sel |= SEL_HEAD;
+        else if (n == 4 && !memcmp(p, "embd", 4)) sel |= SEL_EMBD;
+        else if (n == 3 && !memcmp(p, "all",  3)) sel |= SEL_KDA | SEL_HEAD | SEL_EMBD;
+        else die("--tensors takes a comma separated list of kda, head, embd, all");
+        if (!comma) break;
+        p = comma + 1;
+    }
+    if (!sel) die("--tensors selected nothing");
+    return sel;
+}
+
 int main(int argc, char **argv) {
-    if (argc < 3 || argc > 4) {
+    if (argc < 3) {
         fprintf(stderr,
-                "usage: %s <in.gguf> <out.gguf> [q8_0|q4_K]\n"
-                "  Requantizes blk.N.kda_{q,k,v,output}.weight from BF16.\n"
-                "  Default target type is q8_0.\n", argv[0]);
+                "usage: %s <in.gguf> <out.gguf> [--type q8_0|q4_K] [--tensors LIST]\n"
+                "  Requantizes BF16 tensors that glm53_quantize.py's q4 artifact\n"
+                "  assigns to q8_0.  LIST is a comma separated selection of:\n"
+                "    kda   blk.N.kda_{q,k,v,output}.weight  (default)\n"
+                "    head  output.weight\n"
+                "    embd  token_embd.weight\n"
+                "    all   all of the above\n", argv[0]);
         return 2;
     }
     const char *in_path = argv[1], *out_path = argv[2];
-    const char *want = (argc == 4) ? argv[3] : "q8_0";
+    const char *want = "q8_0";
+    unsigned sel = SEL_KDA;
+    for (int i = 3; i < argc; i++) {
+        if (!strcmp(argv[i], "--type") && i + 1 < argc)         want = argv[++i];
+        else if (!strcmp(argv[i], "--tensors") && i + 1 < argc) sel = parse_selection(argv[++i]);
+        else die("unrecognised argument; run with no arguments for usage");
+    }
     ds4q_type target;
     if      (!strcmp(want, "q8_0")) target = DS4Q_TYPE_Q8_0;
     else if (!strcmp(want, "q4_K")) target = DS4Q_TYPE_Q4_K;
@@ -161,7 +209,7 @@ int main(int argc, char **argv) {
     if (memcmp(g_cur, "GGUF", 4) != 0) die("not a gguf file");
     g_cur += 4;
     const uint32_t version = rd_u32();
-    if (version != 3) fprintf(stderr, "glm53-requant-kda: warning: gguf version %u\n", version);
+    if (version != 3) fprintf(stderr, "glm53-requant-bf16: warning: gguf version %u\n", version);
     const uint64_t n_tensors = rd_u64();
     const uint64_t n_kv      = rd_u64();
     /* A tensor-info entry costs at least 8+4+8+4+8 bytes and a kv pair at
@@ -213,14 +261,14 @@ int main(int argc, char **argv) {
     uint64_t cursor = 0, converted = 0, before = 0, after = 0;
     for (uint64_t i = 0; i < n_tensors; i++) {
         tinfo *t = &ts[i];
-        int convert = (t->type == DS4Q_TYPE_BF16) && is_kda_target(t->name, t->name_len);
+        int convert = (t->type == DS4Q_TYPE_BF16) && selected(t->name, t->name_len, sel);
         /* row_size() returns 0 for a type this build does not know, for a row
          * that is not a whole number of blocks, and for anything out of range.
          * Treating that as "copy 0 bytes" would emit a file that still parses
          * but has quietly lost the payload, so stop instead. */
         const size_t row_bytes = ds4q_row_size((ds4q_type)t->type, (int64_t)t->dims[0]);
         if (row_bytes == 0) {
-            fprintf(stderr, "glm53-requant-kda: %.*s is type %" PRIu32 ", which this build cannot size\n",
+            fprintf(stderr, "glm53-requant-bf16: %.*s is type %" PRIu32 ", which this build cannot size\n",
                     (int)t->name_len, t->name, t->type);
             die("refusing to copy a tensor whose layout is unknown");
         }
@@ -231,7 +279,7 @@ int main(int argc, char **argv) {
             die("tensor data runs past the end of the input");
         }
         if (convert && (t->dims[0] % (uint64_t)ds4q_block_size(target)) != 0) {
-            fprintf(stderr, "glm53-requant-kda: %.*s row %" PRIu64 " not a multiple of the block size; leaving as is\n",
+            fprintf(stderr, "glm53-requant-bf16: %.*s row %" PRIu64 " not a multiple of the block size; leaving as is\n",
                     (int)t->name_len, t->name, t->dims[0]);
             convert = 0;
         }
@@ -244,9 +292,9 @@ int main(int argc, char **argv) {
         cursor += t->new_bytes;
         if (convert) { converted++; before += old_bytes; after += t->new_bytes; }
     }
-    if (!converted) die("no BF16 kda tensors found -- nothing to do");
+    if (!converted) die("no matching BF16 tensors found -- nothing to do");
     fprintf(stderr,
-            "glm53-requant-kda: %" PRIu64 " tensors -> %s, %.2f GiB -> %.2f GiB (saves %.2f GiB per full read)\n",
+            "glm53-requant-bf16: %" PRIu64 " tensors -> %s, %.2f GiB -> %.2f GiB (saves %.2f GiB per full read)\n",
             converted, ds4q_type_name(target),
             before / 1073741824.0, after / 1073741824.0, (before - after) / 1073741824.0);
 
@@ -320,6 +368,6 @@ int main(int argc, char **argv) {
     g_tmp_path = NULL;
     munmap(map, in_size);
     close(fd);
-    fprintf(stderr, "glm53-requant-kda: wrote %s\n", out_path);
+    fprintf(stderr, "glm53-requant-bf16: wrote %s\n", out_path);
     return 0;
 }
