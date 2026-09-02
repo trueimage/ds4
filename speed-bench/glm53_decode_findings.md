@@ -16,14 +16,14 @@ quality cost.
 Measured with `DS4_GLM_DECODE_ABLATE`, which removes a stage and reports the
 resulting speed.  Baseline 21.19 tok/s, two baseline runs 0.38% apart.
 
-**The KDA row is not one of those measurements.**  `DS4_GLM_DECODE_ABLATE`
-carries no `kda` bit, and the KDA path returns before the mask is even read
-(`glm53_graph_kda_attention` is dispatched above `decode_ablate` in `ds4.c`),
-so no ablation arm in this tree can produce it.  The 18.37 ms figure came from
-instrumentation that was never committed and **has not been reproduced**.
-Everything downstream of it -- KDA's share, its GB/s, and the ~7 ms floor
-derived below -- inherits that.  Treat the row as an unverified estimate until
-a committed KDA substage timer replaces it.  The other rows stand.
+**The KDA rows below were re-measured.**  The original 18.37 ms figure was
+produced by instrumentation that was never committed -- `DS4_GLM_DECODE_ABLATE`
+had no `kda` bit, and the KDA path returned before the mask was read -- so it
+could not be reproduced from this tree.  `kda`, `kda_qkv`, `kda_gate`,
+`kda_recur` and `kda_out` now exist, and the table is what they report.  KDA is
+**15.99 ms/token, 35.8% of decode**, not 18.37 ms and 38.9%.  Every other row
+reproduced within noise on the same machine, at a 22.375 tok/s baseline
+(four interleaved baselines, 0.85% spread) rather than 21.19.
 
 | component | ms/token | share | bytes/token | GB/s | % of ceiling |
 |---|---:|---:|---:|---:|---:|
@@ -130,20 +130,49 @@ No degradation -- marginally better, which at this size is noise.  Greedy
 generations from both are coherent and track word for word until a late
 paraphrase.
 
-### The projection was too optimistic, and why
+### The projection was too optimistic, and why -- corrected
 
-Scaling KDA's measured 497 GB/s by the byte reduction predicts +22%.  The
-measured result is +13.4%.  The difference is the useful part: only about 62%
-of KDA's time was weight streaming.  The remaining **~7 ms/token** is the
-conv1d, the gating, and the recurrent state update, none of which shrink when
-the weights do.  That floor is the next thing to attack on this path, and it is
-not a bandwidth problem.
+The earlier reading of this was wrong, and it mattered, because it set the
+priority for the whole KDA path.
 
-Note that this arithmetic runs through the unverified 18.37 ms KDA row: the
-+13.4% and the +22% projection are both measured, but turning their ratio into
-a millisecond floor needs KDA's absolute time.  The 62% split is solid; the
-"~7 ms" is only as good as the row it scales.  Re-derive it once KDA substage
-timing lands.
+It went: scaling KDA's 497 GB/s by the byte reduction predicts +22%, we
+measured +13.4%, therefore only ~62% of KDA was weight streaming and the
+remaining **~7 ms/token** is conv1d, gating and the recurrent state update --
+"the next thing to attack, and not a bandwidth problem."
+
+Direct substage ablation says otherwise.  Splitting KDA on the original BF16
+artifact:
+
+| substage | ms/token | share of decode |
+|---|---:|---:|
+| qkv projections | 9.68 | 21.7% |
+| output projection | 3.16 | 7.1% |
+| gate/beta low-rank chain | 1.37 | 3.1% |
+| recurrence kernel (conv1d + gating + state) | **1.23** | **2.8%** |
+| unattributed (dispatch, interaction) | 0.55 | 1.2% |
+
+The conv1d, the gating and the recurrent state update together are **1.23
+ms/token**, not ~7.  KDA is about 90% weight streaming, not 62%.  Requantizing
+the same tensors to Q8_0 and re-ablating confirms it directly -- qkv goes 9.68
+-> 5.61 ms and the output projection 3.16 -> 1.85 ms against a pure-bandwidth
+prediction of 5.14 and 1.68, so both are ~90% bandwidth-scaled:
+
+| | original | Q8_0 KDA |
+|---|---:|---:|
+| decode | 22.375 tok/s | 25.545 tok/s (**+14.2%**) |
+| KDA total | 15.99 ms | 10.40 ms |
+
+The +13.4% headline reproduces (+14.2% here).  Only the explanation was wrong.
+
+Where the original inference went astray: it assumed everything in KDA that
+did not scale with weight bytes was recurrence work.  Most of it is instead the
+projections failing to scale *perfectly* -- they are ~90% bandwidth-bound, not
+100% -- plus fixed dispatch cost.  Attributing that gap to the recurrence
+inflated a 1.23 ms stage into a 7 ms one.
+
+The practical consequence: **the recurrence kernel is not where the time is.**
+Work on `metal/glm53_kda.metal` is capped at 2.8% of decode no matter how good
+it gets.  The qkv projections, at 21.7%, are the KDA target that matters.
 
 ## A trap in the stage profiler
 

@@ -43794,6 +43794,70 @@ static bool glm53_graph_hc_pre(
     return ok;
 }
 
+/* Timing-only skip-ablation for the GLM decode layer (comma list in
+ * DS4_GLM_DECODE_ABLATE): the skipped stage's output buffer keeps stale
+ * contents, so the run produces garbage text but every remaining dispatch
+ * (and every TP gate) still executes. Whole-token time deltas against a
+ * baseline run are the only reliable per-stage cost measurement — the
+ * stage profiler's per-stage command-buffer splits inflate small stages. */
+#define DS4_GLM_ABLATE_ATTN_OUT  (1u << 0)
+#define DS4_GLM_ABLATE_ATTN_CORE (1u << 1)
+#define DS4_GLM_ABLATE_QPATH     (1u << 2)
+#define DS4_GLM_ABLATE_INDEXER   (1u << 3)
+#define DS4_GLM_ABLATE_ROUTED    (1u << 4)
+#define DS4_GLM_ABLATE_SHARED    (1u << 5)
+#define DS4_GLM_ABLATE_QKLOW     (1u << 6)
+/* KDA (linear attention), the whole stage and its four substages.  KDA is the
+ * largest single line in the decode budget and had no ablation arm at all, so
+ * its cost was estimated rather than measured. */
+#define DS4_GLM_ABLATE_KDA       (1u << 7)
+#define DS4_GLM_ABLATE_KDA_QKV   (1u << 8)
+#define DS4_GLM_ABLATE_KDA_GATE  (1u << 9)
+#define DS4_GLM_ABLATE_KDA_RECUR (1u << 10)
+#define DS4_GLM_ABLATE_KDA_OUT   (1u << 11)
+
+/* Exact token match against the comma list.  A substring test stops working
+ * as soon as one stage name is a prefix of another: strstr(env, "kda") also
+ * fires on "kda_qkv", which would ablate the whole stage when only one
+ * substage was asked for. */
+static bool glm_ablate_names(const char *env, const char *name) {
+    const size_t n = strlen(name);
+    for (const char *p = env; *p; ) {
+        while (*p == ',' || *p == ' ' || *p == '\t') p++;
+        const char *start = p;
+        while (*p && *p != ',' && *p != ' ' && *p != '\t') p++;
+        if ((size_t)(p - start) == n && memcmp(start, name, n) == 0) return true;
+    }
+    return false;
+}
+
+static uint32_t glm_decode_ablate_mask(void) {
+    static int cached = -1;
+    if (cached < 0) {
+        uint32_t mask = 0;
+        const char *env = getenv("DS4_GLM_DECODE_ABLATE");
+        if (env) {
+            if (glm_ablate_names(env, "attn_out"))  mask |= DS4_GLM_ABLATE_ATTN_OUT;
+            if (glm_ablate_names(env, "attn_core")) mask |= DS4_GLM_ABLATE_ATTN_CORE;
+            if (glm_ablate_names(env, "qpath"))     mask |= DS4_GLM_ABLATE_QPATH;
+            if (glm_ablate_names(env, "indexer"))   mask |= DS4_GLM_ABLATE_INDEXER;
+            if (glm_ablate_names(env, "routed"))    mask |= DS4_GLM_ABLATE_ROUTED;
+            if (glm_ablate_names(env, "shared"))    mask |= DS4_GLM_ABLATE_SHARED;
+            if (glm_ablate_names(env, "qklow"))     mask |= DS4_GLM_ABLATE_QKLOW;
+            if (glm_ablate_names(env, "kda"))       mask |= DS4_GLM_ABLATE_KDA;
+            if (glm_ablate_names(env, "kda_qkv"))   mask |= DS4_GLM_ABLATE_KDA_QKV;
+            if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_ABLATE_KDA_GATE;
+            if (glm_ablate_names(env, "kda_recur")) mask |= DS4_GLM_ABLATE_KDA_RECUR;
+            if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_ABLATE_KDA_OUT;
+            if (mask) {
+                fprintf(stderr, "ds4: GLM decode ablation active (mask 0x%x) — output is garbage, timing only\n", mask);
+            }
+        }
+        cached = (int)mask;
+    }
+    return (uint32_t)cached;
+}
+
 static bool glm53_graph_kda_attention(
         ds4_glm_gpu_graph       *g,
         const ds4_model         *model,
@@ -43805,10 +43869,12 @@ static bool glm53_graph_kda_attention(
         return false;
     }
     const uint32_t projection = DS4_N_KDA_HEAD * DS4_N_KDA_HEAD_DIM;
+    const uint32_t ablate = glm_decode_ablate_mask();
     bool qk_paired = false;
 #if defined(__APPLE__)
     bool qkv_paired = false;
-    if (getenv("DS4_METAL_DISABLE_M3_ULTRA_GLM53_DECODE") == NULL &&
+    if (!(ablate & DS4_GLM_ABLATE_KDA_QKV) &&
+        getenv("DS4_METAL_DISABLE_M3_ULTRA_GLM53_DECODE") == NULL &&
         getenv("DS4_METAL_DISABLE_GLM53_BF16_QKV") == NULL &&
         l->kda_q->type == DS4_TENSOR_BF16 &&
         l->kda_k->type == DS4_TENSOR_BF16 &&
@@ -43830,7 +43896,8 @@ static bool glm53_graph_kda_attention(
     const bool qkv_paired = false;
 #endif
 #if !defined(__APPLE__) && !defined(DS4_ROCM_BUILD) && !defined(DS4_NO_GPU)
-    if (l->kda_q->type == DS4_TENSOR_Q4_K &&
+    if (!(ablate & DS4_GLM_ABLATE_KDA_QKV) &&
+        l->kda_q->type == DS4_TENSOR_Q4_K &&
         l->kda_k->type == DS4_TENSOR_Q4_K &&
         getenv("DS4_CUDA_GLM_DISABLE_KDA_QK_PAIR") == NULL) {
         qk_paired = ds4_gpu_matmul_q4_K_pair_decode_tensor(
@@ -43845,33 +43912,41 @@ static bool glm53_graph_kda_attention(
                 g->attn_norm) != 0;
     }
 #endif
-    bool ok = qkv_paired || qk_paired ||
-        glm53_graph_matmul(g->kda_q, model, l->kda_q,
-                           DS4_N_EMBD, projection, g->attn_norm);
-    if (ok && !qkv_paired && !qk_paired) {
-        ok = glm53_graph_matmul(g->kda_k, model, l->kda_k,
-                                DS4_N_EMBD, projection, g->attn_norm);
+    bool ok = true;
+    /* Each substage is skipped whole; its output tensor then keeps the stale
+     * contents from the previous token, which is the documented ablation
+     * contract above -- garbage text, but every other dispatch still runs. */
+    if (!(ablate & DS4_GLM_ABLATE_KDA_QKV)) {
+        ok = qkv_paired || qk_paired ||
+            glm53_graph_matmul(g->kda_q, model, l->kda_q,
+                               DS4_N_EMBD, projection, g->attn_norm);
+        if (ok && !qkv_paired && !qk_paired) {
+            ok = glm53_graph_matmul(g->kda_k, model, l->kda_k,
+                                    DS4_N_EMBD, projection, g->attn_norm);
+        }
+        if (ok && !qkv_paired) {
+            ok = glm53_graph_matmul(g->kda_v, model, l->kda_v,
+                                    DS4_N_EMBD, projection, g->attn_norm);
+        }
     }
-    if (ok && !qkv_paired) {
-        ok = glm53_graph_matmul(g->kda_v, model, l->kda_v,
-                                DS4_N_EMBD, projection, g->attn_norm);
+    if (!(ablate & DS4_GLM_ABLATE_KDA_GATE)) {
+        if (ok) ok = glm53_graph_matmul(
+                g->kda_lowrank, model, l->kda_f_a,
+                DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm);
+        if (ok) ok = glm53_graph_matmul(
+                g->kda_raw_gate, model, l->kda_f_b,
+                DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
+        if (ok) ok = glm53_graph_matmul(
+                g->kda_raw_beta, model, l->kda_beta,
+                DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+        if (ok) ok = glm53_graph_matmul(
+                g->kda_lowrank, model, l->kda_g_a,
+                DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm);
+        if (ok) ok = glm53_graph_matmul(
+                g->kda_output_gate, model, l->kda_g_b,
+                DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
     }
-    if (ok) ok = glm53_graph_matmul(
-            g->kda_lowrank, model, l->kda_f_a,
-            DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm);
-    if (ok) ok = glm53_graph_matmul(
-            g->kda_raw_gate, model, l->kda_f_b,
-            DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
-    if (ok) ok = glm53_graph_matmul(
-            g->kda_raw_beta, model, l->kda_beta,
-            DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
-    if (ok) ok = glm53_graph_matmul(
-            g->kda_lowrank, model, l->kda_g_a,
-            DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm);
-    if (ok) ok = glm53_graph_matmul(
-            g->kda_output_gate, model, l->kda_g_b,
-            DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
-    if (ok) ok = ds4_gpu_glm53_kda_decode(
+    if (ok && !(ablate & DS4_GLM_ABLATE_KDA_RECUR)) ok = ds4_gpu_glm53_kda_decode(
             g->kda_out,
             g->layer_kda_conv_state[il],
             g->layer_kda_recurrent_state[il],
@@ -43893,12 +43968,14 @@ static bool glm53_graph_kda_attention(
             1,
             DS4_KDA_GATE_LOWER_BOUND,
             DS4_RMS_EPS) != 0;
-    if (ok) ok = glm53_graph_matmul(g->attn_out,
-                                         model,
-                                         l->kda_output,
-                                         projection,
-                                         DS4_N_EMBD,
-                                         g->kda_out);
+    if (ok && !(ablate & DS4_GLM_ABLATE_KDA_OUT)) {
+        ok = glm53_graph_matmul(g->attn_out,
+                                model,
+                                l->kda_output,
+                                projection,
+                                DS4_N_EMBD,
+                                g->kda_out);
+    }
     return ok;
 }
 
@@ -44517,42 +44594,6 @@ static void glm_graph_streaming_async_profile_register(void) {
 
 static double glm_graph_streaming_async_profile_ms(void) {
     return now_sec() * 1000.0;
-}
-
-/* Timing-only skip-ablation for the GLM decode layer (comma list in
- * DS4_GLM_DECODE_ABLATE): the skipped stage's output buffer keeps stale
- * contents, so the run produces garbage text but every remaining dispatch
- * (and every TP gate) still executes. Whole-token time deltas against a
- * baseline run are the only reliable per-stage cost measurement — the
- * stage profiler's per-stage command-buffer splits inflate small stages. */
-#define DS4_GLM_ABLATE_ATTN_OUT  (1u << 0)
-#define DS4_GLM_ABLATE_ATTN_CORE (1u << 1)
-#define DS4_GLM_ABLATE_QPATH     (1u << 2)
-#define DS4_GLM_ABLATE_INDEXER   (1u << 3)
-#define DS4_GLM_ABLATE_ROUTED    (1u << 4)
-#define DS4_GLM_ABLATE_SHARED    (1u << 5)
-#define DS4_GLM_ABLATE_QKLOW     (1u << 6)
-
-static uint32_t glm_decode_ablate_mask(void) {
-    static int cached = -1;
-    if (cached < 0) {
-        uint32_t mask = 0;
-        const char *env = getenv("DS4_GLM_DECODE_ABLATE");
-        if (env) {
-            if (strstr(env, "attn_out")) mask |= DS4_GLM_ABLATE_ATTN_OUT;
-            if (strstr(env, "attn_core")) mask |= DS4_GLM_ABLATE_ATTN_CORE;
-            if (strstr(env, "qpath")) mask |= DS4_GLM_ABLATE_QPATH;
-            if (strstr(env, "indexer")) mask |= DS4_GLM_ABLATE_INDEXER;
-            if (strstr(env, "routed")) mask |= DS4_GLM_ABLATE_ROUTED;
-            if (strstr(env, "shared")) mask |= DS4_GLM_ABLATE_SHARED;
-            if (strstr(env, "qklow")) mask |= DS4_GLM_ABLATE_QKLOW;
-            if (mask) {
-                fprintf(stderr, "ds4: GLM decode ablation active (mask 0x%x) — output is garbage, timing only\n", mask);
-            }
-        }
-        cached = (int)mask;
-    }
-    return (uint32_t)cached;
 }
 
 static bool glm_graph_encode_shared_swiglu_one(
@@ -51370,12 +51411,14 @@ static bool glm_graph_forward_token(
                                                 DS4_RMS_EPS) != 0;
         }
         DS4_GLM_PROFILE_DECODE_STAGE("glm_decode_attn", "attn_norm");
+        const uint32_t decode_ablate = glm_decode_ablate_mask();
         if (ok && glm53_kda) {
             DS4_GLM_FT_STAGE("KDA attention");
-            ok = glm53_graph_kda_attention(g, model, l, il);
+            if (!(decode_ablate & DS4_GLM_ABLATE_KDA)) {
+                ok = glm53_graph_kda_attention(g, model, l, il);
+            }
             goto glm53_attention_done;
         }
-        const uint32_t decode_ablate = glm_decode_ablate_mask();
         DS4_GLM_FT_STAGE("DSA q_a projection");
         if (ok && !(decode_ablate & DS4_GLM_ABLATE_QPATH)) {
             ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->q_rank,
