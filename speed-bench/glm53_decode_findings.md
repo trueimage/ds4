@@ -191,12 +191,26 @@ measured inside it.  The `hc` and `head` ablation arms split it:
 `hc,head` together measure 5.77 ms against 5.79 for the two separately, so the
 split is additive and the arms are not interacting.
 
-**The mHC producer is the largest unoptimised item in the decode step.**
-`glm53_graph_hc_pre` issues four dispatches -- plain RMSNorm, the 16384->24 mix
-matvec, the split/mix, and the weighted RMSNorm -- and runs twice per layer
-over 45 layers, so 360 small dispatches per token for 3.99 ms of work.
-DeepSeek V4 already has a fused F16 equivalent in
-`ds4_gpu_dsv4_hc_producer_pre_norm`; GLM 5.3 needs the BF16 version.
+**The mHC producer was the largest unoptimised item in the decode step.**
+`glm53_graph_hc_pre` issued four dispatches -- plain RMSNorm, the 16384->24 mix
+matvec, the split/mix, and the weighted RMSNorm -- twice per layer over 45
+layers, so 360 small dispatches per token for 3.99 ms of work.  DeepSeek V4
+already fused the F16 equivalent; GLM 5.3 now uses the same kernel with BF16
+mix weights, one dispatch per site instead of four:
+
+| ctx | four dispatches | fused | delta |
+|---:|---:|---:|---:|
+| 2,048 | 22.282 | 23.545 | **+5.67%** |
+| 4,096 | 21.94 | 23.195 | +5.72% |
+| 16,384 | 21.795 | 23.00 | +5.53% |
+
+Bit-exact: all 154,880 logits match to max|delta| = 0.  Prefill is unchanged,
+since only the decode path is fused.  2.41 ms of the 3.99 ms is gone; the
+remaining 1.58 ms is the fused kernel's own arithmetic.
+
+**This is the largest engine-only decode gain found on this path**, and it is
+worth contrasting with the KDA recurrence work the earlier budget pointed at:
+that stage is 2.8% of decode in total, while this one change is +5.67%.
 
 **The output head is nearly all matvec.**  1.80 ms for a [4096 -> 154880]
 BF16 matvec is close to what its 1.27 GB costs at this machine's measured
@@ -234,6 +248,15 @@ every boundary, which on this workload adds a uniform ~0.206 ms per boundary
 and roughly triples the measured decode time; and because the floor is uniform,
 stages that do little real work all read as roughly the floor.  Prefer
 `DS4_GLM_DECODE_ABLATE` for attribution and use the stage profiler to localise.
+
+## A trap when A/B-testing a shader change
+
+`ds4_gpu_full_source()` reads `metal/*.metal` from disk at run time and there
+is no embedded fallback, so building two binaries around a shader edit does
+**not** compare two shaders -- both read whatever is on disk when they run.
+Use the per-file overrides (`DS4_METAL_GLM53_KDA_SOURCE` and its siblings) with
+a single binary instead.  A measurement in this file was wrong for exactly
+this reason before it was caught.
 
 ## Scope and caveats
 

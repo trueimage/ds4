@@ -2834,6 +2834,27 @@ int ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
         float                 hc_eps,
         float                 norm_eps);
 
+int ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+        ds4_gpu_tensor       *mix,
+        ds4_gpu_tensor       *out,
+        ds4_gpu_tensor       *norm_out,
+        ds4_gpu_tensor       *split,
+        const ds4_gpu_tensor *residual_hc,
+        const void           *model_map,
+        uint64_t              model_size,
+        uint64_t              mix_weight_offset,
+        uint64_t              scale_offset,
+        uint64_t              base_offset,
+        uint64_t              norm_weight_offset,
+        uint32_t              n,
+        uint32_t              mix_dim,
+        uint32_t              n_embd,
+        uint32_t              n_hc,
+        uint32_t              sinkhorn_iters,
+        float                 eps,
+        float                 hc_eps,
+        float                 norm_eps);
+
 #endif
 int ds4_gpu_output_hc_weights_tensor(
         ds4_gpu_tensor       *out,

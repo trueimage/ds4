@@ -95,6 +95,7 @@ static id<MTLComputePipelineState> g_hc_split_sinkhorn_pipeline;
 static id<MTLComputePipelineState> g_hc_split_weighted_sum_pipeline;
 static id<MTLComputePipelineState> g_hc_split_weighted_sum_norm_pipeline;
 static id<MTLComputePipelineState> g_dsv4_hc_producer_pre_norm_pipeline;
+static id<MTLComputePipelineState> g_dsv4_hc_producer_pre_norm_bf16_pipeline;
 static id<MTLComputePipelineState> g_hc_weighted_sum_pipeline;
 static id<MTLComputePipelineState> g_output_hc_weights4_pipeline;
 static uint32_t g_test_flags;
@@ -10269,6 +10270,7 @@ void ds4_gpu_cleanup(void) {
         g_hc_split_weighted_sum_pipeline = nil;
         g_hc_split_weighted_sum_norm_pipeline = nil;
         g_dsv4_hc_producer_pre_norm_pipeline = nil;
+        g_dsv4_hc_producer_pre_norm_bf16_pipeline = nil;
         g_hc_weighted_sum_pipeline = nil;
         g_output_hc_weights4_pipeline = nil;
         g_hc_expand_pipeline = nil;
@@ -42939,7 +42941,11 @@ int ds4_gpu_hc_rms_norm_mix_f16_tensor(
 }
 
 
-int ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
+/* The f16 and bf16 producers are the same dispatch with a different mix
+ * weight type; both are 16 bits per element, so every size, stride and buffer
+ * binding below is identical and only the pipeline differs. */
+static int ds4_gpu_hc_rms_norm_mix_split_norm_16bit_tensor(
+        bool                  mix_is_bf16,
         ds4_gpu_tensor       *mix,
         ds4_gpu_tensor       *out,
         ds4_gpu_tensor       *norm_out,
@@ -43014,12 +43020,18 @@ int ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
             model_map, model_size, norm_weight_offset, out_bytes, &norm_inner);
         if (!mix_weight || !scalebuf || !basebuf || !norm_weight) return 0;
 
-        if (!g_dsv4_hc_producer_pre_norm_pipeline) {
+        if (mix_is_bf16) {
+            if (!g_dsv4_hc_producer_pre_norm_bf16_pipeline) {
+                g_dsv4_hc_producer_pre_norm_bf16_pipeline = ds4_gpu_get_pipeline(
+                    "kernel_dsv4_hc_rms_norm_mix_bf16_cluster2_pre_norm");
+            }
+        } else if (!g_dsv4_hc_producer_pre_norm_pipeline) {
             g_dsv4_hc_producer_pre_norm_pipeline = ds4_gpu_get_pipeline(
                 "kernel_dsv4_hc_rms_norm_mix_f16_cluster2_pre_norm");
         }
         id<MTLComputePipelineState> producer =
-            g_dsv4_hc_producer_pre_norm_pipeline;
+            mix_is_bf16 ? g_dsv4_hc_producer_pre_norm_bf16_pipeline
+                        : g_dsv4_hc_producer_pre_norm_pipeline;
         if (!producer || producer.maxTotalThreadsPerThreadgroup < 512u) {
             return 0;
         }
@@ -43107,6 +43119,37 @@ int ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
     }
     return 1;
 }
+
+#define DS4_HC_PRODUCER_FORWARD_ARGS                                          \
+    mix, out, norm_out, split, residual_hc, model_map, model_size,            \
+    mix_weight_offset, scale_offset, base_offset, norm_weight_offset,         \
+    n, mix_dim, n_embd, n_hc, sinkhorn_iters, eps, hc_eps, norm_eps
+
+int ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
+        ds4_gpu_tensor *mix, ds4_gpu_tensor *out, ds4_gpu_tensor *norm_out,
+        ds4_gpu_tensor *split, const ds4_gpu_tensor *residual_hc,
+        const void *model_map, uint64_t model_size,
+        uint64_t mix_weight_offset, uint64_t scale_offset,
+        uint64_t base_offset, uint64_t norm_weight_offset,
+        uint32_t n, uint32_t mix_dim, uint32_t n_embd, uint32_t n_hc,
+        uint32_t sinkhorn_iters, float eps, float hc_eps, float norm_eps) {
+    return ds4_gpu_hc_rms_norm_mix_split_norm_16bit_tensor(
+        false, DS4_HC_PRODUCER_FORWARD_ARGS);
+}
+
+int ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+        ds4_gpu_tensor *mix, ds4_gpu_tensor *out, ds4_gpu_tensor *norm_out,
+        ds4_gpu_tensor *split, const ds4_gpu_tensor *residual_hc,
+        const void *model_map, uint64_t model_size,
+        uint64_t mix_weight_offset, uint64_t scale_offset,
+        uint64_t base_offset, uint64_t norm_weight_offset,
+        uint32_t n, uint32_t mix_dim, uint32_t n_embd, uint32_t n_hc,
+        uint32_t sinkhorn_iters, float eps, float hc_eps, float norm_eps) {
+    return ds4_gpu_hc_rms_norm_mix_split_norm_16bit_tensor(
+        true, DS4_HC_PRODUCER_FORWARD_ARGS);
+}
+
+#undef DS4_HC_PRODUCER_FORWARD_ARGS
 
 int ds4_gpu_output_hc_weights_tensor(
         ds4_gpu_tensor       *out,

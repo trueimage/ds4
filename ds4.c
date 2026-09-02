@@ -43767,6 +43767,43 @@ static bool glm53_graph_hc_pre(
     }
     const uint32_t hc_dim = DS4_N_HC * DS4_N_EMBD;
     const uint32_t hc_mix = DS4_N_HC * (DS4_N_HC + 2u);
+#if defined(__APPLE__)
+    /* The compound producer DeepSeek V4 already uses, with the BF16 mix
+     * weights GLM 5.3 stores instead of F16.  It folds the plain RMSNorm, the
+     * 16384->24 mix matvec, the sinkhorn split/collapse and the weighted
+     * RMSNorm into one dispatch, so each of the 90 per-token sites costs one
+     * dispatch instead of four. */
+    if (fn->type == DS4_TENSOR_BF16 &&
+        hc_dim == 16384u && hc_mix == 24u &&
+        DS4_N_EMBD == 4096u && DS4_N_HC == 4u &&
+        !metal_graph_use_reference_hc_decode() &&
+        getenv("DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE") == NULL &&
+        (ds4_gpu_device_is_pre_m5_apple_silicon() ||
+         ds4_gpu_device_is_m5_apple_silicon())) {
+        const int fused = ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+                g->hc_mix,
+                collapsed,
+                normalized,
+                g->hc_split,
+                residual_hc,
+                model->map,
+                model->size,
+                fn->abs_offset,
+                scale->abs_offset,
+                base->abs_offset,
+                norm->abs_offset,
+                hc_dim,
+                hc_mix,
+                DS4_N_EMBD,
+                DS4_N_HC,
+                DS4_N_HC_SINKHORN_ITER,
+                DS4_RMS_EPS,
+                DS4_HC_EPS,
+                DS4_RMS_EPS);
+        if (fused < 0) return false;
+        if (fused > 0) return true;
+    }
+#endif
     bool ok = ds4_gpu_rms_norm_plain_tensor(g->hc_flat,
                                             residual_hc,
                                             hc_dim,
