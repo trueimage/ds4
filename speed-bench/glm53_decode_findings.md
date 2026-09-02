@@ -348,13 +348,32 @@ occupancy on small work than four sequential ones.  Dividing 2.41 ms by 270
 gives 8.9 us per dispatch only if launches were the whole cost, and they were
 not.
 
-The same caution applies to the gate/beta chain.  It moves at least 232 MB,
-which would be 0.33 ms at the rate the big projections achieve, and it costs
-1.37 ms.  The ~1.04 ms difference is *available* to fusion in principle, but it
-is a mix of launch overhead, unmeasured activation traffic, and low occupancy
-on 128- and 64-wide outputs -- and only a benchmark will say how much of it
-comes back.  Treat **1.0 ms, 2.3% of decode** as an upper bound on the prize,
-not a forecast:
+The same caution applied to the gate/beta chain, and the benchmark bore it out.
+The chain moves at least 232 MB, which would be 0.33 ms at the rate the big
+projections achieve, and it cost 1.37 ms, so ~1.04 ms looked available.
+**Pairing it recovered 0.31 ms of that, not 1.0 ms** -- the upper bound was
+three times the prize, which is why it was written as one.
+
+That result also gives the first clean per-dispatch number.  Pairing removes 68
+dispatches per token and removes *nothing else*: the same buffers are written
+and the same weight bytes are read, so the saving is launch overhead and
+nothing but:
+
+    0.310 ms / 68 dispatches = 4.6 us per dispatch
+
+Applying that back to the mHC fusion decomposes its 2.41 ms honestly:
+
+| | ms |
+|---|---:|
+| launch overhead (270 x 4.6 us) | 1.23 |
+| intermediate traffic + occupancy | 1.18 |
+
+So roughly half of the mHC win was dispatch count and half was the three
+intermediate round-trips per site that the fused kernel no longer materialises.
+The earlier 8.9 us per dispatch inferred from that fusion alone was about twice
+the real launch cost, exactly because it absorbed the traffic half.
+
+The remaining shape of the KDA gate work, now measured rather than projected:
 
 - `f_a` and `g_a` are both [4096 -> 128] from the same `attn_norm` input, so
   they pair the way `ds4_gpu_glm53_matmul_bf16_qkv` already pairs q/k/v.

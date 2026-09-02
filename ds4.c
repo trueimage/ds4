@@ -40755,6 +40755,9 @@ typedef struct ds4_glm_gpu_graph {
     ds4_gpu_tensor *kda_k;
     ds4_gpu_tensor *kda_v;
     ds4_gpu_tensor *kda_lowrank;
+    /* f_a and g_a run concurrently when the gate chain is paired, so they
+     * cannot share one low-rank destination the way the serial chain did. */
+    ds4_gpu_tensor *kda_lowrank_g;
     ds4_gpu_tensor *kda_raw_gate;
     ds4_gpu_tensor *kda_raw_beta;
     ds4_gpu_tensor *kda_output_gate;
@@ -42742,6 +42745,7 @@ static void glm_graph_free(ds4_glm_gpu_graph *g) {
     ds4_gpu_tensor_free(g->kda_raw_beta);
     ds4_gpu_tensor_free(g->kda_raw_gate);
     ds4_gpu_tensor_free(g->kda_lowrank);
+    ds4_gpu_tensor_free(g->kda_lowrank_g);
     ds4_gpu_tensor_free(g->kda_v);
     ds4_gpu_tensor_free(g->kda_k);
     ds4_gpu_tensor_free(g->kda_q);
@@ -43119,6 +43123,8 @@ static bool glm_graph_alloc_slice(
         DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_k, kda_projection_bytes);
         DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_v, kda_projection_bytes);
         DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_lowrank,
+                                   (uint64_t)DS4_N_KDA_HEAD_DIM * sizeof(float));
+        DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_lowrank_g,
                                    (uint64_t)DS4_N_KDA_HEAD_DIM * sizeof(float));
         DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_raw_gate, kda_projection_bytes);
         DS4_GLM_GRAPH_ALLOC_TENSOR(g->kda_raw_beta,
@@ -44053,7 +44059,44 @@ static bool glm53_graph_kda_attention(
                                     DS4_N_EMBD, projection, g->attn_norm);
         }
     }
-    if (!(ablate & DS4_GLM_ABLATE_KDA_GATE)) {
+    bool gate_paired = false;
+#if defined(__APPLE__)
+    /* Five serial matvecs become two paired dispatches plus beta.  f_a and g_a
+     * share the attn_norm row; f_b and g_b read the two low-rank vectors those
+     * produce, which is why the pair kernel takes separate inputs.  beta is a
+     * different output width and stays on its own. */
+    if (ok && !(ablate & DS4_GLM_ABLATE_KDA_GATE) &&
+        g->kda_lowrank_g &&
+        l->kda_f_a->type == DS4_TENSOR_BF16 &&
+        l->kda_g_a->type == DS4_TENSOR_BF16 &&
+        l->kda_f_b->type == DS4_TENSOR_BF16 &&
+        l->kda_g_b->type == DS4_TENSOR_BF16 &&
+        getenv("DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR") == NULL) {
+        gate_paired = ds4_gpu_glm53_matmul_bf16_pair(
+                g->kda_lowrank, g->kda_lowrank_g,
+                model->map, model->size,
+                l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
+                DS4_N_EMBD, DS4_N_KDA_HEAD_DIM,
+                g->attn_norm, g->attn_norm) != 0;
+        if (gate_paired) {
+            gate_paired = ds4_gpu_glm53_matmul_bf16_pair(
+                    g->kda_raw_gate, g->kda_output_gate,
+                    model->map, model->size,
+                    l->kda_f_b->abs_offset, l->kda_g_b->abs_offset,
+                    DS4_N_KDA_HEAD_DIM, projection,
+                    g->kda_lowrank, g->kda_lowrank_g) != 0;
+        }
+        /* A partial failure is safe to fall back from: both halves are pure
+         * functions of attn_norm, so the serial chain below simply recomputes
+         * the same values into the same buffers. */
+        if (gate_paired) {
+            ok = glm53_graph_matmul(
+                    g->kda_raw_beta, model, l->kda_beta,
+                    DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+        }
+    }
+#endif
+    if (!gate_paired && !(ablate & DS4_GLM_ABLATE_KDA_GATE)) {
         if (ok) ok = glm53_graph_matmul(
                 g->kda_lowrank, model, l->kda_f_a,
                 DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm);

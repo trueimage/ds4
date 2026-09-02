@@ -190,6 +190,32 @@ kernel void kernel_glm53_mul_mv_bf16_f32_qkv(
                               tgpig.xy, lane, sg, nsg);
 }
 
+/*
+ * Two independent matvecs of the same shape in one dispatch, selected by
+ * tgpig.z, exactly as the qkv variant above selects three.  The inputs are
+ * separate pointers rather than one shared row, which lets this serve both
+ * halves of the GLM 5.3 KDA gate chain: f_a/g_a read the same attn_norm row,
+ * while f_b/g_b read the two different low-rank vectors those produce.
+ */
+kernel void kernel_glm53_mul_mv_bf16_f32_pair(
+        constant glm53_bf16_matmul_args &args,
+        device const ushort             *weights_a,
+        device const ushort             *weights_b,
+        device const float              *x_a,
+        device const float              *x_b,
+        device float                    *out_a,
+        device float                    *out_b,
+        uint3 tgpig [[threadgroup_position_in_grid]],
+        ushort lane [[thread_index_in_simdgroup]],
+        ushort sg [[simdgroup_index_in_threadgroup]],
+        ushort nsg [[simdgroups_per_threadgroup]]) {
+    device const ushort *weights = tgpig.z == 0u ? weights_a : weights_b;
+    device const float  *x       = tgpig.z == 0u ? x_a : x_b;
+    device float        *out     = tgpig.z == 0u ? out_a : out_b;
+    glm53_mul_mv_bf16_f32_row(args, weights, x, out,
+                              tgpig.xy, lane, sg, nsg);
+}
+
 struct glm53_bf16_block16 {
     ushort v[16];
 };
