@@ -436,108 +436,24 @@ What the work actually is, none of it started:
   unrelated rows.  Sorting changes the softmax reduction order, so it needs
   numerical validation, not just a benchmark.
 
-## Why the shared-down fusion was not done
+## The shared-down fusion, after a second look
 
-`ds4_gpu_shared_down_hc_expand_q8_0_tensor` exists and is exactly GLM's shared
-down-projection followed by the expand this branch already fused, so it looked
-like two dispatches collapsing into one for another ~0.2 ms.
+An earlier revision of this document said this could not be done without a
+dedicated shared-expert mid buffer, because `glm_graph_routed_moe_one_dispatch`
+takes `ffn_mid` as scratch and would clobber the shared mid.
 
-It does not fit.  `glm_graph_routed_moe_one_dispatch` takes `ffn_mid` as its
-scratch buffer, and on the ordering where the shared expert runs first the
-routed dispatch clobbers it.  Deferring the shared down-projection until after
-the routed stage -- which is required, since the fused kernel needs
-`routed_out` -- would read that clobbered scratch.  Making it work needs a
-second mid buffer, and at 0.5% that did not justify the aliasing risk on top of
-the `defer_final_sum` plumbing already in this path.
+That is true of only one of the two orderings.  `shared_first` is
+`streaming_selected_cache`, so the shared expert runs first *only* on the
+SSD-streaming path.  On the fully-resident path the routed stage has already
+finished when the shared expert runs, `ffn_mid` still holds the shared mid and
+`ffn_out` holds the routed result -- which is exactly what
+`ds4_gpu_shared_down_hc_expand_q8_0_tensor` takes.  No extra buffer.
 
-## What is left, priced
-
-With KDA split and the residual row split, the dense stages can be checked
-against the memory system.  The ceiling is 736.9 GB/s.
-
-The **weight** byte counts are exact -- summed from the GGUF tensor table, per
-token, over all 34 KDA layers.  They are a lower bound on total traffic: they
-exclude activations, intermediate writes, and (for the recurrence row) the
-conv state, q/k/v inputs, gate inputs, conv weights and biases, and the output
-write.  For the two dense projection rows the weights dominate so completely
-that the omission does not matter; for the two small rows it does, and the
-GB/s shown for them is correspondingly an **under**estimate.
-
-| stage | weight bytes/token | ms | GB/s (weights only) | vs ceiling |
-|---|---:|---:|---:|---:|
-| kda q/k/v (3 x [4096,8192] BF16 x34) | 6.845 GB | 9.68 | **707** | **96%** |
-| kda_output ([8192,4096] BF16 x34) | 2.282 GB | 3.16 | **722** | **98%** |
-| kda gate/beta (f_a, f_b, beta, g_a, g_b) | 0.232 GB | 1.37 | >=169 | >=23% |
-| kda recurrence (136 MiB state, r+w) | 0.285 GB | 1.23 | >=232 | >=31% |
-
-**The KDA projections are done, on this machine.**  At 96% and 98% of a
-736.9 GB/s ceiling there is no room for a faster inner loop; what remains is
-within measurement error of the memory system.  This is an M3 Ultra result --
-a part with a different bandwidth-to-compute ratio could sit lower and have
-something to gain.  Specialising the BF16 matvec for the 4096 and 8192
-shapes -- function constants to unroll the loops, two output rows per
-simdgroup, staging the activation row in threadgroup memory -- cannot pay,
-because the kernel already moves bytes about as fast as the machine will.
-
-This also corrects the 497 -> 547 GB/s figure recorded when the widened loads
-landed.  That came from the 18.37 ms KDA row, which was never measured; against
-the measured 9.68 ms the q/k/v projections run at 707 GB/s.
-
-**What is left is per-launch cost, not bandwidth.**  The two stages far below
-the ceiling are the ones made of many small dispatches.
-
-How much of that is launch overhead specifically is *not* established here, and
-the mHC result should not be read as a per-dispatch price.  Collapsing four
-dispatches into one removed 2.41 ms across 90 sites, but it removed three
-intermediate round-trips per site (`hc_flat`, `hc_mix`, `hc_split` each written
-then re-read) along with the launches, and a fused kernel also gets better
-occupancy on small work than four sequential ones.  Dividing 2.41 ms by 270
-gives 8.9 us per dispatch only if launches were the whole cost, and they were
-not.
-
-The same caution applied to the gate/beta chain, and the benchmark bore it out.
-The chain moves at least 232 MB, which would be 0.33 ms at the rate the big
-projections achieve, and it cost 1.37 ms, so ~1.04 ms looked available.
-**Pairing it recovered 0.31 ms of that, not 1.0 ms** -- the upper bound was
-three times the prize, which is why it was written as one.
-
-That result also gives the first clean per-dispatch number.  Pairing removes 68
-dispatches per token and removes *nothing else*: the same buffers are written
-and the same weight bytes are read, so the saving is launch overhead and
-nothing but:
-
-    0.310 ms / 68 dispatches = 4.6 us per dispatch
-
-Applying that back to the mHC fusion decomposes its 2.41 ms honestly:
-
-| | ms |
-|---|---:|
-| launch overhead (270 x 4.6 us) | 1.23 |
-| intermediate traffic + occupancy | 1.18 |
-
-So roughly half of the mHC win was dispatch count and half was the three
-intermediate round-trips per site that the fused kernel no longer materialises.
-The earlier 8.9 us per dispatch inferred from that fusion alone was about twice
-the real launch cost, exactly because it absorbed the traffic half.
-
-The remaining shape of the KDA gate work, now measured rather than projected:
-
-- `f_a` and `g_a` are both [4096 -> 128] from the same `attn_norm` input, so
-  they pair the way `ds4_gpu_glm53_matmul_bf16_qkv` already pairs q/k/v.
-  `beta` is [4096 -> 64] off the same input at a different width.
-- `f_b` and `g_b` are both [128 -> 8192] but read different activations, so
-  pairing them needs a two-input kernel.
-- Both need a second low-rank buffer: `g->kda_lowrank` is written by `f_a`,
-  read by `f_b`, then overwritten by `g_a`.
-
-Fusing the projection consumers with the HC expansion
-(`ds4_gpu_hc_expand_tensor`, 90 dispatches per token) is the same kind of play
-in the ~3.0 ms "everything else" bucket -- dispatch count, not bandwidth.
-
-**FP16 storage for the recurrent state is not worth pursuing.**  At 31% of
-ceiling the state is latency-bound rather than bandwidth-bound, so halving it
-would not halve the 1.23 ms; the whole stage is 2.8% of decode, and the upside
-is well under 1% against an accumulating-error risk over long contexts.
+Fusing the shared down-projection, the routed add and the HC expand into that
+one dispatch is worth **+0.77% (t=13.60), 0.320 ms over 42 sites** -- 7.6 us
+per site, above both the 4.6 us launch cost and the 3.7 us the plain FFN-tail
+fusion returned, because it also removes the `ffn_sum` round-trip.  The
+streaming path is excluded and keeps the separate dispatches.
 
 ## Two tuning knobs that turn out not to matter
 
@@ -578,13 +494,14 @@ GGUF** with the same harness, contexts and interleaving.
 
     ctx 2048, 128 generated tokens, arms interleaved, 3 pairs
 
-    base (110afdd)   21.190 tok/s   47.19 ms/token
-    tip              23.977 tok/s   41.71 ms/token
-    engine-only      +13.15%
+    base (110afdd)   21.153 tok/s   47.28 ms/token
+    tip              24.147 tok/s   41.41 ms/token
+    engine-only      +14.15%
 
 Contributions, each measured against the baseline current when it landed: the
 widened BF16 loads ~+5.4%, the mHC producer fusion +5.67%, the KDA gate pairing
-+0.74%, and the three HC-expand epilogues +0.46% / +0.11% / +0.14%.
++0.74%, the three HC-expand epilogues +0.46% / +0.11% / +0.14%, and the
+shared-down/HC fusion +0.77%.
 
 Note the base reproduces the 21.19 tok/s of the original budget almost exactly,
 which is a useful check that machine conditions have not drifted between the
