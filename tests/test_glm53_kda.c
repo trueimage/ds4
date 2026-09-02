@@ -72,6 +72,75 @@ static float bf16_to_f32(uint16_t value) {
     return bits.f;
 }
 
+/* Exercises ds4_gpu_glm53_matmul_bf16 at one width.  in_dim picks the path
+ * inside the shared row helper in metal/glm53_bf16.metal: a multiple of 1024
+ * takes the eight-load branch, a multiple of 512 the four-load branch, and
+ * anything else the scalar fallback.  The wide branches repartition which lane
+ * accumulates which k, so they are deliberately not bit-identical to the
+ * scalar path; the reference is accumulated in double and compared with a
+ * relative tolerance.  A tiling or indexing error moves a result far more than
+ * that, which is what this is here to catch. */
+static void check_bf16_matmul(const uint8_t *model, size_t model_bytes,
+                              uint64_t offset, uint32_t in_dim,
+                              uint32_t out_dim, uint32_t rows,
+                              const char *what) {
+    uint16_t *w = (uint16_t *)(void *)((uint8_t *)(uintptr_t)model + offset);
+    for (uint32_t o = 0; o < out_dim; o++) {
+        for (uint32_t i = 0; i < in_dim; i++) {
+            w[(size_t)o * in_dim + i] = f32_to_bf16(
+                0.002f * (float)((int)(o % 11u) - 5) +
+                0.001f * (float)((int)(i % 13u) - 6));
+        }
+    }
+    const size_t x_bytes   = (size_t)rows * in_dim * sizeof(float);
+    const size_t out_bytes = (size_t)rows * out_dim * sizeof(float);
+    float *x        = malloc(x_bytes);
+    float *expected = malloc(out_bytes);
+    float *actual   = malloc(out_bytes);
+    require_ok(x && expected && actual, "wide BF16 host allocation");
+    for (uint32_t r = 0; r < rows; r++) {
+        for (uint32_t i = 0; i < in_dim; i++) {
+            x[(size_t)r * in_dim + i] =
+                0.02f * (float)((int)(i % 17u) - 8) + 0.005f * (float)r;
+        }
+        for (uint32_t o = 0; o < out_dim; o++) {
+            double sum = 0.0;
+            for (uint32_t i = 0; i < in_dim; i++) {
+                sum += (double)bf16_to_f32(w[(size_t)o * in_dim + i]) *
+                       (double)x[(size_t)r * in_dim + i];
+            }
+            expected[(size_t)r * out_dim + o] = (float)sum;
+        }
+    }
+    ds4_gpu_tensor *gx   = ds4_gpu_tensor_alloc(x_bytes);
+    ds4_gpu_tensor *gout = ds4_gpu_tensor_alloc(out_bytes);
+    require_ok(gx && gout, "wide BF16 tensor allocation");
+    require_ok(ds4_gpu_tensor_write(gx, 0, x, x_bytes), "wide BF16 input write");
+
+    require_ok(ds4_gpu_glm53_matmul_bf16(gout, model, model_bytes, offset,
+                                         in_dim, out_dim, gx, 1), what);
+    require_ok(ds4_gpu_tensor_read(gout, 0, actual, out_dim * sizeof(float)),
+               "wide BF16 decode output read");
+    for (uint32_t o = 0; o < out_dim; o++) {
+        require_close(what, actual[o], expected[o],
+                      2e-5f * (fabsf(expected[o]) + 1.0f));
+    }
+
+    require_ok(ds4_gpu_glm53_matmul_bf16(gout, model, model_bytes, offset,
+                                         in_dim, out_dim, gx, rows), what);
+    require_ok(ds4_gpu_tensor_read(gout, 0, actual, out_bytes),
+               "wide BF16 prefill output read");
+    for (uint32_t i = 0; i < rows * out_dim; i++) {
+        require_close(what, actual[i], expected[i],
+                      2e-5f * (fabsf(expected[i]) + 1.0f));
+    }
+    ds4_gpu_tensor_free(gx);
+    ds4_gpu_tensor_free(gout);
+    free(x);
+    free(expected);
+    free(actual);
+}
+
 int main(void) {
     enum {
         D = 128,
@@ -96,7 +165,14 @@ int main(void) {
         Q4_OUT = 37,
         Q4_ROWS = 3,
         Q8_OFFSET = 60000,
-        MODEL_BYTES = 65536,
+        /* Widths that reach the two wide branches of the BF16 row helper.
+         * 4096 is the real GLM 5.3 kda_{q,k,v} width; 8192 (kda_output) is
+         * covered by the same eight-load branch that 1024 and 4096 take. */
+        WIDE512_OFFSET = 65536,   WIDE512_IN = 512,   WIDE512_OUT = 4,
+        WIDE1024_OFFSET = 73728,  WIDE1024_IN = 1024, WIDE1024_OUT = 4,
+        WIDE4096_OFFSET = 90112,  WIDE4096_IN = 4096, WIDE4096_OUT = 2,
+        WIDE_ROWS = 3,
+        MODEL_BYTES = 131072,
     };
 
     uint8_t *model = mmap(NULL, MODEL_BYTES, PROT_READ | PROT_WRITE,
@@ -179,6 +255,15 @@ int main(void) {
                "BF16 prefill output read");
     for (uint32_t i = 0; i < BF16_ROWS * BF16_OUT; i++)
         require_close("BF16 prefill matmul", bf16_actual[i], bf16_expected[i], 2e-4f);
+
+    /* BF16_IN above is 64, so the case just checked only ever runs the scalar
+     * fallback.  These three reach the widened paths. */
+    check_bf16_matmul(model, MODEL_BYTES, WIDE512_OFFSET, WIDE512_IN,
+                      WIDE512_OUT, WIDE_ROWS, "BF16 matmul in_dim=512 (four-load path)");
+    check_bf16_matmul(model, MODEL_BYTES, WIDE1024_OFFSET, WIDE1024_IN,
+                      WIDE1024_OUT, WIDE_ROWS, "BF16 matmul in_dim=1024 (eight-load path)");
+    check_bf16_matmul(model, MODEL_BYTES, WIDE4096_OFFSET, WIDE4096_IN,
+                      WIDE4096_OUT, WIDE_ROWS, "BF16 matmul in_dim=4096 (eight-load path)");
 
 #ifdef DS4_ROCM_BUILD
     test_block_q4_K *q4_weights = (test_block_q4_K *)(model + Q4_OFFSET);
