@@ -259,6 +259,50 @@ and roughly triples the measured decode time; and because the floor is uniform,
 stages that do little real work all read as roughly the floor.  Prefer
 `DS4_GLM_DECODE_ABLATE` for attribution and use the stage profiler to localise.
 
+## A non-destructive second instrument
+
+The ablation arms are destructive: a skipped stage leaves stale contents, so
+the run is timing-only and can in principle perturb data-dependent routing.
+`DS4_GLM_DECODE_REPEAT` is the other half of the pincer.  Every stage it
+accepts is a pure function of its inputs, so dispatching it one extra time per
+site writes the same bytes; the whole-token delta is then one extra execution
+of that stage and **the model output is unchanged**.  Verified: all six arms
+dump logits identical to the baseline at max|delta| = 0.
+
+Only idempotent stages get a bit.  The KDA recurrence advances conv and
+recurrent state, and directional steering updates in place, so neither can be
+repeated and neither is offered.
+
+Where the two instruments agree, the number is trustworthy:
+
+| stage | ablate | repeat | agreement |
+|---|---:|---:|---|
+| kda_qkv | 9.69 | 9.76 | 0.7% |
+| head | 1.80 | 1.76 | 2% |
+| kda_gate | 1.37 | 1.45 | 6% |
+| **kda_out** | **3.33** | **2.47** | **35%** |
+
+The `kda_out` disagreement is reproducible across rounds, and the exact byte
+count settles it.  Both instruments agree that kda_qkv costs 9.69 ms for
+6.845 GB, i.e. 706 GB/s; kda_output is 2.282 GB, which at that rate is 3.23 ms
+-- next to the ablation figure, not the repeat one.  Repeat underestimates here
+because the second dispatch re-reads a 67 MB per-layer weight set that is
+partly still resident, while kda_qkv's 201 MB per layer does not survive.
+
+**So: repeat is the right instrument for dispatch-bound stages and undercounts
+cache-friendly bandwidth-bound ones; ablation is the reverse.**  Use both, and
+let exact bytes arbitrate when they disagree.
+
+### The remaining bucket, partly split
+
+`hc_expand` measures **0.55 ms/token, 1.3% of decode** by repeat -- a
+dispatch-bound stage, so this figure is the reliable one.  That leaves roughly
+2.5 ms in the residual row for the residual adds, directional steering, the
+remaining norms and the final HC collapse, none of which are separated yet.
+
+With the mHC producer now fused, `hc_pre` measures 1.36 ms by repeat, down from
+the 3.99 ms the four-dispatch chain cost.
+
 ## What is left, priced
 
 With KDA split and the residual row split, the dense stages can be checked

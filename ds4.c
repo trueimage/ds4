@@ -43763,6 +43763,118 @@ static bool glm53_graph_kda_attention_rows(
     return ok;
 }
 
+/* Timing-only skip-ablation for the GLM decode layer (comma list in
+ * DS4_GLM_DECODE_ABLATE): the skipped stage's output buffer keeps stale
+ * contents, so the run produces garbage text but every remaining dispatch
+ * (and every TP gate) still executes. Whole-token time deltas against a
+ * baseline run are the only reliable per-stage cost measurement — the
+ * stage profiler's per-stage command-buffer splits inflate small stages. */
+#define DS4_GLM_ABLATE_ATTN_OUT  (1u << 0)
+#define DS4_GLM_ABLATE_ATTN_CORE (1u << 1)
+#define DS4_GLM_ABLATE_QPATH     (1u << 2)
+#define DS4_GLM_ABLATE_INDEXER   (1u << 3)
+#define DS4_GLM_ABLATE_ROUTED    (1u << 4)
+#define DS4_GLM_ABLATE_SHARED    (1u << 5)
+#define DS4_GLM_ABLATE_QKLOW     (1u << 6)
+/* KDA (linear attention), the whole stage and its four substages.  KDA is the
+ * largest single line in the decode budget and had no ablation arm at all, so
+ * its cost was estimated rather than measured. */
+#define DS4_GLM_ABLATE_KDA       (1u << 7)
+#define DS4_GLM_ABLATE_KDA_QKV   (1u << 8)
+#define DS4_GLM_ABLATE_KDA_GATE  (1u << 9)
+#define DS4_GLM_ABLATE_KDA_RECUR (1u << 10)
+#define DS4_GLM_ABLATE_KDA_OUT   (1u << 11)
+/* The two largest pieces of what the budget lumps into "norms, hyper-
+ * connections, residual, LM head": the mHC producer chain that runs twice per
+ * layer, and the output head. */
+#define DS4_GLM_ABLATE_HC        (1u << 12)
+#define DS4_GLM_ABLATE_HEAD      (1u << 13)
+
+/* Exact token match against the comma list.  A substring test stops working
+ * as soon as one stage name is a prefix of another: strstr(env, "kda") also
+ * fires on "kda_qkv", which would ablate the whole stage when only one
+ * substage was asked for. */
+static bool glm_ablate_names(const char *env, const char *name) {
+    const size_t n = strlen(name);
+    for (const char *p = env; *p; ) {
+        while (*p == ',' || *p == ' ' || *p == '\t') p++;
+        const char *start = p;
+        while (*p && *p != ',' && *p != ' ' && *p != '\t') p++;
+        if ((size_t)(p - start) == n && memcmp(start, name, n) == 0) return true;
+    }
+    return false;
+}
+
+/* Non-destructive counterpart to the ablation mask (comma list in
+ * DS4_GLM_DECODE_REPEAT).  A named stage is dispatched one extra time per
+ * site; because every stage listed here is a pure function of its inputs,
+ * running it twice writes the same bytes, so the model output is unchanged and
+ * data-dependent routing downstream cannot shift.  The whole-token delta
+ * against a baseline is then one extra execution of that stage.
+ *
+ * Only idempotent stages are offered.  The KDA recurrence advances the conv
+ * and recurrent state, and directional steering updates its input in place, so
+ * neither can be repeated this way and neither has a bit.
+ *
+ * This measures the same thing the ablation arms do from the other side, and
+ * disagreement between the two is a signal that one of them is lying. */
+#define DS4_GLM_REPEAT_HC_EXPAND (1u << 0)
+#define DS4_GLM_REPEAT_HC_PRE    (1u << 1)
+#define DS4_GLM_REPEAT_HEAD      (1u << 2)
+#define DS4_GLM_REPEAT_KDA_QKV   (1u << 3)
+#define DS4_GLM_REPEAT_KDA_GATE  (1u << 4)
+#define DS4_GLM_REPEAT_KDA_OUT   (1u << 5)
+
+static uint32_t glm_decode_repeat_mask(void) {
+    static int cached = -1;
+    if (cached < 0) {
+        uint32_t mask = 0;
+        const char *env = getenv("DS4_GLM_DECODE_REPEAT");
+        if (env) {
+            if (glm_ablate_names(env, "hc_expand")) mask |= DS4_GLM_REPEAT_HC_EXPAND;
+            if (glm_ablate_names(env, "hc_pre"))    mask |= DS4_GLM_REPEAT_HC_PRE;
+            if (glm_ablate_names(env, "head"))      mask |= DS4_GLM_REPEAT_HEAD;
+            if (glm_ablate_names(env, "kda_qkv"))   mask |= DS4_GLM_REPEAT_KDA_QKV;
+            if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_REPEAT_KDA_GATE;
+            if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_REPEAT_KDA_OUT;
+            if (mask) {
+                fprintf(stderr, "ds4: GLM decode stage repeat active (mask 0x%x) — output stays correct, timing only\n", mask);
+            }
+        }
+        cached = (int)mask;
+    }
+    return (uint32_t)cached;
+}
+
+static uint32_t glm_decode_ablate_mask(void) {
+    static int cached = -1;
+    if (cached < 0) {
+        uint32_t mask = 0;
+        const char *env = getenv("DS4_GLM_DECODE_ABLATE");
+        if (env) {
+            if (glm_ablate_names(env, "attn_out"))  mask |= DS4_GLM_ABLATE_ATTN_OUT;
+            if (glm_ablate_names(env, "attn_core")) mask |= DS4_GLM_ABLATE_ATTN_CORE;
+            if (glm_ablate_names(env, "qpath"))     mask |= DS4_GLM_ABLATE_QPATH;
+            if (glm_ablate_names(env, "indexer"))   mask |= DS4_GLM_ABLATE_INDEXER;
+            if (glm_ablate_names(env, "routed"))    mask |= DS4_GLM_ABLATE_ROUTED;
+            if (glm_ablate_names(env, "shared"))    mask |= DS4_GLM_ABLATE_SHARED;
+            if (glm_ablate_names(env, "qklow"))     mask |= DS4_GLM_ABLATE_QKLOW;
+            if (glm_ablate_names(env, "kda"))       mask |= DS4_GLM_ABLATE_KDA;
+            if (glm_ablate_names(env, "kda_qkv"))   mask |= DS4_GLM_ABLATE_KDA_QKV;
+            if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_ABLATE_KDA_GATE;
+            if (glm_ablate_names(env, "kda_recur")) mask |= DS4_GLM_ABLATE_KDA_RECUR;
+            if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_ABLATE_KDA_OUT;
+            if (glm_ablate_names(env, "hc"))        mask |= DS4_GLM_ABLATE_HC;
+            if (glm_ablate_names(env, "head"))      mask |= DS4_GLM_ABLATE_HEAD;
+            if (mask) {
+                fprintf(stderr, "ds4: GLM decode ablation active (mask 0x%x) — output is garbage, timing only\n", mask);
+            }
+        }
+        cached = (int)mask;
+    }
+    return (uint32_t)cached;
+}
+
 static bool glm53_graph_hc_pre(
         ds4_glm_gpu_graph       *g,
         const ds4_model         *model,
@@ -43818,7 +43930,20 @@ static bool glm53_graph_hc_pre(
                 DS4_HC_EPS,
                 DS4_RMS_EPS);
         if (fused < 0) return false;
-        if (fused > 0) return true;
+        if (fused > 0) {
+            if (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_PRE) {
+                if (ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+                        g->hc_mix, collapsed, normalized, g->hc_split,
+                        residual_hc, model->map, model->size, fn->abs_offset,
+                        scale->abs_offset, base->abs_offset, norm->abs_offset,
+                        hc_dim, hc_mix, DS4_N_EMBD, DS4_N_HC,
+                        DS4_N_HC_SINKHORN_ITER, DS4_RMS_EPS, DS4_HC_EPS,
+                        DS4_RMS_EPS) < 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 #endif
     bool ok = ds4_gpu_rms_norm_plain_tensor(g->hc_flat,
@@ -43848,77 +43973,6 @@ static bool glm53_graph_hc_pre(
     return ok;
 }
 
-/* Timing-only skip-ablation for the GLM decode layer (comma list in
- * DS4_GLM_DECODE_ABLATE): the skipped stage's output buffer keeps stale
- * contents, so the run produces garbage text but every remaining dispatch
- * (and every TP gate) still executes. Whole-token time deltas against a
- * baseline run are the only reliable per-stage cost measurement — the
- * stage profiler's per-stage command-buffer splits inflate small stages. */
-#define DS4_GLM_ABLATE_ATTN_OUT  (1u << 0)
-#define DS4_GLM_ABLATE_ATTN_CORE (1u << 1)
-#define DS4_GLM_ABLATE_QPATH     (1u << 2)
-#define DS4_GLM_ABLATE_INDEXER   (1u << 3)
-#define DS4_GLM_ABLATE_ROUTED    (1u << 4)
-#define DS4_GLM_ABLATE_SHARED    (1u << 5)
-#define DS4_GLM_ABLATE_QKLOW     (1u << 6)
-/* KDA (linear attention), the whole stage and its four substages.  KDA is the
- * largest single line in the decode budget and had no ablation arm at all, so
- * its cost was estimated rather than measured. */
-#define DS4_GLM_ABLATE_KDA       (1u << 7)
-#define DS4_GLM_ABLATE_KDA_QKV   (1u << 8)
-#define DS4_GLM_ABLATE_KDA_GATE  (1u << 9)
-#define DS4_GLM_ABLATE_KDA_RECUR (1u << 10)
-#define DS4_GLM_ABLATE_KDA_OUT   (1u << 11)
-/* The two largest pieces of what the budget lumps into "norms, hyper-
- * connections, residual, LM head": the mHC producer chain that runs twice per
- * layer, and the output head. */
-#define DS4_GLM_ABLATE_HC        (1u << 12)
-#define DS4_GLM_ABLATE_HEAD      (1u << 13)
-
-/* Exact token match against the comma list.  A substring test stops working
- * as soon as one stage name is a prefix of another: strstr(env, "kda") also
- * fires on "kda_qkv", which would ablate the whole stage when only one
- * substage was asked for. */
-static bool glm_ablate_names(const char *env, const char *name) {
-    const size_t n = strlen(name);
-    for (const char *p = env; *p; ) {
-        while (*p == ',' || *p == ' ' || *p == '\t') p++;
-        const char *start = p;
-        while (*p && *p != ',' && *p != ' ' && *p != '\t') p++;
-        if ((size_t)(p - start) == n && memcmp(start, name, n) == 0) return true;
-    }
-    return false;
-}
-
-static uint32_t glm_decode_ablate_mask(void) {
-    static int cached = -1;
-    if (cached < 0) {
-        uint32_t mask = 0;
-        const char *env = getenv("DS4_GLM_DECODE_ABLATE");
-        if (env) {
-            if (glm_ablate_names(env, "attn_out"))  mask |= DS4_GLM_ABLATE_ATTN_OUT;
-            if (glm_ablate_names(env, "attn_core")) mask |= DS4_GLM_ABLATE_ATTN_CORE;
-            if (glm_ablate_names(env, "qpath"))     mask |= DS4_GLM_ABLATE_QPATH;
-            if (glm_ablate_names(env, "indexer"))   mask |= DS4_GLM_ABLATE_INDEXER;
-            if (glm_ablate_names(env, "routed"))    mask |= DS4_GLM_ABLATE_ROUTED;
-            if (glm_ablate_names(env, "shared"))    mask |= DS4_GLM_ABLATE_SHARED;
-            if (glm_ablate_names(env, "qklow"))     mask |= DS4_GLM_ABLATE_QKLOW;
-            if (glm_ablate_names(env, "kda"))       mask |= DS4_GLM_ABLATE_KDA;
-            if (glm_ablate_names(env, "kda_qkv"))   mask |= DS4_GLM_ABLATE_KDA_QKV;
-            if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_ABLATE_KDA_GATE;
-            if (glm_ablate_names(env, "kda_recur")) mask |= DS4_GLM_ABLATE_KDA_RECUR;
-            if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_ABLATE_KDA_OUT;
-            if (glm_ablate_names(env, "hc"))        mask |= DS4_GLM_ABLATE_HC;
-            if (glm_ablate_names(env, "head"))      mask |= DS4_GLM_ABLATE_HEAD;
-            if (mask) {
-                fprintf(stderr, "ds4: GLM decode ablation active (mask 0x%x) — output is garbage, timing only\n", mask);
-            }
-        }
-        cached = (int)mask;
-    }
-    return (uint32_t)cached;
-}
-
 static bool glm53_graph_kda_attention(
         ds4_glm_gpu_graph       *g,
         const ds4_model         *model,
@@ -43931,6 +43985,7 @@ static bool glm53_graph_kda_attention(
     }
     const uint32_t projection = DS4_N_KDA_HEAD * DS4_N_KDA_HEAD_DIM;
     const uint32_t ablate = glm_decode_ablate_mask();
+    const uint32_t repeat = glm_decode_repeat_mask();
     bool qk_paired = false;
 #if defined(__APPLE__)
     bool qkv_paired = false;
@@ -43989,6 +44044,14 @@ static bool glm53_graph_kda_attention(
             ok = glm53_graph_matmul(g->kda_v, model, l->kda_v,
                                     DS4_N_EMBD, projection, g->attn_norm);
         }
+        if (ok && (repeat & DS4_GLM_REPEAT_KDA_QKV)) {
+            ok = glm53_graph_matmul(g->kda_q, model, l->kda_q,
+                                    DS4_N_EMBD, projection, g->attn_norm) &&
+                 glm53_graph_matmul(g->kda_k, model, l->kda_k,
+                                    DS4_N_EMBD, projection, g->attn_norm) &&
+                 glm53_graph_matmul(g->kda_v, model, l->kda_v,
+                                    DS4_N_EMBD, projection, g->attn_norm);
+        }
     }
     if (!(ablate & DS4_GLM_ABLATE_KDA_GATE)) {
         if (ok) ok = glm53_graph_matmul(
@@ -44006,6 +44069,18 @@ static bool glm53_graph_kda_attention(
         if (ok) ok = glm53_graph_matmul(
                 g->kda_output_gate, model, l->kda_g_b,
                 DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
+        if (ok && (repeat & DS4_GLM_REPEAT_KDA_GATE)) {
+            ok = glm53_graph_matmul(g->kda_lowrank, model, l->kda_f_a,
+                                    DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm) &&
+                 glm53_graph_matmul(g->kda_raw_gate, model, l->kda_f_b,
+                                    DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank) &&
+                 glm53_graph_matmul(g->kda_raw_beta, model, l->kda_beta,
+                                    DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm) &&
+                 glm53_graph_matmul(g->kda_lowrank, model, l->kda_g_a,
+                                    DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, g->attn_norm) &&
+                 glm53_graph_matmul(g->kda_output_gate, model, l->kda_g_b,
+                                    DS4_N_KDA_HEAD_DIM, projection, g->kda_lowrank);
+        }
     }
     if (ok && !(ablate & DS4_GLM_ABLATE_KDA_RECUR)) ok = ds4_gpu_glm53_kda_decode(
             g->kda_out,
@@ -44036,6 +44111,10 @@ static bool glm53_graph_kda_attention(
                                 projection,
                                 DS4_N_EMBD,
                                 g->kda_out);
+        if (ok && (repeat & DS4_GLM_REPEAT_KDA_OUT)) {
+            ok = glm53_graph_matmul(g->attn_out, model, l->kda_output,
+                                    projection, DS4_N_EMBD, g->kda_out);
+        }
     }
     return ok;
 }
@@ -45286,6 +45365,12 @@ static bool glm53_graph_encode_ffn_tail_one(
                                       g->hc_comb,
                                       DS4_N_EMBD,
                                       DS4_N_HC) != 0;
+        if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND)) {
+            ok = ds4_gpu_hc_expand_tensor(g->hc_next, g->next,
+                                          g->hc_after_attn, g->hc_post,
+                                          g->hc_comb, DS4_N_EMBD,
+                                          DS4_N_HC) != 0;
+        }
     }
     return ok;
 }
@@ -52107,6 +52192,11 @@ glm53_attention_done:
                                           g->hc_comb,
                                           DS4_N_EMBD,
                                           DS4_N_HC) != 0;
+            if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND)) {
+                ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn, g->attn_out,
+                                              g->hc_cur, g->hc_post, g->hc_comb,
+                                              DS4_N_EMBD, DS4_N_HC) != 0;
+            }
             if (ok && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
             if (ok) ok = glm53_graph_hc_pre(g,
                                             model,
@@ -52281,6 +52371,9 @@ glm53_attention_done:
         }
         if (!(glm_decode_ablate_mask() & DS4_GLM_ABLATE_HEAD)) {
             ok = glm_graph_encode_output_head(g, model, weights);
+            if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HEAD)) {
+                ok = glm_graph_encode_output_head(g, model, weights);
+            }
         }
         if (g->ssd_streaming) {
             if (ok) ok = glm_graph_end_commands_if_active();
@@ -52318,6 +52411,9 @@ glm53_attention_done:
                 if (ok) ok = glm_graph_begin_commands_if_needed();
                 if (ok && !(glm_decode_ablate_mask() & DS4_GLM_ABLATE_HEAD)) {
                     ok = glm_graph_encode_output_head(g, model, weights);
+                    if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HEAD)) {
+                        ok = glm_graph_encode_output_head(g, model, weights);
+                    }
                 }
                 if (ok) ok = glm_graph_end_commands_if_active();
                 else (void)ds4_gpu_synchronize();
