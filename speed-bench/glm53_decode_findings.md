@@ -323,6 +323,64 @@ which are separated yet.
 With the mHC producer now fused, `hc_pre` measures 1.36 ms by repeat, down from
 the 3.99 ms the four-dispatch chain cost.
 
+## The budget, re-measured after the fusions
+
+Everything above was measured before the mHC, gate-pairing and HC-expand work.
+Re-run on the current tip, baseline 41.598 ms/token:
+
+| stage | ms | share |
+|---|---:|---:|
+| KDA attention | 15.39 | 37.0% |
+| routed MoE | 7.89 | 19.0% |
+| DSA attention core | 7.86 | 18.9% |
+| shared expert | 2.07 | 5.0% |
+| output head | 1.68 | 4.0% |
+| mHC producer | 1.44 | 3.5% |
+| attn_output | 1.10 | 2.6% |
+| q_path | 0.56 | 1.4% |
+| indexer | 0.19 | 0.5% |
+| **residual** | **3.42** | **8.2%** |
+
+The mHC producer is down from 3.99 to 1.44 ms.  Note that `kda` now also
+covers the HC expansion folded into `kda_output`, so its 15.39 is not directly
+comparable with the earlier 15.99.
+
+### Splitting the residual
+
+`DS4_GLM_DECODE_REPEAT` gained a `router` bit.  Repeat rather than ablate is
+the only honest instrument for it: skipping the router leaves a stale expert
+selection, which changes which experts the routed stage streams and therefore
+changes the very cost being measured.  Verified non-destructive (identical
+greedy output).
+
+| | ms | share of decode | share of the residual |
+|---|---:|---:|---:|
+| router (logits + top-k, 86 dispatches) | 0.95 | 2.3% | 28% |
+| remaining hc_expand (FFN tail, dense attn) | 0.33 | 0.8% | 10% |
+| still unattributed | 2.13 | 5.1% | 62% |
+
+The router reads `ffn_gate_inp`, which is **F32** at [4096, 288] over 43
+layers: 202.9 MB/token, or 0.29 ms at the 707 GB/s the dense projections
+achieve.  So about a third of the router is weight streaming and the other
+~0.66 ms is the top-k select over 288 experts plus launch cost.  Requantizing
+`ffn_gate_inp` is a model-artifact change and routing precision is the obvious
+risk, but it is the only 200 MB/token F32 tensor left in the decode step.
+
+### The shared expert is not the outlier it looked like
+
+The original budget recorded the shared expert at 0.55 GiB/token and 279 GB/s,
+38% of ceiling -- far below every other kernel, and an obvious target.  **That
+byte count was under by about 2x.**  Summed from the tensor table, the shared
+expert reads three Q8_0 [4096, 2048] tensors per layer over 43 layers:
+
+    gate + up + down = 3 x 383.3 MB = 1.150 GB/token
+
+Against the measured 2.07 ms that is **556 GB/s, 75% of ceiling** -- in the
+same band as KDA overall (77%), not an outlier.  Its gate/up/SwiGLU is already
+fused via `ds4_gpu_shared_mid_swiglu_q8_0_tensor`.  Closing the remaining gap
+to 707 GB/s would be worth about 0.45 ms, 1.1%, not the large win the 38%
+figure implied.
+
 ## What is left, priced
 
 With KDA split and the residual row split, the dense stages can be checked

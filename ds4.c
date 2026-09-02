@@ -43872,6 +43872,11 @@ static bool glm_ablate_names(const char *env, const char *name) {
 #define DS4_GLM_REPEAT_KDA_QKV   (1u << 3)
 #define DS4_GLM_REPEAT_KDA_GATE  (1u << 4)
 #define DS4_GLM_REPEAT_KDA_OUT   (1u << 5)
+/* Router logits and top-k selection.  Repeat rather than ablate is the only
+ * honest instrument here: skipping the router leaves a stale expert selection,
+ * which changes which experts the routed stage streams and so changes the very
+ * cost being measured. */
+#define DS4_GLM_REPEAT_ROUTER    (1u << 6)
 
 static uint32_t glm_decode_repeat_mask(void) {
     static int cached = -1;
@@ -43885,6 +43890,7 @@ static uint32_t glm_decode_repeat_mask(void) {
             if (glm_ablate_names(env, "kda_qkv"))   mask |= DS4_GLM_REPEAT_KDA_QKV;
             if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_REPEAT_KDA_GATE;
             if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_REPEAT_KDA_OUT;
+            if (glm_ablate_names(env, "router"))    mask |= DS4_GLM_REPEAT_ROUTER;
             if (mask) {
                 fprintf(stderr, "ds4: GLM decode stage repeat active (mask 0x%x) — output stays correct, timing only\n", mask);
             }
@@ -44979,6 +44985,21 @@ static bool glm_graph_encode_sparse_ffn_one(
                                                   DS4_N_EXPERT,
                                                   DS4_N_EXPERT_USED,
                                                   DS4_EXPERT_WEIGHT_SCALE) != 0;
+    if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_ROUTER)) {
+        ok = ds4_gpu_matmul_f32_tensor(g->router_logits,
+                                       model->map, model->size,
+                                       l->ffn_gate_inp->abs_offset,
+                                       DS4_N_EMBD, DS4_N_EXPERT, ffn_norm, 1) != 0 &&
+             ds4_gpu_glm_router_select_tensor(g->router_selected,
+                                              g->router_weights,
+                                              g->router_probs,
+                                              model->map, model->size,
+                                              l->ffn_exp_probs_b->abs_offset,
+                                              g->router_logits,
+                                              DS4_N_EXPERT,
+                                              DS4_N_EXPERT_USED,
+                                              DS4_EXPERT_WEIGHT_SCALE) != 0;
+    }
     if (ok) ok = glm_graph_profile_stage(stage_profile,
                                          "glm_decode_ffn",
                                          "router",
