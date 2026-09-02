@@ -48,6 +48,7 @@ kernel void kernel_glm53_kda_decode(
     threadgroup float *reduce_k = reduce_q + 4u;
     threadgroup float *reduce_o = reduce_k + 4u;
     threadgroup float *beta_shared = reduce_o + 4u;
+    threadgroup float *a_decay_shared = beta_shared + 1u;
 
     const uint projection = args.n_heads * D;
     const uint channel = head * D + tid;
@@ -90,16 +91,18 @@ kernel void kernel_glm53_kda_decode(
         sq[tid] = q_acc / (1.0f + exp(-q_acc));
         sk[tid] = k_acc / (1.0f + exp(-k_acc));
         sv[tid] = v_acc / (1.0f + exp(-v_acc));
-        const float gate = raw_gate[input_base + tid] + dt_bias[channel];
-        sd[tid] = exp(args.lower_bound *
-                      (1.0f / (1.0f + exp(-exp(a_log[head]) * gate))));
     }
     if (tid == 0u) {
         beta_shared[0] =
             1.0f / (1.0f + exp(-raw_beta[(ulong)row * args.n_heads + head]));
+        /* head is uniform over the threadgroup, so exp(a_log[head]) is a
+         * single value; every one of the D channels used to recompute it. */
+        a_decay_shared[0] = exp(a_log[head]);
     }
-    threadgroup_barrier(mem_flags::mem_threadgroup |
-                       mem_flags::mem_device);
+    /* Only threadgroup memory is shared between threads here: the conv-state
+     * writes above are each thread's own channel and no thread reads another's,
+     * so the barrier does not need device scope. */
+    threadgroup_barrier(mem_flags::mem_threadgroup);
 
     float q_sumsq = sq[tid] * sq[tid];
     float k_sumsq = sk[tid] * sk[tid];
@@ -119,6 +122,9 @@ kernel void kernel_glm53_kda_decode(
     if (tid < D) {
         sq[tid] *= q_scale;
         sk[tid] *= k_scale;
+        const float gate = raw_gate[input_base + tid] + dt_bias[channel];
+        sd[tid] = exp(args.lower_bound *
+                      (1.0f / (1.0f + exp(-a_decay_shared[0] * gate))));
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
 
@@ -141,8 +147,9 @@ kernel void kernel_glm53_kda_decode(
         float hq = simd_sum(dot(h, q4));
         if (lane == 0u) so[value] = hq;
     }
-    threadgroup_barrier(mem_flags::mem_threadgroup |
-                       mem_flags::mem_device);
+    /* Likewise: the state writes above are not re-read in this kernel, only
+     * so[] crosses simdgroups. */
+    threadgroup_barrier(mem_flags::mem_threadgroup);
 
     float o_sumsq = so[tid] * so[tid];
     o_sumsq = simd_sum(o_sumsq);
