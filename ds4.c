@@ -43790,8 +43790,13 @@ static bool glm53_graph_hc_pre(
         DS4_N_EMBD == 4096u && DS4_N_HC == 4u &&
         !metal_graph_use_reference_hc_decode() &&
         getenv("DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE") == NULL &&
-        (ds4_gpu_device_is_pre_m5_apple_silicon() ||
-         ds4_gpu_device_is_m5_apple_silicon())) {
+        /* Same rollback switches as the DeepSeek F16 producer this shares a
+         * kernel with, so DS4_METAL_DISABLE_PRE_M5_DECODE_PORTS and the two
+         * producer-specific variables disable both paths rather than leaving
+         * this one live after the other has been turned off. */
+        metal_graph_ported_m5_decode_feature_enabled(
+                "DS4_METAL_DISABLE_PRE_M5_HC_PRODUCER_PRE_NORM_FUSE",
+                "DS4_METAL_DISABLE_M5_HC_PRODUCER_PRE_NORM_FUSE")) {
         const int fused = ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
                 g->hc_mix,
                 collapsed,

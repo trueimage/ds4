@@ -62,6 +62,23 @@ static void die(const char *msg) {
     exit(1);
 }
 
+/* Every size below is derived from attacker-controlled header fields, so each
+ * multiply and add is checked rather than allowed to wrap into a small,
+ * plausible-looking value that then passes a range test. */
+static uint64_t mul_or_die(uint64_t a, uint64_t b) {
+    if (a != 0 && b > UINT64_MAX / a) die("size overflow in the tensor table");
+    return a * b;
+}
+
+static uint64_t add_or_die(uint64_t a, uint64_t b) {
+    if (b > UINT64_MAX - a) die("size overflow in the tensor table");
+    return a + b;
+}
+
+static uint64_t pad_or_die(uint64_t x, uint64_t n) {
+    return add_or_die(x, (n - x % n) % n);
+}
+
 static void need(size_t n) {
     if ((size_t)(g_end - g_cur) < n) die("truncated gguf");
 }
@@ -101,8 +118,10 @@ static void skip_value(uint32_t t, int *is_u32, uint32_t *u32_out) {
         } else {
             size_t sz = scalar_size(et);
             if (!sz) die("array of unsupported element type");
-            need(sz * n);
-            g_cur += sz * n;
+            const uint64_t span = mul_or_die((uint64_t)sz, n);
+            if (span > SIZE_MAX) die("metadata array is larger than this address space");
+            need((size_t)span);
+            g_cur += (size_t)span;
         }
         return;
     }
@@ -247,8 +266,10 @@ int main(int argc, char **argv) {
             /* Both guard the ne/dims[0] divisions below and keep the product
              * from wrapping into a small, plausible-looking byte count. */
             if (t->dims[d] == 0) die("tensor with a zero-length dimension");
-            if (t->dims[d] > UINT64_MAX / t->ne) die("tensor element count overflows");
-            t->ne *= t->dims[d];
+            /* ds4q_row_size takes an int64_t, so a dimension past INT64_MAX
+             * would be reinterpreted as negative and silently return 0. */
+            if (t->dims[d] > (uint64_t)INT64_MAX) die("tensor dimension out of range");
+            t->ne = mul_or_die(t->ne, t->dims[d]);
         }
         t->type   = rd_u32();
         t->offset = rd_u64();
@@ -273,7 +294,7 @@ int main(int argc, char **argv) {
             die("refusing to copy a tensor whose layout is unknown");
         }
         const uint64_t nrows = t->ne / t->dims[0];
-        const uint64_t old_bytes = (uint64_t)row_bytes * nrows;
+        const uint64_t old_bytes = mul_or_die((uint64_t)row_bytes, nrows);
         if (t->offset > in_size - data_start ||
             old_bytes > in_size - data_start - t->offset) {
             die("tensor data runs past the end of the input");
@@ -285,11 +306,11 @@ int main(int argc, char **argv) {
         }
         t->new_type = convert ? (uint32_t)target : t->type;
         t->new_bytes = convert
-            ? (uint64_t)ds4q_row_size(target, (int64_t)t->dims[0]) * nrows
+            ? mul_or_die((uint64_t)ds4q_row_size(target, (int64_t)t->dims[0]), nrows)
             : old_bytes;
-        cursor = ds4q_pad(cursor, alignment);
+        cursor = pad_or_die(cursor, alignment);
         t->new_offset = cursor;
-        cursor += t->new_bytes;
+        cursor = add_or_die(cursor, t->new_bytes);
         if (convert) { converted++; before += old_bytes; after += t->new_bytes; }
     }
     if (!converted) die("no matching BF16 tensors found -- nothing to do");
@@ -300,12 +321,34 @@ int main(int argc, char **argv) {
 
     /* Build the file beside its destination and rename it into place at the
      * end: out_path then either still holds whatever it held before, or holds
-     * a complete result, and never a truncated one. */
-    const size_t tmp_len = strlen(out_path) + 32;
+     * a complete result, and never a truncated one.
+     *
+     * The scratch name comes from mkstemp rather than the pid.  A predictable
+     * name opened with fopen("wb") reintroduces exactly the bug the input/
+     * output inode check above closes: if that path is a symlink or hard link
+     * to the input, the open truncates the mapped source.  mkstemp picks an
+     * unpredictable name and opens O_CREAT|O_EXCL, which neither follows a
+     * symlink nor reuses an existing file. */
+    const size_t tmp_len = strlen(out_path) + 8;
     g_tmp_path = malloc(tmp_len);
     if (!g_tmp_path) die("out of memory");
-    snprintf(g_tmp_path, tmp_len, "%s.requant.%ld.tmp", out_path, (long)getpid());
-    FILE *out = fopen(g_tmp_path, "wb");
+    snprintf(g_tmp_path, tmp_len, "%s.XXXXXX", out_path);
+    const int out_fd = mkstemp(g_tmp_path);
+    if (out_fd < 0) die("cannot create the scratch output");
+    /* Belt and braces: confirm what we hold is a fresh regular file and is not
+     * the input, before a single byte is written. */
+    struct stat tmp_st;
+    if (fstat(out_fd, &tmp_st) != 0) die("cannot stat the scratch output");
+    if (!S_ISREG(tmp_st.st_mode) ||
+        (tmp_st.st_dev == st.st_dev && tmp_st.st_ino == st.st_ino)) {
+        die("scratch output is not a fresh regular file");
+    }
+    /* mkstemp creates 0600; a model file should follow the umask like any
+     * other output this tool used to produce. */
+    const mode_t mask = umask(0);
+    (void)umask(mask);
+    (void)fchmod(out_fd, (mode_t)(0666 & ~mask));
+    FILE *out = fdopen(out_fd, "wb");
     if (!out) die("cannot open output");
     /* Header and metadata are copied verbatim; tensor-info entries keep their
      * width, so the data section still begins at the same offset. */

@@ -16,42 +16,52 @@ quality cost.
 Measured with `DS4_GLM_DECODE_ABLATE`, which removes a stage and reports the
 resulting speed.  Baseline 21.19 tok/s, two baseline runs 0.38% apart.
 
-**The KDA rows below were re-measured.**  The original 18.37 ms figure was
-produced by instrumentation that was never committed -- `DS4_GLM_DECODE_ABLATE`
-had no `kda` bit, and the KDA path returned before the mask was read -- so it
-could not be reproduced from this tree.  `kda`, `kda_qkv`, `kda_gate`,
-`kda_recur` and `kda_out` now exist, and the table is what they report.  KDA is
-**15.99 ms/token, 35.8% of decode**, not 18.37 ms and 38.9%.  Every other row
-reproduced within noise on the same machine, at a 22.375 tok/s baseline
-(four interleaved baselines, 0.85% spread) rather than 21.19.
+**The original KDA row was never measured.**  `DS4_GLM_DECODE_ABLATE` had no
+`kda` bit and the KDA path returned before the mask was read, so the 18.37 ms
+and 38.9% recorded here first could not have come from this harness.  `kda`,
+`kda_qkv`, `kda_gate`, `kda_recur`, `kda_out`, `hc` and `head` now exist, and
+the whole budget below was re-measured through them.
 
-| component | ms/token | share | bytes/token | GB/s | % of ceiling |
-|---|---:|---:|---:|---:|---:|
-| KDA attention (34 layers) | 18.37 | 38.9% | 8.50 GiB | 497 | 67% |
-| routed MoE (42 layers) | 8.08 | 17.1% | 4.43 GiB | 589 | **80%** |
-| DSA attention core (11 layers) | 7.91 | 16.8% | -- | -- | -- |
-| shared expert (42 layers) | 2.13 | 4.5% | 0.55 GiB | 279 | 38% |
-| attn_output projection (11 layers) | 1.26 | 2.7% | 0.73 GiB | 622 | **84%** |
-| q_path (11 layers) | 0.59 | 1.3% | -- | -- | -- |
-| indexer (11 layers) | 0.35 | 0.7% | -- | -- | -- |
-| mHC producer chain (90 sites) | 3.99 | 8.9% | -- | -- | -- |
-| output head (norm + logits matvec) | 1.80 | 4.0% | -- | -- | -- |
-| remaining norms, residual, hc_expand | ~3.0 | ~6.7% | -- | -- | -- |
+Everything in the table is from **one** run of arms against **one** baseline of
+22.375 tok/s = 44.693 ms/token (four interleaved baselines, 0.85% spread).
+Do not mix it with the earlier 21.19 tok/s figures; those are superseded.
 
-`% of ceiling` is against 736.9 GB/s, the sequential-read ceiling measured on
-this machine by `speed-bench/metal_bandwidth_probe`.
+| component | ms/token | share | superseded figure |
+|---|---:|---:|---|
+| KDA attention (34 layers) | 15.99 | 35.8% | was 18.37 / 38.9% |
+| DSA attention core (11 layers) | 8.02 | 18.0% | was 7.91 / 16.8% |
+| routed MoE (42 layers) | 7.89 | 17.6% | was 8.08 / 17.1% |
+| mHC producer chain (90 sites) | 3.99 | 8.9% | was inside the residual row |
+| shared expert (42 layers) | 1.98 | 4.4% | was 2.13 / 4.5% |
+| output head (norm + logits matvec) | 1.80 | 4.0% | was inside the residual row |
+| attn_output projection (11 layers) | 1.33 | 3.0% | was 1.26 / 2.7% |
+| q_path (11 layers) | 0.44 | 1.0% | was 0.59 / 1.3% |
+| indexer (11 layers) | 0.21 | 0.5% | was 0.35 / 0.7% |
+| remaining norms, residual, hc_expand | 3.04 | 6.8% | residual, not ablated |
+| **total** | **44.69** | **100%** | |
 
-Two things follow.
+Only KDA moved outside noise; every other carried-over row reproduced.
 
-**The weight-streaming kernels are not the problem.**  Routed MoE runs at 80%
-of the achievable sequential-read bandwidth and the `attn_output` projection at
-84%.  There is very little left in them.
+Bandwidth is deliberately **not** a column here.  It is only meaningful where
+the byte count is exactly derivable, which is the dense projections; see "What
+is left, priced" below for those, computed against 736.9 GB/s.  The routed-MoE
+and shared-expert byte figures recorded in the first version of this document
+(4.43 and 0.55 GiB) depend on which experts a token selects and were never
+re-derived here, so they are omitted rather than restated.
 
 **A per-token bandwidth figure computed over the whole decode step is
 misleading.**  Dividing total bytes by total decode time gives roughly a fifth
 of peak, but the bandwidth-bound kernels only occupy about a fifth of the step.
 The kernels themselves are near the ceiling; the rest of the step is other
 work.
+
+**Ablation arms are destructive.**  A skipped stage leaves stale contents in
+its output buffer, which is fine for timing the dispatches that remain but can
+in principle change data-dependent routing downstream (expert selection, index
+selection).  The arms agree with each other -- `hc,head` measures 5.77 ms
+against 5.79 for the two separately, and the KDA substages sum to 15.44 against
+15.99 for the whole stage -- so the effect is small here, but these are
+skip-ablation estimates, not per-kernel timings.
 
 ## The BF16 KDA projections
 
@@ -251,19 +261,29 @@ stages that do little real work all read as roughly the floor.  Prefer
 
 ## What is left, priced
 
-With KDA split and the residual row split, every large line in the budget has a
-measured cost and a measured bandwidth.  Byte counts are exact, read from the
-GGUF tensor table; the ceiling is 736.9 GB/s.
+With KDA split and the residual row split, the dense stages can be checked
+against the memory system.  The ceiling is 736.9 GB/s.
 
-| stage | bytes/token | ms | GB/s | % of ceiling |
+The **weight** byte counts are exact -- summed from the GGUF tensor table, per
+token, over all 34 KDA layers.  They are a lower bound on total traffic: they
+exclude activations, intermediate writes, and (for the recurrence row) the
+conv state, q/k/v inputs, gate inputs, conv weights and biases, and the output
+write.  For the two dense projection rows the weights dominate so completely
+that the omission does not matter; for the two small rows it does, and the
+GB/s shown for them is correspondingly an **under**estimate.
+
+| stage | weight bytes/token | ms | GB/s (weights only) | vs ceiling |
 |---|---:|---:|---:|---:|
 | kda q/k/v (3 x [4096,8192] BF16 x34) | 6.845 GB | 9.68 | **707** | **96%** |
 | kda_output ([8192,4096] BF16 x34) | 2.282 GB | 3.16 | **722** | **98%** |
-| kda gate/beta (f_a, f_b, beta, g_a, g_b) | 0.232 GB | 1.37 | 169 | 23% |
-| kda recurrence (136 MiB state, r+w) | 0.285 GB | 1.23 | 232 | 31% |
+| kda gate/beta (f_a, f_b, beta, g_a, g_b) | 0.232 GB | 1.37 | >=169 | >=23% |
+| kda recurrence (136 MiB state, r+w) | 0.285 GB | 1.23 | >=232 | >=31% |
 
-**The KDA projections are finished.**  At 96% and 98% of the ceiling there is
-nothing left in them.  Specialising the BF16 matvec for the 4096 and 8192
+**The KDA projections are done, on this machine.**  At 96% and 98% of a
+736.9 GB/s ceiling there is no room for a faster inner loop; what remains is
+within measurement error of the memory system.  This is an M3 Ultra result --
+a part with a different bandwidth-to-compute ratio could sit lower and have
+something to gain.  Specialising the BF16 matvec for the 4096 and 8192
 shapes -- function constants to unroll the loops, two output rows per
 simdgroup, staging the activation row in threadgroup memory -- cannot pay,
 because the kernel already moves bytes about as fast as the machine will.
@@ -272,14 +292,25 @@ This also corrects the 497 -> 547 GB/s figure recorded when the widened loads
 landed.  That came from the 18.37 ms KDA row, which was never measured; against
 the measured 9.68 ms the q/k/v projections run at 707 GB/s.
 
-**What is left is dispatch overhead, not bandwidth.**  The two stages far below
-the ceiling are the ones made of many small launches.  The mHC fusion prices a
-dispatch directly: 270 removed for 2.41 ms, about **8.9 us each**.
+**What is left is per-launch cost, not bandwidth.**  The two stages far below
+the ceiling are the ones made of many small dispatches.
 
-The gate/beta chain moves 232 MB, which is 0.33 ms at the rate the big
-projections achieve, and costs 1.37 ms.  The other ~1.04 ms is 170 dispatches
-(5 matvecs x 34 layers) at ~6 us, agreeing with the mHC figure.  So the
-remaining KDA work is worth about **1.0 ms, 2.3% of decode**:
+How much of that is launch overhead specifically is *not* established here, and
+the mHC result should not be read as a per-dispatch price.  Collapsing four
+dispatches into one removed 2.41 ms across 90 sites, but it removed three
+intermediate round-trips per site (`hc_flat`, `hc_mix`, `hc_split` each written
+then re-read) along with the launches, and a fused kernel also gets better
+occupancy on small work than four sequential ones.  Dividing 2.41 ms by 270
+gives 8.9 us per dispatch only if launches were the whole cost, and they were
+not.
+
+The same caution applies to the gate/beta chain.  It moves at least 232 MB,
+which would be 0.33 ms at the rate the big projections achieve, and it costs
+1.37 ms.  The ~1.04 ms difference is *available* to fusion in principle, but it
+is a mix of launch overhead, unmeasured activation traffic, and low occupancy
+on 128- and 64-wide outputs -- and only a benchmark will say how much of it
+comes back.  Treat **1.0 ms, 2.3% of decode** as an upper bound on the prize,
+not a forecast:
 
 - `f_a` and `g_a` are both [4096 -> 128] from the same `attn_norm` input, so
   they pair the way `ds4_gpu_glm53_matmul_bf16_qkv` already pairs q/k/v.
@@ -327,6 +358,35 @@ Flat to within 0.2% at both contexts.  The selection count is capped by
 this does not become interesting at longer contexts either.  The knob is kept
 as instrumentation for other GPUs, not because it found anything here.
 
+## Cumulative engine-only result
+
+Individual commits report gains against whatever baseline was current when they
+landed, which does not compose into a branch number.  This is the direct
+measurement: the pre-series commit and the branch tip, each built in its own
+tree so each reads its own `metal/*.metal`, run against the **same unchanged
+GGUF** with the same harness, contexts and interleaving.
+
+    ctx 2048, 128 generated tokens, arms interleaved, 3 pairs
+
+    base (110afdd)   21.223 tok/s   47.12 ms/token
+    tip              23.593 tok/s   42.38 ms/token
+    engine-only      +11.17%
+
+Note the base reproduces the 21.19 tok/s of the original budget almost exactly,
+which is a useful check that machine conditions have not drifted between the
+first measurements in this document and the last.
+
+Stacking the model-artifact changes on top of the same tip, all at ctx 2048:
+
+| model file | tok/s | vs base engine + original artifact |
+|---|---:|---:|
+| GLM-5.3-Flash-Q4_K | 23.59 | +11.2% |
+| GLM-5.3-Flash-Q4_K-kdaQ8 | 27.21 | +28.2% |
+| GLM-5.3-Flash-Q4_K-kdaHeadQ8 | 27.84 | +31.2% |
+
+Only the first row is an engine result.  The other two combine it with the
+requantized artifacts and should never be quoted as engine tuning.
+
 ## A trap when A/B-testing a shader change
 
 `ds4_gpu_full_source()` reads `metal/*.metal` from disk at run time and there
@@ -346,8 +406,11 @@ this reason before it was caught.
 - Quality evidence is one perplexity run on one text plus a greedy generation.
   That is good evidence for a near-lossless type like Q8_0, not proof.
 - `--artifact q4` also specifies Q8_0 for the embedding and output tensors,
-  which are BF16 here too (~1.2 GiB more per token through the LM head).  Not
-  measured; the same tool could be extended to cover them.
+  which are BF16 here too (~1.2 GiB more per token through the LM head).  This
+  was subsequently done: `--tensors head,embd` covers them, and converting the
+  head is worth a further +1.80% decode over a KDA-only artifact.  `token_embd`
+  is deliberately not in the default -- it is a single-row lookup per token, so
+  it saves resident memory rather than decode bandwidth.
 - Neither the constants recorded below nor a Q4_K KDA variant were measured.
   The tool accepts `q4_K` as a target, which would take KDA to 2.39 GiB, but
   Q4_K on attention projections is a materially bigger quality question than

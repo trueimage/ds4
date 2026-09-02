@@ -1322,8 +1322,20 @@ kernel void kernel_dsv4_hc_rms_norm_mix_f16_cluster2(
 }
 
 
+/* Self-contained on purpose.  glm53_bf16.metal has an identical helper, but
+ * depending on it would couple this file to that one across the concatenated
+ * library: pointing DS4_METAL_GLM53_BF16_SOURCE at an older revision of that
+ * file would then stop THIS file compiling, which defeats the per-file source
+ * overrides used for shader A/B runs. */
+static inline float4 ds4_hc_bf16x4_to_f32x4(ushort4 v) {
+    return float4(as_type<float>((uint)v.x << 16),
+                  as_type<float>((uint)v.y << 16),
+                  as_type<float>((uint)v.z << 16),
+                  as_type<float>((uint)v.w << 16));
+}
+
 static inline float4 ds4_hc_mix_widen(half4 v)   { return float4(v); }
-static inline float4 ds4_hc_mix_widen(ushort4 v) { return glm53_bf16x4_to_f32x4(v); }
+static inline float4 ds4_hc_mix_widen(ushort4 v) { return ds4_hc_bf16x4_to_f32x4(v); }
 /* The f16 and bf16 producers differ only in how the mix weights are
  * widened; everything else -- the reduction trees, the cluster split, the
  * collapse and the pre-norm -- is shared, so the body is a template and the
@@ -1595,4 +1607,3 @@ kernel void kernel_dsv4_hc_rms_norm_mix_bf16_cluster2_pre_norm(
         collapse_dst, norm_weight, norm_dst, completion, shmem,
         tgpig, tiisg, sgitg);
 }
-

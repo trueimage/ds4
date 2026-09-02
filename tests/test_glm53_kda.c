@@ -72,6 +72,28 @@ static float bf16_to_f32(uint16_t value) {
     return bits.f;
 }
 
+/* Normal-range only, and truncating rather than rounding.  Both are fine here:
+ * the compound-producer fixture uses values with at most seven explicit
+ * mantissa bits, well inside the half normal range, so truncation to ten bits
+ * is exact and the encoding round-trips. */
+static uint16_t f32_to_f16(float value) {
+    union { float f; uint32_t u; } b = { .f = value };
+    const uint32_t sign = (b.u >> 16) & 0x8000u;
+    const int32_t  exp  = (int32_t)((b.u >> 23) & 0xffu) - 127 + 15;
+    const uint32_t mant = (b.u >> 13) & 0x3ffu;
+    if (exp <= 0 || exp >= 31) return (uint16_t)sign;
+    return (uint16_t)(sign | ((uint32_t)exp << 10) | mant);
+}
+
+static float f16_to_f32(uint16_t value) {
+    const uint32_t sign = (uint32_t)(value & 0x8000u) << 16;
+    const uint32_t exp  = (uint32_t)(value >> 10) & 0x1fu;
+    const uint32_t mant = (uint32_t)value & 0x3ffu;
+    union { uint32_t u; float f; } b;
+    b.u = exp == 0 ? sign : (sign | ((exp - 15u + 127u) << 23) | (mant << 13));
+    return b.f;
+}
+
 /* Exercises ds4_gpu_glm53_matmul_bf16 at one width.  in_dim picks the path
  * inside the shared row helper in metal/glm53_bf16.metal: a multiple of 1024
  * takes the eight-load branch, a multiple of 512 the four-load branch, and
@@ -172,7 +194,16 @@ int main(void) {
         WIDE1024_OFFSET = 73728,  WIDE1024_IN = 1024, WIDE1024_OUT = 4,
         WIDE4096_OFFSET = 90112,  WIDE4096_IN = 4096, WIDE4096_OUT = 2,
         WIDE_ROWS = 3,
-        MODEL_BYTES = 131072,
+        /* Compound HC producer fixture.  The f16 and bf16 kernels are two
+         * instantiations of one template, so they get identical weights in
+         * both encodings and must agree exactly. */
+        HC_N = 16384, HC_MIX = 24, HC_EMBD = 4096, HC_HC = 4,
+        HC_F16W_OFFSET  = 131072,   /* HC_N * HC_MIX * 2 = 786432 */
+        HC_BF16W_OFFSET = 917504,
+        HC_SCALE_OFFSET = 1703936,  /* 3 floats  */
+        HC_BASE_OFFSET  = 1703968,  /* 24 floats */
+        HC_NORM_OFFSET  = 1704064,  /* 4096 floats */
+        MODEL_BYTES = 1835008,
     };
 
     uint8_t *model = mmap(NULL, MODEL_BYTES, PROT_READ | PROT_WRITE,
@@ -264,6 +295,93 @@ int main(void) {
                       WIDE1024_OUT, WIDE_ROWS, "BF16 matmul in_dim=1024 (eight-load path)");
     check_bf16_matmul(model, MODEL_BYTES, WIDE4096_OFFSET, WIDE4096_IN,
                       WIDE4096_OUT, WIDE_ROWS, "BF16 matmul in_dim=4096 (eight-load path)");
+
+    /*
+     * Compound HC producer: the f16 and bf16 kernels share one templated body
+     * and differ only in how the mix weights are widened.  Weights are drawn
+     * from values with at most seven explicit mantissa bits, so each is exact
+     * in BOTH half and bfloat16 and the two kernels see bit-identical floats.
+     * The arithmetic and reduction order are then the same, so the outputs
+     * must match exactly -- any difference is a bug in one instantiation.
+     */
+    {
+        static const float exact_both[8] = {
+            0.5f, -0.5f, 1.0f, -1.0f, 1.5f, -1.5f, 0.25f, -0.75f
+        };
+        uint16_t *hc_f16 = (uint16_t *)(model + HC_F16W_OFFSET);
+        uint16_t *hc_bf16 = (uint16_t *)(model + HC_BF16W_OFFSET);
+        for (uint32_t i = 0; i < (uint32_t)(HC_N * HC_MIX); i++) {
+            const float w = exact_both[i % 8u] * 0.03125f;
+            union { float f; uint32_t u; } b = { .f = w };
+            hc_f16[i] = f32_to_f16(w);
+            hc_bf16[i] = (uint16_t)(b.u >> 16);
+            /* the encodings must round-trip to the same float, or the
+             * comparison below would be measuring the fixture, not the kernel */
+            require_close("HC fixture encoding", f16_to_f32(hc_f16[i]),
+                          bf16_to_f32(hc_bf16[i]), 0.0f);
+        }
+        float *hc_scale = (float *)(model + HC_SCALE_OFFSET);
+        for (int i = 0; i < 3; i++) hc_scale[i] = 0.5f + 0.25f * (float)i;
+        float *hc_base = (float *)(model + HC_BASE_OFFSET);
+        for (int i = 0; i < HC_MIX; i++) hc_base[i] = 0.125f * (float)((i % 5) - 2);
+        float *hc_norm = (float *)(model + HC_NORM_OFFSET);
+        for (int i = 0; i < HC_EMBD; i++) hc_norm[i] = 1.0f + 0.001f * (float)(i % 7);
+
+        float *hc_x = malloc((size_t)HC_N * sizeof(float));
+        require_ok(hc_x != NULL, "HC residual allocation");
+        for (int i = 0; i < HC_N; i++)
+            hc_x[i] = 0.01f * (float)((i % 23) - 11) + 0.002f * (float)(i % 5);
+
+        ds4_gpu_tensor *hc_res = ds4_gpu_tensor_alloc((size_t)HC_N * sizeof(float));
+        require_ok(hc_res != NULL, "HC residual tensor");
+        require_ok(ds4_gpu_tensor_write(hc_res, 0, hc_x,
+                                        (size_t)HC_N * sizeof(float)),
+                   "HC residual write");
+
+        float out_f16[HC_EMBD], out_bf16[HC_EMBD];
+        float nrm_f16[HC_EMBD], nrm_bf16[HC_EMBD];
+        float mix_f16[HC_MIX], mix_bf16[HC_MIX];
+        for (int pass = 0; pass < 2; pass++) {
+            ds4_gpu_tensor *mix = ds4_gpu_tensor_alloc(HC_MIX * sizeof(float));
+            ds4_gpu_tensor *spl = ds4_gpu_tensor_alloc(HC_MIX * sizeof(float));
+            ds4_gpu_tensor *out = ds4_gpu_tensor_alloc(HC_EMBD * sizeof(float));
+            ds4_gpu_tensor *nrm = ds4_gpu_tensor_alloc(HC_EMBD * sizeof(float));
+            require_ok(mix && spl && out && nrm, "HC output tensors");
+            const int rc = pass == 0
+                ? ds4_gpu_hc_rms_norm_mix_split_norm_f16_tensor(
+                      mix, out, nrm, spl, hc_res, model, MODEL_BYTES,
+                      HC_F16W_OFFSET, HC_SCALE_OFFSET, HC_BASE_OFFSET,
+                      HC_NORM_OFFSET, HC_N, HC_MIX, HC_EMBD, HC_HC,
+                      1u, 1.0e-6f, 1.0e-3f, 1.0e-6f)
+                : ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+                      mix, out, nrm, spl, hc_res, model, MODEL_BYTES,
+                      HC_BF16W_OFFSET, HC_SCALE_OFFSET, HC_BASE_OFFSET,
+                      HC_NORM_OFFSET, HC_N, HC_MIX, HC_EMBD, HC_HC,
+                      1u, 1.0e-6f, 1.0e-3f, 1.0e-6f);
+            require_ok(rc > 0, pass == 0 ? "HC producer f16" : "HC producer bf16");
+            require_ok(ds4_gpu_tensor_read(mix, 0,
+                           pass == 0 ? mix_f16 : mix_bf16, sizeof(mix_f16)),
+                       "HC mix read");
+            require_ok(ds4_gpu_tensor_read(out, 0,
+                           pass == 0 ? out_f16 : out_bf16, sizeof(out_f16)),
+                       "HC collapse read");
+            require_ok(ds4_gpu_tensor_read(nrm, 0,
+                           pass == 0 ? nrm_f16 : nrm_bf16, sizeof(nrm_f16)),
+                       "HC pre-norm read");
+            ds4_gpu_tensor_free(mix);
+            ds4_gpu_tensor_free(spl);
+            ds4_gpu_tensor_free(out);
+            ds4_gpu_tensor_free(nrm);
+        }
+        for (int i = 0; i < HC_MIX; i++)
+            require_close("HC producer f16 vs bf16 mix", mix_bf16[i], mix_f16[i], 0.0f);
+        for (int i = 0; i < HC_EMBD; i++) {
+            require_close("HC producer f16 vs bf16 collapse", out_bf16[i], out_f16[i], 0.0f);
+            require_close("HC producer f16 vs bf16 pre-norm", nrm_bf16[i], nrm_f16[i], 0.0f);
+        }
+        ds4_gpu_tensor_free(hc_res);
+        free(hc_x);
+    }
 
 #ifdef DS4_ROCM_BUILD
     test_block_q4_K *q4_weights = (test_block_q4_K *)(model + Q4_OFFSET);
