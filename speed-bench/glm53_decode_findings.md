@@ -34,7 +34,9 @@ reproduced within noise on the same machine, at a 22.375 tok/s baseline
 | attn_output projection (11 layers) | 1.26 | 2.7% | 0.73 GiB | 622 | **84%** |
 | q_path (11 layers) | 0.59 | 1.3% | -- | -- | -- |
 | indexer (11 layers) | 0.35 | 0.7% | -- | -- | -- |
-| norms, hyper-connections, residual, LM head | ~8.5 | ~18% | -- | -- | -- |
+| mHC producer chain (90 sites) | 3.99 | 8.9% | -- | -- | -- |
+| output head (norm + logits matvec) | 1.80 | 4.0% | -- | -- | -- |
+| remaining norms, residual, hc_expand | ~3.0 | ~6.7% | -- | -- | -- |
 
 `% of ceiling` is against 736.9 GB/s, the sequential-read ceiling measured on
 this machine by `speed-bench/metal_bandwidth_probe`.
@@ -173,6 +175,47 @@ inflated a 1.23 ms stage into a 7 ms one.
 The practical consequence: **the recurrence kernel is not where the time is.**
 Work on `metal/glm53_kda.metal` is capped at 2.8% of decode no matter how good
 it gets.  The qkv projections, at 21.7%, are the KDA target that matters.
+
+## Splitting the old "norms, hyper-connections, residual, LM head" row
+
+That row was a residual -- whatever the other arms did not account for -- and
+at ~18% of decode it was the second largest line in the budget with nothing
+measured inside it.  The `hc` and `head` ablation arms split it:
+
+| | ms/token | share |
+|---|---:|---:|
+| mHC producer chain | 3.99 | 8.9% |
+| output head | 1.80 | 4.0% |
+| everything else in the row | ~3.0 | ~6.7% |
+
+`hc,head` together measure 5.77 ms against 5.79 for the two separately, so the
+split is additive and the arms are not interacting.
+
+**The mHC producer is the largest unoptimised item in the decode step.**
+`glm53_graph_hc_pre` issues four dispatches -- plain RMSNorm, the 16384->24 mix
+matvec, the split/mix, and the weighted RMSNorm -- and runs twice per layer
+over 45 layers, so 360 small dispatches per token for 3.99 ms of work.
+DeepSeek V4 already has a fused F16 equivalent in
+`ds4_gpu_dsv4_hc_producer_pre_norm`; GLM 5.3 needs the BF16 version.
+
+**The output head is nearly all matvec.**  1.80 ms for a [4096 -> 154880]
+BF16 matvec is close to what its 1.27 GB costs at this machine's measured
+bandwidth, so there is no dispatch overhead worth chasing there.
+
+### Why GPU-side argmax is not worth doing
+
+A natural suggestion is to stop reading all 154,880 logits back and scanning
+them on the CPU, and instead do a hierarchical argmax/top-k on the GPU and
+return only the token.  Measured directly on this machine:
+
+    logits readback (memcpy of 605 KiB)   0.0143 ms
+    CPU argmax scan over 154,880 floats   0.1668 ms
+    combined                              0.1811 ms
+
+That is **0.40% of a 44.76 ms decode step, below the run-to-run spread**, so
+the change could not be shown to work even if it were free.  It also would not
+remove a synchronisation: the token is needed before the next step can start
+either way.  Not worth the complexity.
 
 ## A trap in the stage profiler
 

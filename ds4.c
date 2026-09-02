@@ -43815,6 +43815,11 @@ static bool glm53_graph_hc_pre(
 #define DS4_GLM_ABLATE_KDA_GATE  (1u << 9)
 #define DS4_GLM_ABLATE_KDA_RECUR (1u << 10)
 #define DS4_GLM_ABLATE_KDA_OUT   (1u << 11)
+/* The two largest pieces of what the budget lumps into "norms, hyper-
+ * connections, residual, LM head": the mHC producer chain that runs twice per
+ * layer, and the output head. */
+#define DS4_GLM_ABLATE_HC        (1u << 12)
+#define DS4_GLM_ABLATE_HEAD      (1u << 13)
 
 /* Exact token match against the comma list.  A substring test stops working
  * as soon as one stage name is a prefix of another: strstr(env, "kda") also
@@ -43849,6 +43854,8 @@ static uint32_t glm_decode_ablate_mask(void) {
             if (glm_ablate_names(env, "kda_gate"))  mask |= DS4_GLM_ABLATE_KDA_GATE;
             if (glm_ablate_names(env, "kda_recur")) mask |= DS4_GLM_ABLATE_KDA_RECUR;
             if (glm_ablate_names(env, "kda_out"))   mask |= DS4_GLM_ABLATE_KDA_OUT;
+            if (glm_ablate_names(env, "hc"))        mask |= DS4_GLM_ABLATE_HC;
+            if (glm_ablate_names(env, "head"))      mask |= DS4_GLM_ABLATE_HEAD;
             if (mask) {
                 fprintf(stderr, "ds4: GLM decode ablation active (mask 0x%x) — output is garbage, timing only\n", mask);
             }
@@ -51390,7 +51397,9 @@ static bool glm_graph_forward_token(
                                                           &decode_stage_t0);
         }
 
+        const uint32_t decode_ablate = glm_decode_ablate_mask();
         DS4_GLM_FT_STAGE("attention mHC pre");
+        if (ok && g->glm53 && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
         if (ok && g->glm53) {
             ok = glm53_graph_hc_pre(g,
                                     model,
@@ -51411,7 +51420,6 @@ static bool glm_graph_forward_token(
                                                 DS4_RMS_EPS) != 0;
         }
         DS4_GLM_PROFILE_DECODE_STAGE("glm_decode_attn", "attn_norm");
-        const uint32_t decode_ablate = glm_decode_ablate_mask();
         if (ok && glm53_kda) {
             DS4_GLM_FT_STAGE("KDA attention");
             if (!(decode_ablate & DS4_GLM_ABLATE_KDA)) {
@@ -52045,6 +52053,7 @@ glm53_attention_done:
                                           g->hc_comb,
                                           DS4_N_EMBD,
                                           DS4_N_HC) != 0;
+            if (ok && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
             if (ok) ok = glm53_graph_hc_pre(g,
                                             model,
                                             l->hc_ffn_fn,
@@ -52216,7 +52225,9 @@ glm53_attention_done:
             }
             if (ok) ok = glm_graph_begin_commands_if_needed();
         }
-        ok = glm_graph_encode_output_head(g, model, weights);
+        if (!(glm_decode_ablate_mask() & DS4_GLM_ABLATE_HEAD)) {
+            ok = glm_graph_encode_output_head(g, model, weights);
+        }
         if (g->ssd_streaming) {
             if (ok) ok = glm_graph_end_commands_if_active();
             else (void)ds4_gpu_synchronize();
@@ -52251,7 +52262,9 @@ glm53_attention_done:
                     ok = glm_graph_stream_map_output(g, model, weights);
                 }
                 if (ok) ok = glm_graph_begin_commands_if_needed();
-                if (ok) ok = glm_graph_encode_output_head(g, model, weights);
+                if (ok && !(glm_decode_ablate_mask() & DS4_GLM_ABLATE_HEAD)) {
+                    ok = glm_graph_encode_output_head(g, model, weights);
+                }
                 if (ok) ok = glm_graph_end_commands_if_active();
                 else (void)ds4_gpu_synchronize();
                 if (decode_output_profile) {
