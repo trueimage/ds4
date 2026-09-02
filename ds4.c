@@ -44948,6 +44948,7 @@ static bool glm_graph_encode_sparse_ffn_one(
         ds4_gpu_tensor          *ffn_sum,
         ds4_gpu_tensor          *tmp,
         bool                     add_residual,
+        bool                     defer_final_sum,
         bool                     stage_profile,
         double                  *stage_t0) {
     uint64_t gate_in = 0, gate_out = 0, gate_row_bytes = 0;
@@ -45253,6 +45254,8 @@ static bool glm_graph_encode_sparse_ffn_one(
                                         after_attn,
                                         tmp,
                                         DS4_N_EMBD) != 0;
+    } else if (ok && defer_final_sum) {
+        /* caller folds ffn_out + ffn_sum into the HC expand */
     } else if (ok) {
         ok = ds4_gpu_add_tensor(next,
                                 ffn_out,
@@ -45299,6 +45302,10 @@ static bool glm_graph_encode_ffn_one_normed_from(
         ds4_gpu_tensor          *ffn_sum,
         ds4_gpu_tensor          *tmp,
         bool                     add_residual,
+        /* When set, the routed+shared sum is left undone so the caller can
+         * fold it into the HC expand's has_add path instead of paying a
+         * separate add dispatch for it. */
+        bool                    *defer_final_sum,
         bool                     stage_profile,
         double                  *stage_t0) {
     if (!g || !model || !l || !ffn_norm || !after_attn || !next ||
@@ -45308,6 +45315,8 @@ static bool glm_graph_encode_ffn_one_normed_from(
     }
 
     if (il < DS4_N_LEADING_DENSE) {
+        /* Dense layers have no routed/shared split to defer. */
+        if (defer_final_sum) *defer_final_sum = false;
         const uint64_t hidden = l->ffn_gate->dim[1];
         const bool can_fuse_gate_up =
             glm_graph_weights_are_q8_0(model,
@@ -45431,6 +45440,7 @@ static bool glm_graph_encode_ffn_one_normed_from(
                                            ffn_sum,
                                            tmp,
                                            add_residual,
+                                           defer_final_sum && *defer_final_sum,
                                            stage_profile,
                                            stage_t0);
 }
@@ -45443,6 +45453,15 @@ static bool glm53_graph_encode_ffn_tail_one(
         uint32_t                 pos,
         bool                     stage_profile,
         double                  *stage_t0) {
+    /* The routed+shared sum and the HC expand are adjacent and the expand
+     * kernel already has a has_add path, so on the decode tail they collapse
+     * into one dispatch.  Directional steering would have to run on the summed
+     * value in between, so it is required to be inactive. */
+    bool defer_sum =
+        g->glm53 && g->ffn_sum && g->ffn_out && g->hc_next &&
+        g->hc_after_attn && g->hc_post && g->hc_comb &&
+        g->directional_steering_ffn_scale == 0.0f &&
+        getenv("DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD") == NULL;
     bool ok = glm_graph_encode_ffn_one_normed_from(g,
                                                    model,
                                                    l,
@@ -45458,6 +45477,7 @@ static bool glm53_graph_encode_ffn_tail_one(
                                                    g->ffn_sum,
                                                    g->attn_out,
                                                    false,
+                                                   &defer_sum,
                                                    stage_profile,
                                                    stage_t0);
     if (ok) {
@@ -45468,7 +45488,22 @@ static bool glm53_graph_encode_ffn_tail_one(
                                       pos);
         ok = glm_graph_apply_directional_steering_ffn(g, g->next, il, 1);
     }
-    if (ok) {
+    if (ok && defer_sum) {
+        ok = ds4_gpu_hc_expand_add_tensor(g->hc_next,
+                                          g->ffn_out,
+                                          g->ffn_sum,
+                                          g->hc_after_attn,
+                                          g->hc_post,
+                                          g->hc_comb,
+                                          DS4_N_EMBD,
+                                          DS4_N_HC) != 0;
+        if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND)) {
+            ok = ds4_gpu_hc_expand_add_tensor(g->hc_next, g->ffn_out,
+                                              g->ffn_sum, g->hc_after_attn,
+                                              g->hc_post, g->hc_comb,
+                                              DS4_N_EMBD, DS4_N_HC) != 0;
+        }
+    } else if (ok) {
         ok = ds4_gpu_hc_expand_tensor(g->hc_next,
                                       g->next,
                                       g->hc_after_attn,
@@ -45540,6 +45575,7 @@ static bool glm_graph_encode_ffn_one_from(
                                                 ffn_sum,
                                                 tmp,
                                                 true,
+                                                NULL,
                                                 stage_profile,
                                                 stage_t0);
 }
@@ -50731,6 +50767,7 @@ glm53_indexed_attention_done:
                                                               g->ffn_sum,
                                                               g->attn_out,
                                                               true,
+                                                              NULL,
                                                               false,
                                                               NULL);
                 } else if (ok) {
@@ -51649,7 +51686,7 @@ static bool glm_graph_forward_token(
         }
 
         const uint32_t decode_ablate = glm_decode_ablate_mask();
-        bool kda_hc_expanded = false;
+        bool attn_hc_expanded = false;
         DS4_GLM_FT_STAGE("attention mHC pre");
         if (ok && g->glm53 && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
         if (ok && g->glm53) {
@@ -51676,7 +51713,7 @@ static bool glm_graph_forward_token(
             DS4_GLM_FT_STAGE("KDA attention");
             if (!(decode_ablate & DS4_GLM_ABLATE_KDA)) {
                 ok = glm53_graph_kda_attention(g, model, l, il,
-                                               &kda_hc_expanded);
+                                               &attn_hc_expanded);
             }
             goto glm53_attention_done;
         }
@@ -52274,16 +52311,38 @@ static bool glm_graph_forward_token(
                                                 g->tp_in[slot],
                                                 DS4_N_EMBD) != 0;
             } else {
-                ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->attn_out,
-                                                                  model,
-                                                                  l->attn_output->abs_offset,
-                                                                  g->heads_dim,
-                                                                  DS4_N_EMBD,
-                                                                  g->heads,
-                                                                  il,
-                                                                  pos,
-                                                                  "attn_o",
-                                                                  g->ssd_streaming) != 0;
+#if defined(__APPLE__)
+                /* Same epilogue trick as kda_output.  This projection is Q8_0,
+                 * and DeepSeek's fused kernel already covers that shape and
+                 * reads post/comb from hc_split at the offsets GLM uses, so no
+                 * new kernel is needed here. */
+                if (g->glm53 && !g->ssd_streaming &&
+                    l->attn_output->type == DS4_TENSOR_Q8_0 &&
+                    g->directional_steering_attn_scale == 0.0f &&
+                    g->hc_after_attn && g->hc_cur && g->hc_split &&
+                    getenv("DS4_METAL_DISABLE_GLM53_ATTN_OUT_HC_EXPAND") == NULL &&
+                    ds4_gpu_matmul_q8_0_hc_expand_tensor(
+                        g->hc_after_attn, g->attn_out,
+                        model->map, model->size,
+                        l->attn_output->abs_offset,
+                        g->heads_dim, DS4_N_EMBD, g->heads,
+                        g->hc_cur, g->hc_split,
+                        DS4_N_EMBD, DS4_N_HC) != 0) {
+                    attn_hc_expanded = true;
+                }
+#endif
+                if (!attn_hc_expanded) {
+                    ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->attn_out,
+                                                                      model,
+                                                                      l->attn_output->abs_offset,
+                                                                      g->heads_dim,
+                                                                      DS4_N_EMBD,
+                                                                      g->heads,
+                                                                      il,
+                                                                      pos,
+                                                                      "attn_o",
+                                                                      g->ssd_streaming) != 0;
+                }
             }
         }
 glm53_attention_done:
@@ -52302,7 +52361,7 @@ glm53_attention_done:
             /* Skip only the expand when kda_output already folded it in; the
              * FFN-side mHC producer below is in this same block and must still
              * run. */
-            if (!kda_hc_expanded) {
+            if (!attn_hc_expanded) {
                 ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn,
                                               g->attn_out,
                                               g->hc_cur,
@@ -52419,6 +52478,7 @@ glm53_attention_done:
                                                       g->ffn_sum,
                                                       g->attn_out,
                                                       true,
+                                                      NULL,
                                                       decode_stage_profile,
                                                       decode_stage_profile ? &decode_stage_t0 : NULL);
         }

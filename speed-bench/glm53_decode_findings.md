@@ -295,10 +295,30 @@ let exact bytes arbitrate when they disagree.
 
 ### The remaining bucket, partly split
 
-`hc_expand` measures **0.55 ms/token, 1.3% of decode** by repeat -- a
-dispatch-bound stage, so this figure is the reliable one.  That leaves roughly
-2.5 ms in the residual row for the residual adds, directional steering, the
-remaining norms and the final HC collapse, none of which are separated yet.
+`hc_expand` measured **0.55 ms/token, 1.3% of decode** by repeat -- a
+dispatch-bound stage, so that figure was the reliable one.  All 90 sites are
+now folded into whatever produces their input, and between them they returned
+0.37 ms of it:
+
+| site | count | mechanism | gain |
+|---|---:|---|---:|
+| kda_output (BF16 matvec) | 34 | new epilogue kernel | +0.46% |
+| attn_output (Q8_0 matvec) | ~12 | DeepSeek's existing fused kernel | +0.11% |
+| FFN tail (routed+shared add) | 43 | existing `has_add` path on the expand | +0.14% |
+
+The last two together are +0.48% (t=9.65, n=8), 0.199 ms over 54 sites, or
+3.7 us per site -- below the 4.6 us launch cost and the KDA epilogue's 5.6 us,
+which fits: those two remove a cheap elementwise add and a Q8_0 matvec rather
+than a BF16 matvec plus a 64 KiB round-trip.
+
+Two of the three needed no new kernel at all.  `ds4_gpu_matmul_q8_0_hc_expand_tensor`
+already existed for DeepSeek and reads post/comb from `hc_split` at the offsets
+GLM uses; `ds4_gpu_hc_expand_add_tensor` already exposed the expand kernel's
+`has_add` path.  Only the BF16 matvec needed an epilogue written.
+
+That leaves roughly 2.5 ms in the residual row for the residual adds,
+directional steering, the remaining norms and the final HC collapse, none of
+which are separated yet.
 
 With the mHC producer now fused, `hc_pre` measures 1.36 ms by repeat, down from
 the 3.99 ms the four-dispatch chain cost.
