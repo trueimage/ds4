@@ -64,6 +64,40 @@ static inline void glm53_mul_mv_bf16_f32_row(
      * NOTE: this changes which lane accumulates which k, so the partial sums
      * differ from the scalar path and results are NOT bit-identical to it.
      */
+    if ((args.in_dim & 1023u) == 0u) {
+        float4 acc = float4(0.0f);
+        const uint stride = 128u;
+        for (uint kk = (uint)lane * 4u; kk < args.in_dim; kk += 8u * stride) {
+            const ushort4 w0 = *((device const ushort4 *)(w + kk));
+            const ushort4 w1 = *((device const ushort4 *)(w + kk + 1u * stride));
+            const ushort4 w2 = *((device const ushort4 *)(w + kk + 2u * stride));
+            const ushort4 w3 = *((device const ushort4 *)(w + kk + 3u * stride));
+            const ushort4 w4 = *((device const ushort4 *)(w + kk + 4u * stride));
+            const ushort4 w5 = *((device const ushort4 *)(w + kk + 5u * stride));
+            const ushort4 w6 = *((device const ushort4 *)(w + kk + 6u * stride));
+            const ushort4 w7 = *((device const ushort4 *)(w + kk + 7u * stride));
+            const float4 x0 = *((device const float4 *)(xr + kk));
+            const float4 x1 = *((device const float4 *)(xr + kk + 1u * stride));
+            const float4 x2 = *((device const float4 *)(xr + kk + 2u * stride));
+            const float4 x3 = *((device const float4 *)(xr + kk + 3u * stride));
+            const float4 x4 = *((device const float4 *)(xr + kk + 4u * stride));
+            const float4 x5 = *((device const float4 *)(xr + kk + 5u * stride));
+            const float4 x6 = *((device const float4 *)(xr + kk + 6u * stride));
+            const float4 x7 = *((device const float4 *)(xr + kk + 7u * stride));
+            acc = fma(glm53_bf16x4_to_f32x4(w0), x0, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w1), x1, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w2), x2, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w3), x3, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w4), x4, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w5), x5, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w6), x6, acc);
+            acc = fma(glm53_bf16x4_to_f32x4(w7), x7, acc);
+        }
+        sum = (acc.x + acc.y) + (acc.z + acc.w);
+        sum = simd_sum(sum);
+        if (lane == 0u) out[(ulong)token * args.out_dim + out_row] = sum;
+        return;
+    }
     if ((args.in_dim & 511u) == 0u) {
         float4 acc = float4(0.0f);
         const uint stride = 128u;
