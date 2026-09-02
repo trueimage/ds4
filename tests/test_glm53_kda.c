@@ -203,7 +203,10 @@ int main(void) {
         HC_SCALE_OFFSET = 1703936,  /* 3 floats  */
         HC_BASE_OFFSET  = 1703968,  /* 24 floats */
         HC_NORM_OFFSET  = 1704064,  /* 4096 floats */
-        MODEL_BYTES = 1835008,
+        /* BF16 matvec + HC-expand epilogue fixture */
+        FUSED_W_OFFSET = 1720448,   /* FUSED_IN * FUSED_OUT * 2 = 131072 */
+        FUSED_IN = 1024, FUSED_OUT = 64, FUSED_HC = 4,
+        MODEL_BYTES = 2097152,
     };
 
     uint8_t *model = mmap(NULL, MODEL_BYTES, PROT_READ | PROT_WRITE,
@@ -381,6 +384,84 @@ int main(void) {
         }
         ds4_gpu_tensor_free(hc_res);
         free(hc_x);
+    }
+
+    /*
+     * BF16 matvec with the HC expansion folded into its epilogue must equal
+     * the separate matvec followed by ds4_gpu_hc_expand_tensor, exactly.  The
+     * fused kernel reuses the same row accumulation and repeats the expand
+     * arithmetic in the same operand order, so anything but bit-identical
+     * output is a bug -- most likely a stride or an index.
+     */
+    {
+        uint16_t *fw = (uint16_t *)(model + FUSED_W_OFFSET);
+        for (uint32_t o = 0; o < FUSED_OUT; o++) {
+            for (uint32_t i = 0; i < FUSED_IN; i++) {
+                fw[(size_t)o * FUSED_IN + i] = f32_to_bf16(
+                    0.003f * (float)((int)((o * 7u + i) % 17u) - 8));
+            }
+        }
+        float fx[FUSED_IN], fres[FUSED_HC * FUSED_OUT];
+        float fpost[FUSED_HC], fcomb[FUSED_HC * FUSED_HC];
+        for (int i = 0; i < FUSED_IN; i++)
+            fx[i] = 0.01f * (float)((i % 19) - 9);
+        for (int i = 0; i < FUSED_HC * FUSED_OUT; i++)
+            fres[i] = 0.05f * (float)((i % 13) - 6);
+        for (int i = 0; i < FUSED_HC; i++) fpost[i] = 0.25f + 0.125f * (float)i;
+        for (int i = 0; i < FUSED_HC * FUSED_HC; i++)
+            fcomb[i] = 0.1f * (float)((i % 7) - 3);
+
+        ds4_gpu_tensor *tx   = ds4_gpu_tensor_alloc(sizeof(fx));
+        ds4_gpu_tensor *tres = ds4_gpu_tensor_alloc(sizeof(fres));
+        ds4_gpu_tensor *tpost = ds4_gpu_tensor_alloc(sizeof(fpost));
+        ds4_gpu_tensor *tcomb = ds4_gpu_tensor_alloc(sizeof(fcomb));
+        ds4_gpu_tensor *out_ref = ds4_gpu_tensor_alloc(FUSED_OUT * sizeof(float));
+        ds4_gpu_tensor *hc_ref  = ds4_gpu_tensor_alloc(sizeof(fres));
+        ds4_gpu_tensor *out_fus = ds4_gpu_tensor_alloc(FUSED_OUT * sizeof(float));
+        ds4_gpu_tensor *hc_fus  = ds4_gpu_tensor_alloc(sizeof(fres));
+        require_ok(tx && tres && tpost && tcomb && out_ref && hc_ref &&
+                   out_fus && hc_fus, "fused epilogue tensors");
+        require_ok(ds4_gpu_tensor_write(tx, 0, fx, sizeof(fx)) &&
+                   ds4_gpu_tensor_write(tres, 0, fres, sizeof(fres)) &&
+                   ds4_gpu_tensor_write(tpost, 0, fpost, sizeof(fpost)) &&
+                   ds4_gpu_tensor_write(tcomb, 0, fcomb, sizeof(fcomb)),
+                   "fused epilogue inputs");
+
+        require_ok(ds4_gpu_glm53_matmul_bf16(
+                       out_ref, model, MODEL_BYTES, FUSED_W_OFFSET,
+                       FUSED_IN, FUSED_OUT, tx, 1),
+                   "reference BF16 matvec");
+        require_ok(ds4_gpu_hc_expand_tensor(hc_ref, out_ref, tres, tpost, tcomb,
+                                            FUSED_OUT, FUSED_HC),
+                   "reference HC expand");
+
+        const int fused = ds4_gpu_glm53_matmul_bf16_hc_expand4(
+            out_fus, hc_fus, model, MODEL_BYTES, FUSED_W_OFFSET,
+            FUSED_IN, FUSED_OUT, tx, tres, tpost, tcomb, FUSED_HC);
+        if (fused == 0) {
+            fprintf(stderr,
+                    "BF16 matvec + HC expand: not available on this device, skipped\n");
+        } else {
+            float a[FUSED_OUT], b[FUSED_OUT];
+            float ha[FUSED_HC * FUSED_OUT], hb[FUSED_HC * FUSED_OUT];
+            require_ok(ds4_gpu_tensor_read(out_ref, 0, a, sizeof(a)) &&
+                       ds4_gpu_tensor_read(out_fus, 0, b, sizeof(b)) &&
+                       ds4_gpu_tensor_read(hc_ref, 0, ha, sizeof(ha)) &&
+                       ds4_gpu_tensor_read(hc_fus, 0, hb, sizeof(hb)),
+                       "fused epilogue readback");
+            for (int i = 0; i < FUSED_OUT; i++)
+                require_close("fused epilogue block_out", b[i], a[i], 0.0f);
+            for (int i = 0; i < FUSED_HC * FUSED_OUT; i++)
+                require_close("fused epilogue hc stream", hb[i], ha[i], 0.0f);
+        }
+        ds4_gpu_tensor_free(tx);
+        ds4_gpu_tensor_free(tres);
+        ds4_gpu_tensor_free(tpost);
+        ds4_gpu_tensor_free(tcomb);
+        ds4_gpu_tensor_free(out_ref);
+        ds4_gpu_tensor_free(hc_ref);
+        ds4_gpu_tensor_free(out_fus);
+        ds4_gpu_tensor_free(hc_fus);
     }
 
 #ifdef DS4_ROCM_BUILD

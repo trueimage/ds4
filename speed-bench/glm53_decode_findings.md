@@ -454,6 +454,23 @@ Stacking the model-artifact changes on top of the same tip, all at ctx 2048:
 Only the first row is an engine result.  The other two combine it with the
 requantized artifacts and should never be quoted as engine tuning.
 
+## A trap when verifying a decode-path change
+
+`ds4-bench --dump-frontier-logits-dir` writes one file per **frontier**, which
+is the logits at the end of prefill.  It does not exercise the single-token
+decode graph at all.
+
+This was found the hard way.  A change that skipped the FFN-side mHC producer
+on every KDA layer -- catastrophic, garbage output after the first token --
+produced frontier logits **bit-identical** to the baseline, because the bug was
+entirely in the decode path the dump never touches.  A four-token greedy
+generation caught it immediately.
+
+For anything that touches decode, compare **greedy generations** instead: fixed
+prompts, `--temp 0`, 128 tokens, byte-compared.  Decode is deterministic across
+runs (verified), and any bit difference diverges within a few tokens.  The
+frontier dump is still the right tool for a prefill-path change.
+
 ## A trap when A/B-testing a shader change
 
 `ds4_gpu_full_source()` reads `metal/*.metal` from disk at run time and there

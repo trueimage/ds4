@@ -3037,6 +3037,20 @@ int ds4_gpu_glm53_matmul_bf16_pair(
         const ds4_gpu_tensor *x_a,
         const ds4_gpu_tensor *x_b);
 
+int ds4_gpu_glm53_matmul_bf16_hc_expand4(
+        ds4_gpu_tensor       *out,
+        ds4_gpu_tensor       *hc_out,
+        const void           *model_map,
+        uint64_t              model_size,
+        uint64_t              weight_offset,
+        uint32_t              in_dim,
+        uint32_t              out_dim,
+        const ds4_gpu_tensor *x,
+        const ds4_gpu_tensor *residual_hc,
+        const ds4_gpu_tensor *post,
+        const ds4_gpu_tensor *comb,
+        uint32_t              n_hc);
+
 #ifndef DS4_GLM53_VISION_TYPES_DEFINED
 #define DS4_GLM53_VISION_TYPES_DEFINED
 #define DS4_GLM53_VISION_LAYERS 24u

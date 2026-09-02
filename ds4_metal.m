@@ -44363,6 +44363,79 @@ int ds4_gpu_glm53_matmul_bf16_pair(
     }
 }
 
+int ds4_gpu_glm53_matmul_bf16_hc_expand4(
+        ds4_gpu_tensor       *out,
+        ds4_gpu_tensor       *hc_out,
+        const void           *model_map,
+        uint64_t              model_size,
+        uint64_t              weight_offset,
+        uint32_t              in_dim,
+        uint32_t              out_dim,
+        const ds4_gpu_tensor *x,
+        const ds4_gpu_tensor *residual_hc,
+        const ds4_gpu_tensor *post,
+        const ds4_gpu_tensor *comb,
+        uint32_t              n_hc) {
+    if (!g_initialized && !ds4_gpu_init()) return 0;
+    /* Same device scope as the qkv and pair variants this shares a row helper
+     * with; every other device keeps the separate matvec and expand. */
+    if (!ds4_gpu_device_name_contains("M3 Ultra")) return 0;
+    if (n_hc != 4u) return 0;
+    uint64_t weights = 0;
+    if (in_dim == 0 || out_dim == 0 ||
+        !glm53_gpu_mul_u64(in_dim, out_dim, &weights) ||
+        !glm53_gpu_tensor_has(x, in_dim, sizeof(float)) ||
+        !glm53_gpu_tensor_has(out, out_dim, sizeof(float)) ||
+        !glm53_gpu_tensor_has(hc_out, (uint64_t)n_hc * out_dim, sizeof(float)) ||
+        !glm53_gpu_tensor_has(residual_hc, (uint64_t)n_hc * out_dim, sizeof(float)) ||
+        !glm53_gpu_tensor_has(post, n_hc, sizeof(float)) ||
+        !glm53_gpu_tensor_has(comb, (uint64_t)n_hc * n_hc, sizeof(float))) {
+        return 0;
+    }
+
+    @autoreleasepool {
+        const uint64_t weight_bytes = weights * sizeof(uint16_t);
+        uint64_t inner = 0;
+        id<MTLBuffer> weightbuf = glm53_gpu_weight_buffer(
+            model_map, model_size, weight_offset, weight_bytes,
+            &inner, "BF16 matrix with HC expand");
+        id<MTLComputePipelineState> pipeline =
+            ds4_gpu_get_pipeline("kernel_glm53_mul_mv_bf16_f32_hc_expand4");
+        if (!weightbuf || !pipeline) return 0;
+
+        const uint32_t nsg = glm53_gpu_bf16_mv_nsg();
+        glm53_gpu_bf16_matmul_args args = {
+            .in_dim = in_dim,
+            .out_dim = out_dim,
+            .n_rows = 1u,
+        };
+        int owned = 0;
+        id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+        if (!cb) return 0;
+        id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
+        [enc setComputePipelineState:pipeline];
+        [enc setBytes:&args length:sizeof(args) atIndex:0];
+        [enc setBuffer:weightbuf offset:(NSUInteger)inner atIndex:1];
+        [enc setBuffer:ds4_gpu_tensor_buffer(x)
+                offset:ds4_gpu_tensor_offset(x) atIndex:2];
+        [enc setBuffer:ds4_gpu_tensor_buffer(out)
+                offset:ds4_gpu_tensor_offset(out) atIndex:3];
+        [enc setBuffer:ds4_gpu_tensor_buffer(residual_hc)
+                offset:ds4_gpu_tensor_offset(residual_hc) atIndex:4];
+        [enc setBuffer:ds4_gpu_tensor_buffer(post)
+                offset:ds4_gpu_tensor_offset(post) atIndex:5];
+        [enc setBuffer:ds4_gpu_tensor_buffer(comb)
+                offset:ds4_gpu_tensor_offset(comb) atIndex:6];
+        [enc setBuffer:ds4_gpu_tensor_buffer(hc_out)
+                offset:ds4_gpu_tensor_offset(hc_out) atIndex:7];
+        [enc dispatchThreadgroups:MTLSizeMake((out_dim + nsg - 1u) / nsg, 1u, 1u)
+            threadsPerThreadgroup:MTLSizeMake(32u * nsg, 1u, 1u)];
+        ds4_gpu_end_compute_encoder(cb, enc);
+        return ds4_gpu_finish_command_buffer(
+            cb, owned, "GLM-5.3 BF16 matmul with HC expand");
+    }
+}
+
 typedef struct {
     uint32_t width;
     uint32_t rows;

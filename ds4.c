@@ -44025,7 +44025,9 @@ static bool glm53_graph_kda_attention(
         ds4_glm_gpu_graph       *g,
         const ds4_model         *model,
         const ds4_layer_weights *l,
-        uint32_t                 il) {
+        uint32_t                 il,
+        bool                    *hc_expanded) {
+    if (hc_expanded) *hc_expanded = false;
     if (!g || !model || !l || il >= DS4_MAX_LAYER ||
         !g->layer_kda_conv_state[il] ||
         !g->layer_kda_recurrent_state[il]) {
@@ -44190,12 +44192,36 @@ static bool glm53_graph_kda_attention(
             DS4_KDA_GATE_LOWER_BOUND,
             DS4_RMS_EPS) != 0;
     if (ok && !(ablate & DS4_GLM_ABLATE_KDA_OUT)) {
-        ok = glm53_graph_matmul(g->attn_out,
-                                model,
-                                l->kda_output,
-                                projection,
-                                DS4_N_EMBD,
-                                g->kda_out);
+#if defined(__APPLE__)
+        /* Fold the HC expansion into this projection's epilogue: the
+         * simdgroup that finishes output row d already holds it in lane 0, so
+         * it can write the four HC streams there rather than have a separate
+         * dispatch read the row straight back.  Only valid when nothing sits
+         * between the two -- directional steering would, so it is required to
+         * be inactive. */
+        if (hc_expanded && g->glm53 &&
+            l->kda_output->type == DS4_TENSOR_BF16 &&
+            g->directional_steering_attn_scale == 0.0f &&
+            g->hc_after_attn && g->hc_cur && g->hc_post && g->hc_comb &&
+            getenv("DS4_METAL_DISABLE_GLM53_KDA_OUT_HC_EXPAND") == NULL) {
+            if (ds4_gpu_glm53_matmul_bf16_hc_expand4(
+                    g->attn_out, g->hc_after_attn,
+                    model->map, model->size, l->kda_output->abs_offset,
+                    projection, DS4_N_EMBD,
+                    g->kda_out, g->hc_cur, g->hc_post, g->hc_comb,
+                    DS4_N_HC) != 0) {
+                *hc_expanded = true;
+            }
+        }
+#endif
+        if (!(hc_expanded && *hc_expanded)) {
+            ok = glm53_graph_matmul(g->attn_out,
+                                    model,
+                                    l->kda_output,
+                                    projection,
+                                    DS4_N_EMBD,
+                                    g->kda_out);
+        }
         if (ok && (repeat & DS4_GLM_REPEAT_KDA_OUT)) {
             ok = glm53_graph_matmul(g->attn_out, model, l->kda_output,
                                     projection, DS4_N_EMBD, g->kda_out);
@@ -51623,6 +51649,7 @@ static bool glm_graph_forward_token(
         }
 
         const uint32_t decode_ablate = glm_decode_ablate_mask();
+        bool kda_hc_expanded = false;
         DS4_GLM_FT_STAGE("attention mHC pre");
         if (ok && g->glm53 && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
         if (ok && g->glm53) {
@@ -51648,7 +51675,8 @@ static bool glm_graph_forward_token(
         if (ok && glm53_kda) {
             DS4_GLM_FT_STAGE("KDA attention");
             if (!(decode_ablate & DS4_GLM_ABLATE_KDA)) {
-                ok = glm53_graph_kda_attention(g, model, l, il);
+                ok = glm53_graph_kda_attention(g, model, l, il,
+                                               &kda_hc_expanded);
             }
             goto glm53_attention_done;
         }
@@ -52271,17 +52299,22 @@ glm53_attention_done:
                     g, g->attn_out, il, 1);
         }
         if (ok && g->glm53) {
-            ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn,
-                                          g->attn_out,
-                                          g->hc_cur,
-                                          g->hc_post,
-                                          g->hc_comb,
-                                          DS4_N_EMBD,
-                                          DS4_N_HC) != 0;
-            if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND)) {
-                ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn, g->attn_out,
-                                              g->hc_cur, g->hc_post, g->hc_comb,
-                                              DS4_N_EMBD, DS4_N_HC) != 0;
+            /* Skip only the expand when kda_output already folded it in; the
+             * FFN-side mHC producer below is in this same block and must still
+             * run. */
+            if (!kda_hc_expanded) {
+                ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn,
+                                              g->attn_out,
+                                              g->hc_cur,
+                                              g->hc_post,
+                                              g->hc_comb,
+                                              DS4_N_EMBD,
+                                              DS4_N_HC) != 0;
+                if (ok && (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_EXPAND)) {
+                    ok = ds4_gpu_hc_expand_tensor(g->hc_after_attn, g->attn_out,
+                                                  g->hc_cur, g->hc_post, g->hc_comb,
+                                                  DS4_N_EMBD, DS4_N_HC) != 0;
+                }
             }
             if (ok && (decode_ablate & DS4_GLM_ABLATE_HC)) { /* ablate */ } else
             if (ok) ok = glm53_graph_hc_pre(g,
