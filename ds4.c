@@ -44100,13 +44100,31 @@ static bool glm53_graph_kda_attention(
             ok = glm53_graph_matmul(g->kda_v, model, l->kda_v,
                                     DS4_N_EMBD, projection, g->attn_norm);
         }
+        /* Repeat whichever variant actually ran.  Re-dispatching the serial
+         * matvecs when the fused kernel did the work would price a path that
+         * is not executing. */
         if (ok && (repeat & DS4_GLM_REPEAT_KDA_QKV)) {
-            ok = glm53_graph_matmul(g->kda_q, model, l->kda_q,
-                                    DS4_N_EMBD, projection, g->attn_norm) &&
-                 glm53_graph_matmul(g->kda_k, model, l->kda_k,
-                                    DS4_N_EMBD, projection, g->attn_norm) &&
-                 glm53_graph_matmul(g->kda_v, model, l->kda_v,
-                                    DS4_N_EMBD, projection, g->attn_norm);
+#if defined(__APPLE__)
+            if (qkv_paired) {
+                ok = ds4_gpu_glm53_matmul_bf16_qkv(
+                        g->kda_q, g->kda_k, g->kda_v,
+                        model->map, model->size,
+                        l->kda_q->abs_offset, l->kda_k->abs_offset,
+                        l->kda_v->abs_offset,
+                        DS4_N_EMBD, projection, g->attn_norm) != 0;
+            } else
+#endif
+            if (qk_paired) {
+                ok = glm53_graph_matmul(g->kda_v, model, l->kda_v,
+                                        DS4_N_EMBD, projection, g->attn_norm);
+            } else {
+                ok = glm53_graph_matmul(g->kda_q, model, l->kda_q,
+                                        DS4_N_EMBD, projection, g->attn_norm) &&
+                     glm53_graph_matmul(g->kda_k, model, l->kda_k,
+                                        DS4_N_EMBD, projection, g->attn_norm) &&
+                     glm53_graph_matmul(g->kda_v, model, l->kda_v,
+                                        DS4_N_EMBD, projection, g->attn_norm);
+            }
         }
     }
     bool gate_paired = false;
@@ -44143,6 +44161,24 @@ static bool glm53_graph_kda_attention(
             ok = glm53_graph_matmul(
                     g->kda_raw_beta, model, l->kda_beta,
                     DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+            /* The serial fallback's repeat below is unreachable once pairing
+             * succeeds, so the paired path carries its own. */
+            if (ok && (repeat & DS4_GLM_REPEAT_KDA_GATE)) {
+                ok = ds4_gpu_glm53_matmul_bf16_pair(
+                        g->kda_lowrank, g->kda_lowrank_g,
+                        model->map, model->size,
+                        l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
+                        DS4_N_EMBD, DS4_N_KDA_HEAD_DIM,
+                        g->attn_norm, g->attn_norm) != 0 &&
+                     ds4_gpu_glm53_matmul_bf16_pair(
+                        g->kda_raw_gate, g->kda_output_gate,
+                        model->map, model->size,
+                        l->kda_f_b->abs_offset, l->kda_g_b->abs_offset,
+                        DS4_N_KDA_HEAD_DIM, projection,
+                        g->kda_lowrank, g->kda_lowrank_g) != 0 &&
+                     glm53_graph_matmul(g->kda_raw_beta, model, l->kda_beta,
+                                        DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+            }
         }
     }
 #endif
@@ -44229,8 +44265,22 @@ static bool glm53_graph_kda_attention(
                                     g->kda_out);
         }
         if (ok && (repeat & DS4_GLM_REPEAT_KDA_OUT)) {
-            ok = glm53_graph_matmul(g->attn_out, model, l->kda_output,
-                                    projection, DS4_N_EMBD, g->kda_out);
+#if defined(__APPLE__)
+            if (hc_expanded && *hc_expanded) {
+                /* Price the projection-plus-expand kernel that is deployed,
+                 * not the bare projection it replaced. */
+                ok = ds4_gpu_glm53_matmul_bf16_hc_expand4(
+                        g->attn_out, g->hc_after_attn,
+                        model->map, model->size, l->kda_output->abs_offset,
+                        projection, DS4_N_EMBD,
+                        g->kda_out, g->hc_cur, g->hc_post, g->hc_comb,
+                        DS4_N_HC) != 0;
+            } else
+#endif
+            {
+                ok = glm53_graph_matmul(g->attn_out, model, l->kda_output,
+                                        projection, DS4_N_EMBD, g->kda_out);
+            }
         }
     }
     return ok;
@@ -45478,11 +45528,23 @@ static bool glm53_graph_encode_ffn_tail_one(
      * kernel already has a has_add path, so on the decode tail they collapse
      * into one dispatch.  Directional steering would have to run on the summed
      * value in between, so it is required to be inactive. */
-    bool defer_sum =
+    bool defer_sum = false;
+#if defined(__APPLE__)
+    /* Metal only, like the two attention-side epilogues.  ds4_gpu_hc_expand_add_
+     * tensor is a stub on ROCm, and while CUDA implements it, changing that
+     * backend's arithmetic from a change measured only on Metal is not
+     * something this should do silently.
+     *
+     * Also declines while a debug dump of this layer is armed: the deferral
+     * leaves g->next unwritten, so the "ffn_out" dump below would capture
+     * whatever the buffer held from a previous token. */
+    defer_sum =
         g->glm53 && g->ffn_sum && g->ffn_out && g->hc_next &&
         g->hc_after_attn && g->hc_post && g->hc_comb &&
         g->directional_steering_ffn_scale == 0.0f &&
+        !metal_graph_debug_wants("ffn_out", il, pos) &&
         getenv("DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD") == NULL;
+#endif
     bool ok = glm_graph_encode_ffn_one_normed_from(g,
                                                    model,
                                                    l,
