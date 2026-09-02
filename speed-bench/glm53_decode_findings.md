@@ -381,6 +381,63 @@ fused via `ds4_gpu_shared_mid_swiglu_q8_0_tensor`.  Closing the remaining gap
 to 707 GB/s would be worth about 0.45 ms, 1.1%, not the large win the 38%
 figure implied.
 
+## The DSA attention core is the one stage with real headroom
+
+Every dense stage measured so far turned out to be at or near the memory
+ceiling.  The DSA attention core is not, and it is 18.9% of the decode step.
+
+It is selection-capped, not context-scaled -- `indexer.top_k` is 2048 and
+`pool_size` 4, so at most 2051 rows are ever attended.  Measured cost is flat:
+
+| ctx | attn_core |
+|---:|---:|
+| 2,048 | 7.77 ms |
+| 8,192 | 7.78 ms |
+| 16,384 | 7.68 ms |
+
+What it reads per token, from the tensor table and the cache geometry
+(`kv_lora_rank` 512, rope dim 64, f16 compact cache, 12 DSA layers):
+
+    compact KV, 2051 rows x 1152 B x 12 layers     28.4 MB
+    attn_v_b value projection, Q8_0               107.0 MB
+    total                                         135.4 MB
+
+    135.4 MB / 7.7 ms = 17.6 GB/s = 2.4% of ceiling
+
+At the 707 GB/s the dense projections achieve, that traffic would take
+**0.19 ms**.  So roughly **7.5 ms of the 7.7 is not data movement** -- it is
+latency, occupancy, and uncoalesced access.
+
+That makes this the largest remaining opportunity on the path by a wide margin,
+and unlike the projections it is not capped by physics.  The shape of the work,
+which is not started:
+
+- **Sort the selected indices.** The indexer produces up to 2051 row ids that
+  are then gathered from the compact cache.  Unsorted ids make every gather a
+  scattered read of a 1152-byte row; sorted ids would let adjacent lanes touch
+  adjacent cache lines.
+- **Fuse the partial reduction with the value projection.** `attn_v_b` is 107
+  of the 135 MB and is read as a separate step from the score reduction.
+- **Revisit the score and cache layout** so the 512-wide lora part and the
+  64-wide rope part are not strided apart per row.
+
+None of these are measured; the 7.5 ms is the budget they are competing for,
+not a promise.
+
+## Why the shared-down fusion was not done
+
+`ds4_gpu_shared_down_hc_expand_q8_0_tensor` exists and is exactly GLM's shared
+down-projection followed by the expand this branch already fused, so it looked
+like two dispatches collapsing into one for another ~0.2 ms.
+
+It does not fit.  `glm_graph_routed_moe_one_dispatch` takes `ffn_mid` as its
+scratch buffer, and on the ordering where the shared expert runs first the
+routed dispatch clobbers it.  Deferring the shared down-projection until after
+the routed stage -- which is required, since the fused kernel needs
+`routed_out` -- would read that clobbered scratch.  Making it work needs a
+second mid buffer, and at 0.5% that did not justify the aliasing risk on top of
+the `defer_final_sum` plumbing already in this path.
+
 ## What is left, priced
 
 With KDA split and the residual row split, the dense stages can be checked
