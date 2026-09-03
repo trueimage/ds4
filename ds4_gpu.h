@@ -3037,6 +3037,8 @@ int ds4_gpu_glm53_matmul_bf16_pair(
         const ds4_gpu_tensor *x_a,
         const ds4_gpu_tensor *x_b);
 
+uint64_t ds4_gpu_encoder_count(void);
+
 int ds4_gpu_glm53_matmul_bf16_trio(
         ds4_gpu_tensor       *out_a,
         ds4_gpu_tensor       *out_b,

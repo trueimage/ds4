@@ -348,6 +348,28 @@ The mHC producer is down from 3.99 to 1.44 ms.  Note that `kda` now also
 covers the HC expansion folded into `kda_output`, so its 15.39 is not directly
 comparable with the earlier 15.99.
 
+### How much launch overhead is left in total
+
+Chasing the residual stage by stage has diminishing returns, so
+`DS4_METAL_ENCODER_COUNT` counts compute encoders instead -- one per dispatch
+for essentially every primitive here.  Differencing two runs of different
+decode length removes prefill and setup:
+
+    6,605 encoders over 8 decode tokens
+    26,989 over 40
+    (26989 - 6605) / 32 = **637 dispatches per decode token**
+
+At the 4.6 us launch cost measured from the gate pairing, that is **2.93
+ms/token, about 7% of the 41.31 ms step**, spread across every stage rather
+than concentrated in the residual.  It is the floor that all remaining
+dispatch-count work is competing for, and it bounds the fusion approach as a
+whole: no arrangement of the current graph gets under it without removing
+launches.
+
+For scale, the fusions in this branch have already taken roughly 3.5 ms of
+dispatch and intermediate-traffic cost out of the step, so what is left is
+smaller than what was found.
+
 ### Splitting the residual
 
 `DS4_GLM_DECODE_REPEAT` gained a `router` bit.  Repeat rather than ablate is

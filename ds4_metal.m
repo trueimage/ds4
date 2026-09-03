@@ -965,7 +965,30 @@ static id<MTLCommandBuffer> ds4_gpu_command_buffer(int *owned) {
     return cb;
 }
 
+/* Encoder count, as a proxy for dispatch count.  Almost every primitive here
+ * creates one encoder per dispatch, so the delta between two runs of differing
+ * decode length divided by the token difference is dispatches per token -- and
+ * that times the measured 4.6 us launch cost is the floor no amount of kernel
+ * tuning gets under.  Read with ds4_gpu_encoder_count(). */
+static uint64_t g_encoder_count;
+
+uint64_t ds4_gpu_encoder_count(void) { return g_encoder_count; }
+
+static void ds4_gpu_encoder_count_print(void) {
+    fprintf(stderr, "ds4: metal compute encoders created: %llu\n",
+            (unsigned long long)g_encoder_count);
+}
+
+static void ds4_gpu_encoder_count_arm(void) {
+    static int armed = 0;
+    if (armed) return;
+    armed = 1;
+    if (getenv("DS4_METAL_ENCODER_COUNT")) atexit(ds4_gpu_encoder_count_print);
+}
+
 static id<MTLComputeCommandEncoder> ds4_gpu_compute_encoder(id<MTLCommandBuffer> cb) {
+    g_encoder_count++;
+    ds4_gpu_encoder_count_arm();
     if (g_batch_cb && cb == g_batch_cb) {
         g_batch_has_work = YES;
         if (!g_batch_enc) {
