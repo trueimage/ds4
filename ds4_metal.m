@@ -44091,6 +44091,13 @@ typedef struct {
     uint32_t n_rows;
 } glm53_gpu_bf16_matmul_args;
 
+typedef struct {
+    uint32_t in_dim;
+    uint32_t out_dim_ab;
+    uint32_t out_dim_c;
+    uint32_t n_rows;
+} glm53_gpu_bf16_trio_args;
+
 int ds4_gpu_glm53_embedding_bf16(
         ds4_gpu_tensor       *out,
         const void           *model_map,
@@ -44360,6 +44367,81 @@ int ds4_gpu_glm53_matmul_bf16_pair(
         ds4_gpu_end_compute_encoder(cb, enc);
         return ds4_gpu_finish_command_buffer(cb, owned,
                                               "GLM-5.3 BF16 pair matmul");
+    }
+}
+
+int ds4_gpu_glm53_matmul_bf16_trio(
+        ds4_gpu_tensor       *out_a,
+        ds4_gpu_tensor       *out_b,
+        ds4_gpu_tensor       *out_c,
+        const void           *model_map,
+        uint64_t              model_size,
+        uint64_t              weight_a_offset,
+        uint64_t              weight_b_offset,
+        uint64_t              weight_c_offset,
+        uint32_t              in_dim,
+        uint32_t              out_dim_ab,
+        uint32_t              out_dim_c,
+        const ds4_gpu_tensor *x) {
+    if (!g_initialized && !ds4_gpu_init()) return 0;
+    if (!ds4_gpu_device_name_contains("M3 Ultra")) return 0;
+    uint64_t w_ab = 0, w_c = 0;
+    if (in_dim == 0 || out_dim_ab == 0 || out_dim_c == 0 ||
+        out_dim_c > out_dim_ab ||
+        !glm53_gpu_mul_u64(in_dim, out_dim_ab, &w_ab) ||
+        !glm53_gpu_mul_u64(in_dim, out_dim_c, &w_c) ||
+        !glm53_gpu_tensor_has(x, in_dim, sizeof(float)) ||
+        !glm53_gpu_tensor_has(out_a, out_dim_ab, sizeof(float)) ||
+        !glm53_gpu_tensor_has(out_b, out_dim_ab, sizeof(float)) ||
+        !glm53_gpu_tensor_has(out_c, out_dim_c, sizeof(float))) {
+        return 0;
+    }
+
+    @autoreleasepool {
+        uint64_t inner_a = 0, inner_b = 0, inner_c = 0;
+        id<MTLBuffer> weight_a = glm53_gpu_weight_buffer(
+            model_map, model_size, weight_a_offset,
+            w_ab * sizeof(uint16_t), &inner_a, "BF16 trio matrix A");
+        id<MTLBuffer> weight_b = glm53_gpu_weight_buffer(
+            model_map, model_size, weight_b_offset,
+            w_ab * sizeof(uint16_t), &inner_b, "BF16 trio matrix B");
+        id<MTLBuffer> weight_c = glm53_gpu_weight_buffer(
+            model_map, model_size, weight_c_offset,
+            w_c * sizeof(uint16_t), &inner_c, "BF16 trio matrix C");
+        id<MTLComputePipelineState> pipeline =
+            ds4_gpu_get_pipeline("kernel_glm53_mul_mv_bf16_f32_trio");
+        if (!weight_a || !weight_b || !weight_c || !pipeline) return 0;
+
+        const uint32_t nsg = glm53_gpu_bf16_mv_nsg();
+        glm53_gpu_bf16_trio_args args = {
+            .in_dim = in_dim,
+            .out_dim_ab = out_dim_ab,
+            .out_dim_c = out_dim_c,
+            .n_rows = 1u,
+        };
+        int owned = 0;
+        id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+        if (!cb) return 0;
+        id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
+        [enc setComputePipelineState:pipeline];
+        [enc setBytes:&args length:sizeof(args) atIndex:0];
+        [enc setBuffer:weight_a offset:(NSUInteger)inner_a atIndex:1];
+        [enc setBuffer:weight_b offset:(NSUInteger)inner_b atIndex:2];
+        [enc setBuffer:weight_c offset:(NSUInteger)inner_c atIndex:3];
+        [enc setBuffer:ds4_gpu_tensor_buffer(x)
+                offset:ds4_gpu_tensor_offset(x) atIndex:4];
+        [enc setBuffer:ds4_gpu_tensor_buffer(out_a)
+                offset:ds4_gpu_tensor_offset(out_a) atIndex:5];
+        [enc setBuffer:ds4_gpu_tensor_buffer(out_b)
+                offset:ds4_gpu_tensor_offset(out_b) atIndex:6];
+        [enc setBuffer:ds4_gpu_tensor_buffer(out_c)
+                offset:ds4_gpu_tensor_offset(out_c) atIndex:7];
+        [enc dispatchThreadgroups:MTLSizeMake((out_dim_ab + nsg - 1u) / nsg,
+                                              1u, 3u)
+            threadsPerThreadgroup:MTLSizeMake(32u * nsg, 1u, 1u)];
+        ds4_gpu_end_compute_encoder(cb, enc);
+        return ds4_gpu_finish_command_buffer(cb, owned,
+                                              "GLM-5.3 BF16 trio matmul");
     }
 }
 

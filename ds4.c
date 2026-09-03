@@ -44144,7 +44144,19 @@ static bool glm53_graph_kda_attention(
         l->kda_f_b->type == DS4_TENSOR_BF16 &&
         l->kda_g_b->type == DS4_TENSOR_BF16 &&
         getenv("DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR") == NULL) {
-        gate_paired = ds4_gpu_glm53_matmul_bf16_pair(
+        /* beta reads the same attn_norm row as f_a and g_a, only at a
+         * shorter output width, so the trio kernel carries all three and the
+         * chain drops from three dispatches to two. */
+        bool beta_fused = l->kda_beta->type == DS4_TENSOR_BF16 &&
+            getenv("DS4_METAL_DISABLE_GLM53_KDA_GATE_TRIO") == NULL &&
+            ds4_gpu_glm53_matmul_bf16_trio(
+                g->kda_lowrank, g->kda_lowrank_g, g->kda_raw_beta,
+                model->map, model->size,
+                l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
+                l->kda_beta->abs_offset,
+                DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, DS4_N_KDA_HEAD,
+                g->attn_norm) != 0;
+        gate_paired = beta_fused || ds4_gpu_glm53_matmul_bf16_pair(
                 g->kda_lowrank, g->kda_lowrank_g,
                 model->map, model->size,
                 l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
@@ -44161,27 +44173,39 @@ static bool glm53_graph_kda_attention(
         /* A partial failure is safe to fall back from: both halves are pure
          * functions of attn_norm, so the serial chain below simply recomputes
          * the same values into the same buffers. */
-        if (gate_paired) {
+        if (gate_paired && !beta_fused) {
             ok = glm53_graph_matmul(
                     g->kda_raw_beta, model, l->kda_beta,
                     DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+        }
+        if (gate_paired) {
             /* The serial fallback's repeat below is unreachable once pairing
              * succeeds, so the paired path carries its own. */
             if (ok && (repeat & DS4_GLM_REPEAT_KDA_GATE)) {
-                ok = ds4_gpu_glm53_matmul_bf16_pair(
-                        g->kda_lowrank, g->kda_lowrank_g,
-                        model->map, model->size,
-                        l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
-                        DS4_N_EMBD, DS4_N_KDA_HEAD_DIM,
-                        g->attn_norm, g->attn_norm) != 0 &&
-                     ds4_gpu_glm53_matmul_bf16_pair(
+                if (beta_fused) {
+                    ok = ds4_gpu_glm53_matmul_bf16_trio(
+                            g->kda_lowrank, g->kda_lowrank_g, g->kda_raw_beta,
+                            model->map, model->size,
+                            l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
+                            l->kda_beta->abs_offset,
+                            DS4_N_EMBD, DS4_N_KDA_HEAD_DIM, DS4_N_KDA_HEAD,
+                            g->attn_norm) != 0;
+                } else {
+                    ok = ds4_gpu_glm53_matmul_bf16_pair(
+                            g->kda_lowrank, g->kda_lowrank_g,
+                            model->map, model->size,
+                            l->kda_f_a->abs_offset, l->kda_g_a->abs_offset,
+                            DS4_N_EMBD, DS4_N_KDA_HEAD_DIM,
+                            g->attn_norm, g->attn_norm) != 0 &&
+                         glm53_graph_matmul(g->kda_raw_beta, model, l->kda_beta,
+                                            DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+                }
+                if (ok) ok = ds4_gpu_glm53_matmul_bf16_pair(
                         g->kda_raw_gate, g->kda_output_gate,
                         model->map, model->size,
                         l->kda_f_b->abs_offset, l->kda_g_b->abs_offset,
                         DS4_N_KDA_HEAD_DIM, projection,
-                        g->kda_lowrank, g->kda_lowrank_g) != 0 &&
-                     glm53_graph_matmul(g->kda_raw_beta, model, l->kda_beta,
-                                        DS4_N_EMBD, DS4_N_KDA_HEAD, g->attn_norm);
+                        g->kda_lowrank, g->kda_lowrank_g) != 0;
             }
         }
     }
