@@ -554,15 +554,15 @@ GGUF** with the same harness, contexts and interleaving.
 
     ctx 2048, 128 generated tokens, arms interleaved, 3 pairs
 
-    base (110afdd)   21.170 tok/s   47.24 ms/token
-    tip              28.413 tok/s   35.19 ms/token
-    engine-only      +34.22%
+    base (110afdd)   21.160 tok/s   47.26 ms/token
+    tip              28.300 tok/s   35.34 ms/token
+    engine-only      +33.74%
 
 Contributions, each measured against the baseline current when it landed: the
 widened BF16 loads ~+5.4%, the mHC producer fusion +5.67%, the KDA gate pairing
 +0.74%, the three HC-expand epilogues +0.46% / +0.11% / +0.14%, the
 shared-down/HC fusion +0.77%, the gate trio +0.30%, and the grouped/split DSA
-kernel +17.45%.
+kernel +16.86%.
 
 Note the base reproduces the 21.19 tok/s of the original budget almost exactly,
 which is a useful check that machine conditions have not drifted between the
