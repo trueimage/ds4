@@ -451,36 +451,50 @@ Relaxing both, at ctx 2048, interleaved:
 
 | | tok/s | ms/token |
 |---|---:|---:|
-| generic kernel | 24.168 (sd 0.008) | 41.38 |
-| split group8 | **28.387** (sd 0.008) | **35.23** |
-| | **+17.45%**, Welch t = 930 | |
+| generic kernel | 24.232 | 41.27 |
+| split group8 | **28.318** | **35.31** |
+| | **+16.86%** | |
 
 **This is the largest single gain in the branch**, and it came from deleting
 two guard clauses rather than writing a kernel.
 
-### It is not bit-exact, and here is the evidence that it is sound
+### A bug this uncovered, and why "not bit-exact" was the wrong conclusion
 
-The split path reduces with an online softmax across blocks, so its arithmetic
-differs from the generic kernel's single-pass softmax.  It is deterministic
-(two runs agree exactly), but against the generic path the DSA attention
-outputs differ by up to **1.04% of range**, and greedy generation agrees for
-the first 60-130 tokens then diverges while staying coherent.
+The split path reduces with an online softmax across blocks, so some deviation
+from the generic single-pass softmax is expected.  The first measurement showed
+**1.04% of range** on the DSA attention outputs, with greedy generation
+diverging after 60-130 tokens.  That was written up as acceptable
+online-softmax noise.  It was not noise.
 
-Because of that, `score_official` on the tracked fixtures proves nothing here:
-its prompts are 24 tokens, so fewer than 512 rows are selected and the split
-path never engages.  A long-context fixture was built instead -- 16 cases of
-~4000-token prompts from `promessi_sposi.txt` with the following ~200 tokens as
-the teacher-forced target:
+`ds4_gpu_glm_attention_indexed_decode_split_group8_typed_tensor` takes a
+`selected_rows_valid` flag which, when true, selects a kernel variant that
+skips the `row < cache_cap` bounds test on every selected row.  The GLM call
+site passed `true`.  That call site had never executed before -- the guards
+above kept it unreachable -- so the claim had never been tested, and it is
+false: the GLM indexer emits rows past `compact_cache_cap`, which the generic
+kernel excludes by scoring them `-INFINITY`.  The split path was folding
+out-of-range cache contents into the attention output.
 
-| batch | tokens | split | generic | delta |
-|---|---:|---:|---:|---:|
-| A | 1,797 | 1.836499 | 1.833405 | +0.169% |
-| B | 1,817 | 2.044772 | 2.046025 | **-0.061%** |
-| combined | 3,614 | 1.941212 | 1.940304 | +0.047% |
+Passing `false` settles it:
 
-**The sign flips between batches**, so this is sampling noise at 3,614 tokens
-rather than a systematic quality cost.  `DS4_METAL_DISABLE_GLM53_DSA_SPLIT`
-selects the generic kernel for comparison.
+| | deviation vs generic |
+|---|---:|
+| rows assumed valid (as shipped in the first attempt) | 1.04% of range |
+| rows bounds-checked | **3.06e-05** |
+
+3e-05 is ordinary float reordering, which is what online softmax should cost.
+The bounds check is worth **0.24%** of decode, and with it:
+
+- greedy generation is **identical over 200 tokens** at ctx 8192, where the
+  split path is definitely engaged;
+- long-context teacher-forced NLL over 1,797 tokens is **1.833376 against the
+  generic path's 1.833405, a delta of -0.0016%**, where the buggy version was
+  +0.169%.
+
+The lesson is worth keeping: "this optimisation is not bit-exact, and here is a
+quality run showing the difference is small" is a comfortable story that can
+absorb a real bug.  The 1.04% was ~99% bug and ~1% arithmetic, and the only
+reason to look further was that 1% is far larger than reordering should cost.
 
 ## The shared-down fusion, after a second look
 
