@@ -35118,7 +35118,12 @@ int ds4_gpu_glm_attention_indexed_decode_split_group8_typed_tensor(
         n_selected == 0 || cache_cap == 0 || n_selected > cache_cap ||
         n_head == 0 || (n_head % 8u) != 0 ||
         kv_lora_dim != 512u ||
-        qk_nope == 0 || qk_rope != 64u ||
+        /* qk_rope == 0 is GLM 5.3, which has no RoPE tail.  The kernel drives
+         * all its rope work from rope_vecs = qk_rope >> 2 and the scratch size
+         * below already drops the rope term at 0, so the case is supported --
+         * as the freq_base/freq_scale checks below, which are already
+         * conditioned on qk_rope != 0, imply. */
+        qk_nope == 0 || (qk_rope != 64u && qk_rope != 0u) ||
         value_dim == 0 || qk_dim < qk_nope ||
         block_rows == 0u || needed_blocks == 0u ||
         n_blocks < needed_blocks || n_blocks > 64u ||

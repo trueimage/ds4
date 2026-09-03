@@ -2866,7 +2866,12 @@ kernel void kernel_glm_attention_indexed_decode_split_group8_partial_impl(
     if (args.n_selected == 0u ||
         args.cache_f16 == 0u ||
         args.kv_lora_dim != 512u ||
-        args.qk_rope != 64u ||
+        /* GLM 5.3 has no RoPE tail (n_rot = 0).  Everything rope here is
+         * driven by rope_vecs = qk_rope >> 2, so at 0 the staging loop runs no
+         * iterations, rope_shared is never touched and the per-lane rope dot
+         * is skipped -- the kernel is already correct for that case and only
+         * this guard kept it out. */
+        (args.qk_rope != 64u && args.qk_rope != 0u) ||
         args.block_rows == 0u ||
         block >= args.n_blocks) {
         return;

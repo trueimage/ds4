@@ -41674,14 +41674,22 @@ static bool glm_graph_indexed_decode_split_group8_available(uint32_t n_selected)
     const uint32_t block_rows = glm_graph_indexed_decode_split_block_rows_for(n_selected);
     const uint32_t needed_blocks =
         block_rows != 0u ? (n_selected + block_rows - 1u) / block_rows : 0u;
+    /* The split path reduces with an online softmax, so its arithmetic is not
+     * bit-identical to the generic kernel.  This switch selects the generic
+     * one for comparison. */
+    if (getenv("DS4_METAL_DISABLE_GLM53_DSA_SPLIT") != NULL) return false;
     return n_selected > 512u &&
            block_rows > 0 &&
            needed_blocks > 0 &&
            needed_blocks <= glm_graph_indexed_decode_split_blocks() &&
-           glm_graph_indexed_decode_split_blocks() <= 64u &&
+           /* The reduce kernel walks one thread per block and refuses more
+            * than 64, so the runtime block count is what has to fit -- not
+            * split_blocks(), which is the worst-case buffer sizing and is 65
+            * for GLM 5.3's 2051-row selection limit. */
+           needed_blocks <= 64u &&
            (DS4_N_HEAD % 8u) == 0 &&
            DS4_N_KV_LORA == 512u &&
-           DS4_N_ROT == 64u &&
+           (DS4_N_ROT == 64u || DS4_N_ROT == 0u) &&
            glm_graph_compact_cache_is_f16();
 #endif
 }
