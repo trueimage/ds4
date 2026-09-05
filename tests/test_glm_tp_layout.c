@@ -23,7 +23,9 @@ enum {
 
 int ds4_test_glm_expert_layout_policy(ds4_backend backend,
                                       ds4_tp_role role,
+                                      ds4_distributed_role distributed_role,
                                       bool ssd_streaming,
+                                      bool multi_tier,
                                       bool inspect_only,
                                       uint32_t gate_type,
                                       uint32_t up_type,
@@ -36,21 +38,25 @@ int ds4_test_glm_promoted_first_token_diagnostic(uint32_t gate_type,
 
 static int failures;
 
-static void expect_layout(const char *name,
-                          ds4_backend backend,
-                          ds4_tp_role role,
-                          bool ssd_streaming,
-                          bool inspect_only,
-                          uint32_t gate_type,
-                          uint32_t up_type,
-                          uint32_t down_type,
-                          int expected_policy,
-                          uint32_t expected_bad_type) {
+static void expect_layout_topology(const char *name,
+                                   ds4_backend backend,
+                                   ds4_tp_role role,
+                                   ds4_distributed_role distributed_role,
+                                   bool ssd_streaming,
+                                   bool multi_tier,
+                                   bool inspect_only,
+                                   uint32_t gate_type,
+                                   uint32_t up_type,
+                                   uint32_t down_type,
+                                   int expected_policy,
+                                   uint32_t expected_bad_type) {
     uint32_t bad_layer = UINT32_MAX;
     uint32_t bad_type = UINT32_MAX;
     const int policy = ds4_test_glm_expert_layout_policy(backend,
                                                          role,
+                                                         distributed_role,
                                                          ssd_streaming,
+                                                         multi_tier,
                                                          inspect_only,
                                                          gate_type,
                                                          up_type,
@@ -68,6 +74,30 @@ static void expect_layout(const char *name,
                 bad_type);
         failures++;
     }
+}
+
+static void expect_layout(const char *name,
+                          ds4_backend backend,
+                          ds4_tp_role role,
+                          bool ssd_streaming,
+                          bool inspect_only,
+                          uint32_t gate_type,
+                          uint32_t up_type,
+                          uint32_t down_type,
+                          int expected_policy,
+                          uint32_t expected_bad_type) {
+    expect_layout_topology(name,
+                           backend,
+                           role,
+                           DS4_DISTRIBUTED_NONE,
+                           ssd_streaming,
+                           false,
+                           inspect_only,
+                           gate_type,
+                           up_type,
+                           down_type,
+                           expected_policy,
+                           expected_bad_type);
 }
 
 static void expect_promoted_first_token_rejection(void) {
@@ -153,6 +183,46 @@ int main(void) {
                   DS4_TP_LEADER, true, false,
                   GGUF_Q2_K, GGUF_Q2_K, GGUF_Q2_K,
                   POLICY_ALLOWED, 0);
+    expect_layout_topology("distributed coordinator promoted layout",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_COORDINATOR, false, false, false,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_UNSUPPORTED_SCOPE, GGUF_Q6_K);
+    expect_layout_topology("distributed worker promoted layout",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_WORKER, false, false, false,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_UNSUPPORTED_SCOPE, GGUF_Q6_K);
+    expect_layout_topology("distributed coordinator promoted inspection",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_COORDINATOR, false, false, true,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_ALLOWED, 0);
+    expect_layout_topology("distributed worker promoted inspection",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_WORKER, false, false, true,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_ALLOWED, 0);
+    expect_layout_topology("multi-tier promoted layout",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_NONE, false, true, false,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_UNSUPPORTED_SCOPE, GGUF_Q6_K);
+    expect_layout_topology("multi-tier promoted inspection",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_NONE, false, true, true,
+                           GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                           POLICY_ALLOWED, 0);
+    expect_layout_topology("distributed prior layout",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_WORKER, false, false, false,
+                           GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                           POLICY_ALLOWED, 0);
+    expect_layout_topology("multi-tier prior layout",
+                           DS4_BACKEND_METAL, DS4_TP_NONE,
+                           DS4_DISTRIBUTED_NONE, false, true, false,
+                           GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                           POLICY_ALLOWED, 0);
     expect_promoted_first_token_rejection();
     if (failures != 0) return 1;
     puts("test_glm_tp_layout: PASS");

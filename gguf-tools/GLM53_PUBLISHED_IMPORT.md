@@ -38,10 +38,13 @@ batches and existing grouped matmul variants for large prefill. Q8_0 experts
 also use that path. Previously supported GLM expert layouts retain their
 established dispatch. This is compatibility support, not a claim that the new
 formats have reached their best possible throughput.
-The new high-precision fallback is available only for resident single-device
-Metal execution. CPU execution, non-Metal GPU backends, SSD streaming, and GLM
-tensor-parallel sessions reject these layouts at model open. The F32 expert
-helpers remain internal arithmetic references for component diagnostics.
+The new high-precision fallback is available only for resident single-device,
+non-distributed Metal execution. CPU execution, non-Metal GPU backends,
+distributed coordinator or worker slices, SSD streaming, GLM tensor-parallel
+sessions, and multi-tier GPU placements reject these layouts before GPU
+initialization. General placement validation independently rejects CPU spill.
+The F32 expert helpers remain internal arithmetic references for component
+diagnostics.
 
 ## Tools and inputs
 

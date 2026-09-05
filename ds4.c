@@ -41141,13 +41141,15 @@ typedef enum {
 } glm_expert_layout_policy;
 
 static glm_expert_layout_policy glm_validate_requested_expert_layouts(
-        const ds4_weights *weights,
-        ds4_backend       backend,
-        ds4_tp_role       role,
-        bool              ssd_streaming,
-        bool              inspect_only,
-        uint32_t         *bad_layer,
-        uint32_t         *bad_type) {
+        const ds4_weights      *weights,
+        ds4_backend            backend,
+        ds4_tp_role            role,
+        ds4_distributed_role   distributed_role,
+        bool                   ssd_streaming,
+        bool                   multi_tier,
+        bool                   inspect_only,
+        uint32_t              *bad_layer,
+        uint32_t              *bad_type) {
     if (!weights) return GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
     uint32_t promoted_layer = 0;
     uint32_t promoted_type = 0;
@@ -41157,7 +41159,9 @@ static glm_expert_layout_policy glm_validate_requested_expert_layouts(
         !inspect_only &&
         (backend != DS4_BACKEND_METAL ||
          role != DS4_TP_NONE ||
-         ssd_streaming)) {
+         distributed_role != DS4_DISTRIBUTED_NONE ||
+         ssd_streaming ||
+         multi_tier)) {
         if (bad_layer) *bad_layer = promoted_layer;
         if (bad_type) *bad_type = promoted_type;
         return GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE;
@@ -41167,6 +41171,45 @@ static glm_expert_layout_policy glm_validate_requested_expert_layouts(
     }
     return glm_tp_validate_ownership_kernels(weights, bad_layer, bad_type) ?
         GLM_EXPERT_LAYOUT_ALLOWED : GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
+}
+
+static int glm_engine_validate_expert_layout_policy(
+        const ds4_engine         *e,
+        const ds4_engine_options *opt) {
+    if (DS4_MODEL_FAMILY != DS4_MODEL_FAMILY_GLM_DSA) return 0;
+
+    uint32_t bad_layer = 0;
+    uint32_t bad_type = 0;
+    const glm_expert_layout_policy layout_policy =
+        glm_validate_requested_expert_layouts(&e->weights,
+                                              e->backend,
+                                              opt->tp.role,
+                                              e->distributed.role,
+                                              e->ssd_streaming,
+                                              e->multi_tier,
+                                              opt->inspect_only,
+                                              &bad_layer,
+                                              &bad_type);
+    if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE) {
+        fprintf(stderr,
+                "ds4: GLM routed expert type %u in layer %u is supported "
+                "only by resident single-device Metal; CPU execution, "
+                "non-Metal GPU backends, distributed execution, "
+                "multi-device placement, streaming, and tensor "
+                "parallelism are unsupported\n",
+                bad_type,
+                bad_layer);
+        return 1;
+    }
+    if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_TP) {
+        fprintf(stderr,
+                "ds4: GLM tensor parallelism lacks ownership-aware "
+                "kernels for routed expert type %u in layer %u\n",
+                bad_type,
+                bad_layer);
+        return 1;
+    }
+    return 0;
 }
 
 #ifndef DS4_NO_GPU
@@ -63315,15 +63358,17 @@ int ds4_test_glm_memory_guard_disabled(void) {
 }
 
 int ds4_test_glm_expert_layout_policy(
-        ds4_backend backend,
-        ds4_tp_role role,
-        bool        ssd_streaming,
-        bool        inspect_only,
-        uint32_t    gate_type,
-        uint32_t    up_type,
-        uint32_t    down_type,
-        uint32_t   *bad_layer,
-        uint32_t   *bad_type) {
+        ds4_backend          backend,
+        ds4_tp_role          role,
+        ds4_distributed_role distributed_role,
+        bool                 ssd_streaming,
+        bool                 multi_tier,
+        bool                 inspect_only,
+        uint32_t             gate_type,
+        uint32_t             up_type,
+        uint32_t             down_type,
+        uint32_t            *bad_layer,
+        uint32_t            *bad_type) {
     ds4_tensor gate = {.type = gate_type};
     ds4_tensor up = {.type = up_type};
     ds4_tensor down = {.type = down_type};
@@ -63335,7 +63380,9 @@ int ds4_test_glm_expert_layout_policy(
     return (int)glm_validate_requested_expert_layouts(&weights,
                                                       backend,
                                                       role,
+                                                      distributed_role,
                                                       ssd_streaming,
+                                                      multi_tier,
                                                       inspect_only,
                                                       bad_layer,
                                                       bad_type);
@@ -63837,39 +63884,10 @@ static int ds4_engine_open_internal(ds4_engine **out,
                  load_output,
                  load_output_optional);
 
-    if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
-        uint32_t bad_layer = 0;
-        uint32_t bad_type = 0;
-        const glm_expert_layout_policy layout_policy =
-            glm_validate_requested_expert_layouts(&e->weights,
-                                                  e->backend,
-                                                  opt->tp.role,
-                                                  e->ssd_streaming,
-                                                  opt->inspect_only,
-                                                  &bad_layer,
-                                                  &bad_type);
-        if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE) {
-            fprintf(stderr,
-                    "ds4: GLM routed expert type %u in layer %u is supported "
-                    "only by resident single-device Metal; CPU execution, "
-                    "non-Metal GPU backends, streaming, and tensor "
-                    "parallelism are unsupported\n",
-                    bad_type,
-                    bad_layer);
-            ds4_engine_close(e);
-            *out = NULL;
-            return 1;
-        }
-        if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_TP) {
-            fprintf(stderr,
-                    "ds4: GLM tensor parallelism lacks ownership-aware "
-                    "kernels for routed expert type %u in layer %u\n",
-                    bad_type,
-                    bad_layer);
-            ds4_engine_close(e);
-            *out = NULL;
-            return 1;
-        }
+    if (glm_engine_validate_expert_layout_policy(e, opt) != 0) {
+        ds4_engine_close(e);
+        *out = NULL;
+        return 1;
     }
 
 #ifndef DS4_NO_GPU
@@ -64055,6 +64073,11 @@ static int ds4_engine_open_internal(ds4_engine **out,
     }
     if (engine_classify_multi_tier(e, gpu_cfg) != 0) {
         fprintf(stderr, "ds4: failed to classify multi-tier placement\n");
+        ds4_engine_close(e);
+        *out = NULL;
+        return 1;
+    }
+    if (glm_engine_validate_expert_layout_policy(e, opt) != 0) {
         ds4_engine_close(e);
         *out = NULL;
         return 1;
