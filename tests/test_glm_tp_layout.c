@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 enum {
     GGUF_Q8_0 = 8,
@@ -27,6 +30,9 @@ int ds4_test_glm_expert_layout_policy(ds4_backend backend,
                                       uint32_t down_type,
                                       uint32_t *bad_layer,
                                       uint32_t *bad_type);
+int ds4_test_glm_promoted_first_token_diagnostic(uint32_t gate_type,
+                                                 uint32_t up_type,
+                                                 uint32_t down_type);
 
 static int failures;
 
@@ -60,6 +66,32 @@ static void expect_layout(const char *name,
                 policy,
                 bad_layer,
                 bad_type);
+        failures++;
+    }
+}
+
+static void expect_promoted_first_token_rejection(void) {
+    const pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        failures++;
+        return;
+    }
+    if (pid == 0) {
+        const int rc = ds4_test_glm_promoted_first_token_diagnostic(
+                GGUF_Q6_K,
+                GGUF_Q6_K,
+                GGUF_Q8_0);
+        _exit(rc == 1 ? 0 : 1);
+    }
+
+    int status = 0;
+    if (waitpid(pid, &status, 0) != pid ||
+        !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0) {
+        fprintf(stderr,
+                "FAIL: promoted public first-token diagnostic did not "
+                "reject cleanly\n");
         failures++;
     }
 }
@@ -121,6 +153,7 @@ int main(void) {
                   DS4_TP_LEADER, true, false,
                   GGUF_Q2_K, GGUF_Q2_K, GGUF_Q2_K,
                   POLICY_ALLOWED, 0);
+    expect_promoted_first_token_rejection();
     if (failures != 0) return 1;
     puts("test_glm_tp_layout: PASS");
     return 0;

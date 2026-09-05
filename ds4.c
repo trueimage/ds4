@@ -61171,6 +61171,21 @@ int ds4_engine_first_token_test(ds4_engine *e, const ds4_tokens *prompt) {
         return 1;
     }
 
+    uint32_t bad_layer = 0;
+    uint32_t bad_type = 0;
+    if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA &&
+        glm_find_promoted_expert_layout(&e->weights,
+                                        &bad_layer,
+                                        &bad_type)) {
+        fprintf(stderr,
+                "ds4: GLM first-token CPU test does not support routed "
+                "expert type %u in layer %u; promoted expert execution "
+                "requires resident single-device Metal\n",
+                bad_type,
+                bad_layer);
+        return 1;
+    }
+
     const ds4_model *model = &e->model;
     const ds4_vocab *vocab = &e->vocab;
     const ds4_weights *weights = &e->weights;
@@ -63324,6 +63339,30 @@ int ds4_test_glm_expert_layout_policy(
                                                       inspect_only,
                                                       bad_layer,
                                                       bad_type);
+}
+
+int ds4_test_glm_promoted_first_token_diagnostic(
+        uint32_t gate_type,
+        uint32_t up_type,
+        uint32_t down_type) {
+    const ds4_shape saved_shape = g_ds4_shape;
+    ds4_engine engine;
+    ds4_tensor gate = {.type = gate_type};
+    ds4_tensor up = {.type = up_type};
+    ds4_tensor down = {.type = down_type};
+    int token = 0;
+    ds4_tokens prompt = {.v = &token, .len = 1, .cap = 1};
+
+    memset(&engine, 0, sizeof(engine));
+    engine.backend = DS4_BACKEND_METAL;
+    g_ds4_shape = DS4_SHAPE_GLM53;
+    engine.weights.layer[DS4_N_LEADING_DENSE].ffn_gate_exps = &gate;
+    engine.weights.layer[DS4_N_LEADING_DENSE].ffn_up_exps = &up;
+    engine.weights.layer[DS4_N_LEADING_DENSE].ffn_down_exps = &down;
+
+    const int result = ds4_engine_first_token_test(&engine, &prompt);
+    g_ds4_shape = saved_shape;
+    return result;
 }
 
 static int ds4_test_make_engine(
