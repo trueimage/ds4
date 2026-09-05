@@ -208,7 +208,7 @@ rocm: strix-halo
 # CUDA hosts.  Everything else mirrors `make test`.
 test-rocm:
 	$(MAKE) -B ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test \
-		tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args tests/test_prompt_prefix \
+		tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_glm_tp_layout tests/test_gpu_args tests/test_prompt_prefix \
 		ds4 ds4-server ds4-bench ds4-agent \
 		CORE_OBJS="ds4.o ds4_image.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_rocm.o ds4_rocm_compat.o ds4_rocm_unavailable.o ds4_layer_pack.o $(ROCM_MMQ_OBJS)" \
 		CFLAGS="$(CFLAGS) $(ROCM_HOST_CFLAGS) -DDS4_ROCM_BUILD" \
@@ -219,6 +219,7 @@ test-rocm:
 	./ds4_test
 	./tests/test_layer_pack
 	./tests/test_engine_mgpu_placement
+	./tests/test_glm_tp_layout
 	./tests/test_gpu_args
 	./tests/test_gpu_args_cli.sh
 	./tests/test_prompt_prefix
@@ -496,6 +497,12 @@ tests/test_engine_mgpu_placement.o: tests/test_engine_mgpu_placement.c ds4.h ds4
 tests/test_engine_mgpu_placement: tests/test_engine_mgpu_placement.o ds4_cpu_test_hooks.o ds4_image.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+tests/test_glm_tp_layout.o: tests/test_glm_tp_layout.c ds4.h
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
+
+tests/test_glm_tp_layout: tests/test_glm_tp_layout.o ds4_cpu_test_hooks.o ds4_image.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 tests/test_sampling.o: tests/test_sampling.c ds4.h
 	$(CC) $(CFLAGS) -fno-finite-math-only -DDS4_TEST_HOOKS -I. -c -o $@ $<
 
@@ -582,7 +589,7 @@ tests/test_prompt_prefix: tests/test_prompt_prefix.o ds4_prompt_prefix.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test \
-	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args \
+	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_glm_tp_layout tests/test_gpu_args \
 	tests/test_deepseek4_vision_image tests/test_prompt_prefix $(SAMPLING_TEST) $(GLM53_KDA_DEFAULT_TEST) \
 	ds4 ds4-server ds4-bench ds4-agent
 	./ds4-eval --self-test-extractors
@@ -590,6 +597,7 @@ test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test \
 	./ds4_test
 	./tests/test_layer_pack
 	./tests/test_engine_mgpu_placement
+	./tests/test_glm_tp_layout
 	./tests/test_gpu_args
 	./tests/test_gpu_args_cli.sh
 	./tests/test_prompt_prefix
@@ -631,5 +639,5 @@ mxfp4-dot-test: tests/test_mxfp4_dot.c
 	./tests/test_mxfp4_dot
 
 clean:
-	rm -f tests/test_glm_mixed_experts_metal
+	rm -f tests/test_glm_mixed_experts_metal tests/test_glm_tp_layout
 	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official gguf-tools/quality-testing/score_official.o speed-bench/metal_decode_schedule_bench speed-bench/metal_prefill_variant_bench speed-bench/*.o tests/test_q4k_dot tests/test_mxfp4_dot tests/test_mxfp4_metal tests/test_mxfp4_rocm tests/test_mxfp4_cuda tests/test_metal_session_batch tests/test_glm53_kda tests/test_glm53_kda_rocm tests/test_glm53_vision_engine tests/test_glm53_vision_prompt tests/test_deepseek4_vision_image tests/test_prompt_prefix tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o

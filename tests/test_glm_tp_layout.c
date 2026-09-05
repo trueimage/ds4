@@ -1,0 +1,74 @@
+#define DS4_TEST_HOOKS
+#include "../ds4.h"
+
+#include <stdint.h>
+#include <stdio.h>
+
+enum {
+    GGUF_Q8_0 = 8,
+    GGUF_Q2_K = 10,
+    GGUF_Q4_K = 12,
+    GGUF_Q5_K = 13,
+    GGUF_Q6_K = 14,
+};
+
+int ds4_test_glm_tp_layout_allowed(ds4_tp_role role,
+                                   bool ssd_streaming,
+                                   uint32_t gate_type,
+                                   uint32_t up_type,
+                                   uint32_t down_type,
+                                   uint32_t *bad_layer,
+                                   uint32_t *bad_type);
+
+static int failures;
+
+static void expect_layout(const char *name,
+                          ds4_tp_role role,
+                          bool ssd_streaming,
+                          uint32_t gate_type,
+                          uint32_t up_type,
+                          uint32_t down_type,
+                          int expected,
+                          uint32_t expected_bad_type) {
+    uint32_t bad_layer = UINT32_MAX;
+    uint32_t bad_type = UINT32_MAX;
+    const int allowed = ds4_test_glm_tp_layout_allowed(role,
+                                                       ssd_streaming,
+                                                       gate_type,
+                                                       up_type,
+                                                       down_type,
+                                                       &bad_layer,
+                                                       &bad_type);
+    if (allowed != expected ||
+        (!expected && (bad_layer != 0 || bad_type != expected_bad_type))) {
+        fprintf(stderr,
+                "FAIL: %s allowed=%d layer=%u type=%u\n",
+                name,
+                allowed,
+                bad_layer,
+                bad_type);
+        failures++;
+    }
+}
+
+int main(void) {
+    expect_layout("single-device promoted layout", DS4_TP_NONE, true,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0, 1, 0);
+    expect_layout("leader streaming Q6 gate/up", DS4_TP_LEADER, true,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q6_K, 0, GGUF_Q6_K);
+    expect_layout("worker streaming Q8 gate/up", DS4_TP_WORKER, true,
+                  GGUF_Q8_0, GGUF_Q8_0, GGUF_Q6_K, 0, GGUF_Q8_0);
+    expect_layout("leader streaming Q8 down", DS4_TP_LEADER, true,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q8_0, 0, GGUF_Q8_0);
+    expect_layout("worker streaming prior layout", DS4_TP_WORKER, true,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K, 1, 0);
+    expect_layout("leader resident prior layout", DS4_TP_LEADER, false,
+                  GGUF_Q4_K, GGUF_Q4_K, GGUF_Q4_K, 1, 0);
+    expect_layout("worker resident promoted layout", DS4_TP_WORKER, false,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0, 0, GGUF_Q6_K);
+    expect_layout("leader streaming Q2 layout", DS4_TP_LEADER, true,
+                  GGUF_Q2_K, GGUF_Q2_K, GGUF_Q2_K, 1, 0);
+    if (failures != 0) return 1;
+    puts("test_glm_tp_layout: PASS");
+    return 0;
+}

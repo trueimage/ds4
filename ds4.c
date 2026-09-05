@@ -41074,6 +41074,84 @@ static uint64_t glm_graph_memory_guard_budget_bytes(
 }
 #endif
 
+#if !defined(DS4_NO_GPU) || defined(DS4_TEST_HOOKS)
+static bool glm_graph_layer_uses_generic_routed_moe(
+        const ds4_layer_weights *l) {
+    return l &&
+           l->ffn_gate_exps &&
+           l->ffn_up_exps &&
+           l->ffn_down_exps &&
+           (l->ffn_gate_exps->type == DS4_TENSOR_IQ2_XXS ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0 ||
+            l->ffn_down_exps->type == DS4_TENSOR_Q8_0);
+}
+
+static bool glm_tp_validate_promoted_expert_layouts(
+        const ds4_weights *weights,
+        uint32_t          *bad_layer,
+        uint32_t          *bad_type) {
+    if (!weights) return false;
+    for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
+        const ds4_layer_weights *l = &weights->layer[il];
+        if (!l->ffn_gate_exps) continue;
+        uint32_t type = 0;
+        if (l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0) {
+            type = l->ffn_gate_exps->type;
+        } else if (l->ffn_up_exps &&
+                   (l->ffn_up_exps->type == DS4_TENSOR_Q6_K ||
+                    l->ffn_up_exps->type == DS4_TENSOR_Q8_0)) {
+            type = l->ffn_up_exps->type;
+        } else if (l->ffn_down_exps &&
+                   l->ffn_down_exps->type == DS4_TENSOR_Q8_0) {
+            type = DS4_TENSOR_Q8_0;
+        }
+        if (type == 0) continue;
+        if (bad_layer) *bad_layer = il;
+        if (bad_type) *bad_type = type;
+        return false;
+    }
+    return true;
+}
+
+static bool glm_tp_validate_ownership_kernels(
+        const ds4_weights *weights,
+        uint32_t          *bad_layer,
+        uint32_t          *bad_type) {
+    if (!weights) return false;
+    for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
+        const ds4_layer_weights *l = &weights->layer[il];
+        if (!l->ffn_gate_exps) continue;
+        if (glm_graph_layer_uses_generic_routed_moe(l) ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q2_K ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q4_K) {
+            continue;
+        }
+        if (bad_layer) *bad_layer = il;
+        if (bad_type) *bad_type = l->ffn_gate_exps->type;
+        return false;
+    }
+    return true;
+}
+
+static bool glm_tp_validate_requested_layouts(
+        const ds4_weights *weights,
+        ds4_tp_role       role,
+        bool              ssd_streaming,
+        uint32_t         *bad_layer,
+        uint32_t         *bad_type) {
+    if (role == DS4_TP_NONE) return true;
+    if (!glm_tp_validate_promoted_expert_layouts(weights,
+                                                  bad_layer,
+                                                  bad_type)) {
+        return false;
+    }
+    return ssd_streaming ||
+           glm_tp_validate_ownership_kernels(weights, bad_layer, bad_type);
+}
+#endif
+
 #ifndef DS4_NO_GPU
 typedef struct ds4_glm_gpu_graph {
     const ds4_weights *weights;
@@ -42328,48 +42406,6 @@ static bool glm_graph_dense_tensor_layout(
     if (ndim > 0 && t->dim[0] != dim0) return false;
     if (ndim > 1 && t->dim[1] != dim1) return false;
     if (ndim > 2 && t->dim[2] != dim2) return false;
-    return true;
-}
-
-static bool glm_graph_layer_uses_generic_routed_moe(
-        const ds4_layer_weights *l) {
-    return l &&
-           l->ffn_gate_exps &&
-           l->ffn_up_exps &&
-           l->ffn_down_exps &&
-           (l->ffn_gate_exps->type == DS4_TENSOR_IQ2_XXS ||
-            l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
-            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0 ||
-            l->ffn_down_exps->type == DS4_TENSOR_Q8_0);
-}
-
-static bool glm_tp_validate_ownership_kernels(
-        const ds4_weights *weights,
-        uint32_t          *bad_layer,
-        uint32_t          *bad_type) {
-    if (!weights) return false;
-    for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
-        const ds4_layer_weights *l = &weights->layer[il];
-        if (!l->ffn_gate_exps) continue;
-        /* Published high-precision expert fallbacks are validated for one
-         * device. Keep TP closed until their mixed ownership paths are tested. */
-        if (l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
-            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0 ||
-            (l->ffn_down_exps && l->ffn_down_exps->type == DS4_TENSOR_Q8_0)) {
-            if (bad_layer) *bad_layer = il;
-            if (bad_type) *bad_type = l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ?
-                DS4_TENSOR_Q6_K : DS4_TENSOR_Q8_0;
-            return false;
-        }
-        if (glm_graph_layer_uses_generic_routed_moe(l) ||
-            l->ffn_gate_exps->type == DS4_TENSOR_Q2_K ||
-            l->ffn_gate_exps->type == DS4_TENSOR_Q4_K) {
-            continue;
-        }
-        if (bad_layer) *bad_layer = il;
-        if (bad_type) *bad_type = l->ffn_gate_exps->type;
-        return false;
-    }
     return true;
 }
 
@@ -63246,6 +63282,29 @@ int ds4_test_glm_memory_guard_disabled(void) {
     return glm_graph_memory_guard_disabled() ? 1 : 0;
 }
 
+int ds4_test_glm_tp_layout_allowed(
+        ds4_tp_role role,
+        bool        ssd_streaming,
+        uint32_t    gate_type,
+        uint32_t    up_type,
+        uint32_t    down_type,
+        uint32_t   *bad_layer,
+        uint32_t   *bad_type) {
+    ds4_tensor gate = {.type = gate_type};
+    ds4_tensor up = {.type = up_type};
+    ds4_tensor down = {.type = down_type};
+    ds4_weights weights;
+    memset(&weights, 0, sizeof(weights));
+    weights.layer[0].ffn_gate_exps = &gate;
+    weights.layer[0].ffn_up_exps = &up;
+    weights.layer[0].ffn_down_exps = &down;
+    return glm_tp_validate_requested_layouts(&weights,
+                                             role,
+                                             ssd_streaming,
+                                             bad_layer,
+                                             bad_type) ? 1 : 0;
+}
+
 static int ds4_test_make_engine(
         ds4_engine *eng,
         const ds4_test_fake_tensor *tensors,
@@ -63726,10 +63785,12 @@ static int ds4_engine_open_internal(ds4_engine **out,
         opt->tp.role != DS4_TP_NONE &&
         !e->ssd_streaming;
     const int tp_shard_rank = opt->tp.role == DS4_TP_WORKER ? 1 : 0;
-    if (tp_shard && DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
+    if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
         uint32_t bad_layer = 0;
         uint32_t bad_type = 0;
-        if (!glm_tp_validate_ownership_kernels(&e->weights,
+        if (!glm_tp_validate_requested_layouts(&e->weights,
+                                               opt->tp.role,
+                                               e->ssd_streaming,
                                                &bad_layer,
                                                &bad_type)) {
             fprintf(stderr,
