@@ -12,39 +12,49 @@ enum {
     GGUF_Q6_K = 14,
 };
 
-int ds4_test_glm_tp_layout_allowed(ds4_tp_role role,
-                                   bool ssd_streaming,
-                                   uint32_t gate_type,
-                                   uint32_t up_type,
-                                   uint32_t down_type,
-                                   uint32_t *bad_layer,
-                                   uint32_t *bad_type);
+enum {
+    POLICY_ALLOWED = 0,
+    POLICY_UNSUPPORTED_SCOPE,
+    POLICY_UNSUPPORTED_TP,
+};
+
+int ds4_test_glm_expert_layout_policy(ds4_backend backend,
+                                      ds4_tp_role role,
+                                      bool ssd_streaming,
+                                      uint32_t gate_type,
+                                      uint32_t up_type,
+                                      uint32_t down_type,
+                                      uint32_t *bad_layer,
+                                      uint32_t *bad_type);
 
 static int failures;
 
 static void expect_layout(const char *name,
+                          ds4_backend backend,
                           ds4_tp_role role,
                           bool ssd_streaming,
                           uint32_t gate_type,
                           uint32_t up_type,
                           uint32_t down_type,
-                          int expected,
+                          int expected_policy,
                           uint32_t expected_bad_type) {
     uint32_t bad_layer = UINT32_MAX;
     uint32_t bad_type = UINT32_MAX;
-    const int allowed = ds4_test_glm_tp_layout_allowed(role,
-                                                       ssd_streaming,
-                                                       gate_type,
-                                                       up_type,
-                                                       down_type,
-                                                       &bad_layer,
-                                                       &bad_type);
-    if (allowed != expected ||
-        (!expected && (bad_layer != 0 || bad_type != expected_bad_type))) {
+    const int policy = ds4_test_glm_expert_layout_policy(backend,
+                                                         role,
+                                                         ssd_streaming,
+                                                         gate_type,
+                                                         up_type,
+                                                         down_type,
+                                                         &bad_layer,
+                                                         &bad_type);
+    if (policy != expected_policy ||
+        (expected_policy != POLICY_ALLOWED &&
+         (bad_layer != 0 || bad_type != expected_bad_type))) {
         fprintf(stderr,
-                "FAIL: %s allowed=%d layer=%u type=%u\n",
+                "FAIL: %s policy=%d layer=%u type=%u\n",
                 name,
-                allowed,
+                policy,
                 bad_layer,
                 bad_type);
         failures++;
@@ -52,22 +62,47 @@ static void expect_layout(const char *name,
 }
 
 int main(void) {
-    expect_layout("single-device promoted layout", DS4_TP_NONE, true,
-                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0, 1, 0);
-    expect_layout("leader streaming Q6 gate/up", DS4_TP_LEADER, true,
-                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q6_K, 0, GGUF_Q6_K);
-    expect_layout("worker streaming Q8 gate/up", DS4_TP_WORKER, true,
-                  GGUF_Q8_0, GGUF_Q8_0, GGUF_Q6_K, 0, GGUF_Q8_0);
-    expect_layout("leader streaming Q8 down", DS4_TP_LEADER, true,
-                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q8_0, 0, GGUF_Q8_0);
-    expect_layout("worker streaming prior layout", DS4_TP_WORKER, true,
-                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K, 1, 0);
-    expect_layout("leader resident prior layout", DS4_TP_LEADER, false,
-                  GGUF_Q4_K, GGUF_Q4_K, GGUF_Q4_K, 1, 0);
-    expect_layout("worker resident promoted layout", DS4_TP_WORKER, false,
-                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0, 0, GGUF_Q6_K);
-    expect_layout("leader streaming Q2 layout", DS4_TP_LEADER, true,
-                  GGUF_Q2_K, GGUF_Q2_K, GGUF_Q2_K, 1, 0);
+    expect_layout("CPU promoted layout", DS4_BACKEND_CPU, DS4_TP_NONE, false,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                  POLICY_ALLOWED, 0);
+    expect_layout("resident Metal promoted layout", DS4_BACKEND_METAL,
+                  DS4_TP_NONE, false,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                  POLICY_ALLOWED, 0);
+    expect_layout("CUDA promoted layout", DS4_BACKEND_CUDA, DS4_TP_NONE, false,
+                  GGUF_Q6_K, GGUF_Q6_K, GGUF_Q8_0,
+                  POLICY_UNSUPPORTED_SCOPE, GGUF_Q6_K);
+    expect_layout("Metal streaming promoted down", DS4_BACKEND_METAL,
+                  DS4_TP_NONE, true,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q8_0,
+                  POLICY_UNSUPPORTED_SCOPE, GGUF_Q8_0);
+    expect_layout("Metal TP promoted gate", DS4_BACKEND_METAL,
+                  DS4_TP_WORKER, false,
+                  GGUF_Q8_0, GGUF_Q8_0, GGUF_Q6_K,
+                  POLICY_UNSUPPORTED_SCOPE, GGUF_Q8_0);
+    expect_layout("CUDA prior layout", DS4_BACKEND_CUDA, DS4_TP_NONE, false,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                  POLICY_ALLOWED, 0);
+    expect_layout("Metal streaming prior layout", DS4_BACKEND_METAL,
+                  DS4_TP_NONE, true,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                  POLICY_ALLOWED, 0);
+    expect_layout("Metal streaming prior TP layout", DS4_BACKEND_METAL,
+                  DS4_TP_WORKER, true,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                  POLICY_ALLOWED, 0);
+    expect_layout("Metal resident prior TP layout", DS4_BACKEND_METAL,
+                  DS4_TP_LEADER, false,
+                  GGUF_Q4_K, GGUF_Q4_K, GGUF_Q4_K,
+                  POLICY_ALLOWED, 0);
+    expect_layout("Metal resident unsupported TP layout", DS4_BACKEND_METAL,
+                  DS4_TP_LEADER, false,
+                  GGUF_Q5_K, GGUF_Q5_K, GGUF_Q6_K,
+                  POLICY_UNSUPPORTED_TP, GGUF_Q5_K);
+    expect_layout("Metal streaming Q2 layout", DS4_BACKEND_METAL,
+                  DS4_TP_LEADER, true,
+                  GGUF_Q2_K, GGUF_Q2_K, GGUF_Q2_K,
+                  POLICY_ALLOWED, 0);
     if (failures != 0) return 1;
     puts("test_glm_tp_layout: PASS");
     return 0;

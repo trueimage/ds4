@@ -41087,7 +41087,7 @@ static bool glm_graph_layer_uses_generic_routed_moe(
             l->ffn_down_exps->type == DS4_TENSOR_Q8_0);
 }
 
-static bool glm_tp_validate_promoted_expert_layouts(
+static bool glm_find_promoted_expert_layout(
         const ds4_weights *weights,
         uint32_t          *bad_layer,
         uint32_t          *bad_type) {
@@ -41110,9 +41110,9 @@ static bool glm_tp_validate_promoted_expert_layouts(
         if (type == 0) continue;
         if (bad_layer) *bad_layer = il;
         if (bad_type) *bad_type = type;
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 static bool glm_tp_validate_ownership_kernels(
@@ -41135,20 +41135,37 @@ static bool glm_tp_validate_ownership_kernels(
     return true;
 }
 
-static bool glm_tp_validate_requested_layouts(
+typedef enum {
+    GLM_EXPERT_LAYOUT_ALLOWED = 0,
+    GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE,
+    GLM_EXPERT_LAYOUT_UNSUPPORTED_TP,
+} glm_expert_layout_policy;
+
+static glm_expert_layout_policy glm_validate_requested_expert_layouts(
         const ds4_weights *weights,
+        ds4_backend       backend,
         ds4_tp_role       role,
         bool              ssd_streaming,
         uint32_t         *bad_layer,
         uint32_t         *bad_type) {
-    if (role == DS4_TP_NONE) return true;
-    if (!glm_tp_validate_promoted_expert_layouts(weights,
-                                                  bad_layer,
-                                                  bad_type)) {
-        return false;
+    if (!weights) return GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
+    uint32_t promoted_layer = 0;
+    uint32_t promoted_type = 0;
+    if (glm_find_promoted_expert_layout(weights,
+                                        &promoted_layer,
+                                        &promoted_type) &&
+        (role != DS4_TP_NONE ||
+         ssd_streaming ||
+         (backend != DS4_BACKEND_CPU && backend != DS4_BACKEND_METAL))) {
+        if (bad_layer) *bad_layer = promoted_layer;
+        if (bad_type) *bad_type = promoted_type;
+        return GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE;
     }
-    return ssd_streaming ||
-           glm_tp_validate_ownership_kernels(weights, bad_layer, bad_type);
+    if (role == DS4_TP_NONE || ssd_streaming) {
+        return GLM_EXPERT_LAYOUT_ALLOWED;
+    }
+    return glm_tp_validate_ownership_kernels(weights, bad_layer, bad_type) ?
+        GLM_EXPERT_LAYOUT_ALLOWED : GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
 }
 #endif
 
@@ -63282,7 +63299,8 @@ int ds4_test_glm_memory_guard_disabled(void) {
     return glm_graph_memory_guard_disabled() ? 1 : 0;
 }
 
-int ds4_test_glm_tp_layout_allowed(
+int ds4_test_glm_expert_layout_policy(
+        ds4_backend backend,
         ds4_tp_role role,
         bool        ssd_streaming,
         uint32_t    gate_type,
@@ -63298,11 +63316,12 @@ int ds4_test_glm_tp_layout_allowed(
     weights.layer[0].ffn_gate_exps = &gate;
     weights.layer[0].ffn_up_exps = &up;
     weights.layer[0].ffn_down_exps = &down;
-    return glm_tp_validate_requested_layouts(&weights,
-                                             role,
-                                             ssd_streaming,
-                                             bad_layer,
-                                             bad_type) ? 1 : 0;
+    return (int)glm_validate_requested_expert_layouts(&weights,
+                                                      backend,
+                                                      role,
+                                                      ssd_streaming,
+                                                      bad_layer,
+                                                      bad_type);
 }
 
 static int ds4_test_make_engine(
@@ -63777,22 +63796,29 @@ static int ds4_engine_open_internal(ds4_engine **out,
                  load_output,
                  load_output_optional);
 
-    /* TP always maps one contiguous routed-expert half per rank. Decide
-     * immediately after binding so memory guards account only the bytes this
-     * rank owns (replicated dense weights plus its expert shard). */
 #ifndef DS4_NO_GPU
-    const bool tp_shard =
-        opt->tp.role != DS4_TP_NONE &&
-        !e->ssd_streaming;
-    const int tp_shard_rank = opt->tp.role == DS4_TP_WORKER ? 1 : 0;
     if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
         uint32_t bad_layer = 0;
         uint32_t bad_type = 0;
-        if (!glm_tp_validate_requested_layouts(&e->weights,
-                                               opt->tp.role,
-                                               e->ssd_streaming,
-                                               &bad_layer,
-                                               &bad_type)) {
+        const glm_expert_layout_policy layout_policy =
+            glm_validate_requested_expert_layouts(&e->weights,
+                                                  e->backend,
+                                                  opt->tp.role,
+                                                  e->ssd_streaming,
+                                                  &bad_layer,
+                                                  &bad_type);
+        if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE) {
+            fprintf(stderr,
+                    "ds4: GLM routed expert type %u in layer %u is supported "
+                    "only by CPU or resident single-device Metal "
+                    "(no streaming or tensor parallelism)\n",
+                    bad_type,
+                    bad_layer);
+            ds4_engine_close(e);
+            *out = NULL;
+            return 1;
+        }
+        if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_TP) {
             fprintf(stderr,
                     "ds4: GLM tensor parallelism lacks ownership-aware "
                     "kernels for routed expert type %u in layer %u\n",
@@ -63803,6 +63829,14 @@ static int ds4_engine_open_internal(ds4_engine **out,
             return 1;
         }
     }
+
+    /* TP always maps one contiguous routed-expert half per rank. Decide
+     * immediately after binding so memory guards account only the bytes this
+     * rank owns (replicated dense weights plus its expert shard). */
+    const bool tp_shard =
+        opt->tp.role != DS4_TP_NONE &&
+        !e->ssd_streaming;
+    const int tp_shard_rank = opt->tp.role == DS4_TP_WORKER ? 1 : 0;
     g_tp_shard_model_bytes = 0;
     if (tp_shard) {
         ds4_model_map_span_vec shard_spans;
