@@ -4465,6 +4465,18 @@ static bool tensor_type_is_dense_quant(uint32_t type) {
            type == DS4_TENSOR_Q4_0;
 }
 
+static bool tensor_type_is_glm_control_matrix(uint32_t type) {
+    return type == DS4_TENSOR_BF16 || type == DS4_TENSOR_Q8_0;
+}
+
+static void tensor_expect_glm_control_matrix(const ds4_tensor *t,
+                                             uint64_t in, uint64_t out) {
+    if (!t || !tensor_type_is_glm_control_matrix(t->type)) {
+        ds4_die("GLM HC and indexer pool matrices require BF16 or Q8_0");
+    }
+    tensor_expect_layout(t, t->type, 2, in, out, 0);
+}
+
 static void tensor_expect_glm_dense_quant_layout(
         const ds4_tensor *t,
         uint32_t          ndim,
@@ -5114,12 +5126,10 @@ static void weights_validate_glm_dsa_layout(
 
         tensor_expect_layout(l->attn_norm, DS4_TENSOR_F32, 1, DS4_N_EMBD, 0, 0);
         if (ds4_model_is_glm53() && il + DS4_N_NEXTN_PREDICT < DS4_N_LAYER) {
-            tensor_expect_layout(l->hc_attn_fn, DS4_TENSOR_BF16, 2,
-                                 hc_dim, hc_mix_dim, 0);
+            tensor_expect_glm_control_matrix(l->hc_attn_fn, hc_dim, hc_mix_dim);
             tensor_expect_layout(l->hc_attn_scale, DS4_TENSOR_F32, 1, 3, 0, 0);
             tensor_expect_layout(l->hc_attn_base, DS4_TENSOR_F32, 1, hc_mix_dim, 0, 0);
-            tensor_expect_layout(l->hc_ffn_fn, DS4_TENSOR_BF16, 2,
-                                 hc_dim, hc_mix_dim, 0);
+            tensor_expect_glm_control_matrix(l->hc_ffn_fn, hc_dim, hc_mix_dim);
             tensor_expect_layout(l->hc_ffn_scale, DS4_TENSOR_F32, 1, 3, 0, 0);
             tensor_expect_layout(l->hc_ffn_base, DS4_TENSOR_F32, 1, hc_mix_dim, 0, 0);
         }
@@ -5191,8 +5201,8 @@ static void weights_validate_glm_dsa_layout(
             if (ds4_model_is_glm53()) {
                 tensor_expect_layout(l->indexer_compressor_ape, DS4_TENSOR_BF16, 2,
                                      DS4_N_INDEXER_HEAD_DIM, 4, 0);
-                tensor_expect_layout(l->indexer_compressor_gate, DS4_TENSOR_BF16, 2,
-                                     DS4_N_EMBD, DS4_N_INDEXER_HEAD_DIM, 0);
+                tensor_expect_glm_control_matrix(l->indexer_compressor_gate,
+                                                 DS4_N_EMBD, DS4_N_INDEXER_HEAD_DIM);
             }
         }
         tensor_expect_layout(l->ffn_norm,        DS4_TENSOR_F32,  1, DS4_N_EMBD, 0, 0);
@@ -42696,13 +42706,15 @@ static bool glm_graph_validate_layer_layout(
     const uint64_t kda_projection =
         (uint64_t)DS4_N_KDA_HEAD * DS4_N_KDA_HEAD_DIM;
     if (ds4_model_is_glm53()) {
-        if (!glm_graph_tensor_layout(l->hc_attn_fn, DS4_TENSOR_BF16, 2,
+        if (!l->hc_attn_fn || !tensor_type_is_glm_control_matrix(l->hc_attn_fn->type) ||
+            !glm_graph_tensor_layout(l->hc_attn_fn, l->hc_attn_fn->type, 2,
                                      hc_dim, hc_mix, 0) ||
             !glm_graph_tensor_layout(l->hc_attn_scale, DS4_TENSOR_F32, 1,
                                      3, 0, 0) ||
             !glm_graph_tensor_layout(l->hc_attn_base, DS4_TENSOR_F32, 1,
                                      hc_mix, 0, 0) ||
-            !glm_graph_tensor_layout(l->hc_ffn_fn, DS4_TENSOR_BF16, 2,
+            !l->hc_ffn_fn || !tensor_type_is_glm_control_matrix(l->hc_ffn_fn->type) ||
+            !glm_graph_tensor_layout(l->hc_ffn_fn, l->hc_ffn_fn->type, 2,
                                      hc_dim, hc_mix, 0) ||
             !glm_graph_tensor_layout(l->hc_ffn_scale, DS4_TENSOR_F32, 1,
                                      3, 0, 0) ||
