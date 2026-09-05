@@ -48,17 +48,26 @@ class ImportTests(unittest.TestCase):
                 specs.append((f'published.{qtype}', (256, 2), qtype, bytes(i % 256 for i in range(n))))
             make_gguf(source, specs)
             source_before = source.read_bytes()
-            _, tensors = importer.read_shard(source)
-            entries = [dict(input=t, plan=TensorPlan(f'ds4.{t["qtype"]}', t['shape'], t['qtype'],
-                                                    'test', nbytes=t['nbytes'])) for t in tensors]
-            importer.write_import(output, entries, [kv_string('general.name', 'test')], {})
+            with importer.OpenShard(source) as shard:
+                importer.verify_file(shard, hashlib.sha256(source_before).hexdigest())
+                entries = [dict(input=t, plan=TensorPlan(f'ds4.{t["qtype"]}', t['shape'], t['qtype'],
+                                                        'test', nbytes=t['nbytes']))
+                           for t in shard.tensors]
+                importer.write_import(output, entries, [kv_string('general.name', 'test')], {}, [shard])
+                existing_output = output.read_bytes()
+                report_path = Path(str(output) + '.import.json')
+                existing_report = report_path.read_bytes()
+                with self.assertRaisesRegex(ValueError, 'already exists'):
+                    importer.write_import(output, entries, [], {}, [shard])
+                self.assertEqual(output.read_bytes(), existing_output)
+                self.assertEqual(report_path.read_bytes(), existing_report)
             importer.verify_import(output)
-            meta, imported = importer.read_shard(output)
-            self.assertEqual(meta['general.name'], 'test')
-            self.assertEqual([importer.payload(t) for t in imported], [s[3] for s in specs])
+            with importer.OpenShard(output) as imported_shard:
+                self.assertEqual(imported_shard.metadata['general.name'], 'test')
+                self.assertEqual([importer.payload(t) for t in imported_shard.tensors],
+                                 [s[3] for s in specs])
+                imported = imported_shard.tensors
             self.assertEqual(source.read_bytes(), source_before)
-            with self.assertRaisesRegex(ValueError, 'already exists'):
-                importer.write_import(output, entries, [], {})
             original_output = output.read_bytes()
             output.write_bytes(original_output.replace(b'test', b'best', 1))
             with self.assertRaisesRegex(ValueError, 'header differs'):
@@ -110,44 +119,85 @@ class ImportTests(unittest.TestCase):
             make_gguf(path, [('x', (32,), 8, bytes(34))])
             path.write_bytes(path.read_bytes()[:-40])
             with self.assertRaisesRegex(ValueError, 'truncated'):
-                importer.read_shard(path)
+                importer.OpenShard(path)
             make_gguf(path, [('x', (32,), 8, bytes(34)), ('x', (32,), 8, bytes(34))])
             with self.assertRaisesRegex(ValueError, 'duplicate'):
-                importer.read_shard(path)
+                importer.OpenShard(path)
             plans = [TensorPlan(n, (32,), 8, 'test', offset=0, nbytes=34) for n in ('x', 'y')]
             header = b'GGUF' + struct.pack('<IQQ', 3, 2, 0) + b''.join(tensor_header(p) for p in plans)
             path.write_bytes(header + bytes(align(len(header)) - len(header)) + bytes(128))
             with self.assertRaisesRegex(ValueError, 'overlapping'):
-                importer.read_shard(path)
+                importer.OpenShard(path)
             make_gguf(path, [], [kv_u32('general.alignment', 3)])
             with self.assertRaisesRegex(ValueError, 'alignment'):
-                importer.read_shard(path)
+                importer.OpenShard(path)
         with self.assertRaisesRegex(ValueError, 'block layout'):
             importer.tensor_bytes(13, (255, 2))
 
-    def test_checksum_verification_and_failed_copy_leave_no_output(self):
+    def test_checksum_verification(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'input.gguf'
-            output = Path(directory) / 'out.gguf'
             make_gguf(path, [('x', (32,), 8, bytes(34))])
-            importer.verify_file(path, hashlib.sha256(path.read_bytes()).hexdigest())
-            with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
-                importer.verify_file(path, '0' * 64)
-            _, tensors = importer.read_shard(path)
-            path.write_bytes(b'')
-            entry = dict(input=tensors[0], plan=TensorPlan('x', (32,), 8, 'test', nbytes=34))
-            with self.assertRaisesRegex(ValueError, 'short read'):
-                importer.write_import(output, [entry], [], {})
+            with importer.OpenShard(path) as shard:
+                importer.verify_file(shard, hashlib.sha256(path.read_bytes()).hexdigest())
+                with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
+                    importer.verify_file(shard, '0' * 64)
+
+    def test_symlink_replacement_invalidates_open_shard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original, replacement = root / 'original.gguf', root / 'replacement.gguf'
+            link, output = root / 'input.gguf', root / 'out.gguf'
+            make_gguf(original, [('x', (32,), 8, bytes(34))])
+            make_gguf(replacement, [('x', (32,), 8, bytes([1]) * 34)])
+            link.symlink_to(original.name)
+            foreign_partial = root / 'out.gguf.foreign.partial'
+            foreign_partial.write_bytes(b'preserve')
+            with importer.OpenShard(link) as shard:
+                importer.verify_file(shard, hashlib.sha256(original.read_bytes()).hexdigest())
+                entry = dict(input=shard.tensors[0],
+                             plan=TensorPlan('x', (32,), 8, 'test', nbytes=34))
+                link.unlink()
+                link.symlink_to(replacement.name)
+                with self.assertRaisesRegex(ValueError, 'input changed during import'):
+                    importer.write_import(output, [entry], [], {}, [shard])
             self.assertFalse(output.exists())
             self.assertFalse(Path(str(output) + '.import.json').exists())
-            self.assertEqual(list(Path(directory).glob('*.partial')), [])
+            self.assertEqual(foreign_partial.read_bytes(), b'preserve')
+
+    def test_modification_during_copy_prevents_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path, output = root / 'input.gguf', root / 'out.gguf'
+            make_gguf(path, [('x', (32,), 8, bytes(34))])
+            foreign_partial = root / 'out.gguf.foreign.partial'
+            foreign_partial.write_bytes(b'preserve')
+            with importer.OpenShard(path) as shard:
+                importer.verify_file(shard, hashlib.sha256(path.read_bytes()).hexdigest())
+                tensor = shard.tensors[0]
+                entry = dict(input=tensor, plan=TensorPlan('x', (32,), 8, 'test', nbytes=34))
+                original_copy = shard.copy_range
+
+                def copy_then_modify(*args):
+                    original_copy(*args)
+                    with path.open('r+b') as fp:
+                        fp.seek(tensor['abs_offset'])
+                        fp.write(b'\x01')
+
+                with patch.object(shard, 'copy_range', side_effect=copy_then_modify):
+                    with self.assertRaisesRegex(ValueError, 'input changed during import'):
+                        importer.write_import(output, [entry], [], {}, [shard])
+            self.assertFalse(output.exists())
+            self.assertFalse(Path(str(output) + '.import.json').exists())
+            self.assertEqual(foreign_partial.read_bytes(), b'preserve')
+            self.assertEqual(list(root.glob('out.gguf.*.partial')), [foreign_partial])
 
     def test_insufficient_space_fails_before_creating_output(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'out.gguf'
             with patch.object(importer.shutil, 'disk_usage', return_value=SimpleNamespace(free=0)):
                 with self.assertRaisesRegex(ValueError, 'insufficient free space'):
-                    importer.write_import(output, [], [], {})
+                    importer.write_import(output, [], [], {}, [])
             self.assertEqual(list(Path(directory).iterdir()), [])
 
 
