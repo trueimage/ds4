@@ -365,11 +365,19 @@ tests/test_deepseek4_vision_image: tests/test_deepseek4_vision_image.o ds4_image
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 ifeq ($(UNAME_S),Darwin)
-$(GLM53_KDA_TEST): tests/test_glm53_kda.o ds4_metal.o
+$(GLM53_KDA_TEST): tests/test_glm53_kda.o ds4_metal.o ds4_image.o
 	$(CC) $(CFLAGS) -o $@ $^ $(METAL_LDLIBS)
 else
-$(GLM53_KDA_TEST): tests/test_glm53_kda.o ds4_cuda.o $(MMQ_OBJS)
+$(GLM53_KDA_TEST): tests/test_glm53_kda.o ds4_cuda.o ds4_image.o $(MMQ_OBJS)
 	$(NVCC) $(NVCCFLAGS) -o $@ $^ $(CUDA_LDLIBS)
+endif
+
+# Only the Metal build of this test is exercised by `make test`; the CUDA
+# variant still builds through `make test-glm53-kda`.
+ifeq ($(UNAME_S),Darwin)
+GLM53_KDA_DEFAULT_TEST := $(GLM53_KDA_TEST)
+else
+GLM53_KDA_DEFAULT_TEST :=
 endif
 
 .PHONY: test-glm53-kda
@@ -565,7 +573,8 @@ tests/test_prompt_prefix: tests/test_prompt_prefix.o ds4_prompt_prefix.o
 
 test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test \
 	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args \
-	tests/test_deepseek4_vision_image tests/test_prompt_prefix $(SAMPLING_TEST) ds4 ds4-server ds4-bench ds4-agent
+	tests/test_deepseek4_vision_image tests/test_prompt_prefix $(SAMPLING_TEST) $(GLM53_KDA_DEFAULT_TEST) \
+	ds4 ds4-server ds4-bench ds4-agent
 	./ds4-eval --self-test-extractors
 	./ds4_agent_test
 	./ds4_test
@@ -576,6 +585,7 @@ test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test \
 	./tests/test_prompt_prefix
 	./tests/test_sampling
 	./tests/test_deepseek4_vision_image
+	@if [ -n "$(GLM53_KDA_DEFAULT_TEST)" ]; then ./$(GLM53_KDA_TEST); fi
 
 dspark-acceptance: ds4
 	DS4_DSPARK_MODEL="$(DS4_DSPARK_MODEL)" \
