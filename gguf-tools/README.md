@@ -1,7 +1,9 @@
 # DS4 GGUF Tools
 
 This directory contains the offline tools used to build and evaluate DeepSeek
-V4 Flash GGUF files for `ds4`.
+V4 and GLM GGUF files for `ds4`. For the experimental source-aligned import of
+published GLM-5.3-Flash quantizations, see
+[Published GLM-5.3-Flash quantizations in DS4](GLM53_PUBLISHED_IMPORT.md).
 
 The important pieces are:
 
