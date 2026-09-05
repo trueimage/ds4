@@ -31367,6 +31367,8 @@ static uint32_t ds4_gpu_routed_mv_nr0(uint32_t type) {
     case DS4_METAL_TENSOR_Q8_0:    return 2;
     case DS4_METAL_TENSOR_Q8_K:    return 2;
     case DS4_METAL_TENSOR_Q4_K:    return 2;
+    case DS4_METAL_TENSOR_Q5_K:    return 2;
+    case DS4_METAL_TENSOR_Q6_K:    return 2;
     case DS4_METAL_TENSOR_MXFP4:   return 2;
     case DS4_METAL_TENSOR_Q2_K:
     case DS4_METAL_TENSOR_IQ2_XXS: return 4;
@@ -31379,6 +31381,7 @@ static const char *ds4_gpu_metal_tensor_type_name(uint32_t type) {
     case DS4_METAL_TENSOR_IQ2_XXS: return "iq2_xxs";
     case DS4_METAL_TENSOR_Q2_K:    return "q2_k";
     case DS4_METAL_TENSOR_Q4_K:    return "q4_k";
+    case DS4_METAL_TENSOR_Q8_0:    return "q8_0";
     case DS4_METAL_TENSOR_Q5_K:    return "q5_k";
     case DS4_METAL_TENSOR_Q6_K:    return "q6_k";
     case DS4_METAL_TENSOR_MXFP4:   return "mxfp4";
@@ -31490,6 +31493,10 @@ static id<MTLComputePipelineState> ds4_gpu_routed_mv_pipeline(uint32_t type) {
     case DS4_METAL_TENSOR_IQ2_XXS: return g_moe_mul_mv_id_iq2_xxs_pipeline;
     case DS4_METAL_TENSOR_Q2_K:    return g_moe_mul_mv_id_q2_k_pipeline;
     case DS4_METAL_TENSOR_Q4_K:    return g_moe_mul_mv_id_q4_k_pipeline;
+    case DS4_METAL_TENSOR_Q5_K:
+        return ds4_gpu_get_mul_mv_pipeline("kernel_mul_mv_id_q5_K_f32", 2);
+    case DS4_METAL_TENSOR_Q6_K:
+        return ds4_gpu_get_mul_mv_pipeline("kernel_mul_mv_id_q6_K_f32", 2);
     case DS4_METAL_TENSOR_MXFP4:   return g_moe_mul_mv_id_mxfp4_pipeline;
     default:                       return nil;
     }

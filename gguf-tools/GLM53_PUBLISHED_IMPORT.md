@@ -31,6 +31,16 @@ operations. Existing BF16 HC producer fusion remains active for BF16 tensors.
 Other numerical controls remain F32. The original PR branch is the frozen
 baseline; compatibility work belongs in a separate branch/worktree.
 
+Published Q5 can promote routed gate/up matrices to Q6_K and down matrices to
+Q8_0 in selected layers. Metal dispatches these layers through the generic
+routed expert path, with F32 Q5_K/Q6_K matvec variants for decode and short
+batches and existing grouped matmul variants for large prefill. Q8_0 experts
+also use that path. Previously supported GLM expert layouts retain their
+established dispatch. This is compatibility support, not a claim that the new
+formats have reached their best possible throughput.
+The new high-precision fallback is validated for resident single-device Metal;
+GLM tensor-parallel sessions reject these layouts pending ownership validation.
+
 ## Tools and inputs
 
 Use Python 3.10+ with NumPy, a current `hf` CLI, the complete source checkpoint,
@@ -74,6 +84,7 @@ python gguf-tools/tests/test_glm53_import_gguf.py
 python gguf-tools/tests/test_glm53_quantize.py
 make -j8 all ds4_test tests/test_glm53_kda
 ./tests/test_glm53_kda
+make test-glm-mixed-experts-metal
 ./ds4_test --metal-kernels
 ```
 

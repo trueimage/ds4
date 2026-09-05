@@ -3247,6 +3247,43 @@ void kernel_mul_mv_iq2_xxs_pair_f32_impl(
     }
 }
 
+// Published GLM mixed quants can promote gate/up to Q6_K and down to Q8_0.
+// The generic routed path already has grouped prefill kernels for Q5_K/Q6_K;
+// these F32 row variants also cover decode and short prefill batches.
+template<int bits, int nr0, typename args_t>
+void kernel_mul_mv_q5_q6_K_f32_impl(
+        args_t args,
+        device const char *src0,
+        device const char *src1,
+        device char *dst,
+        threadgroup char *shmem,
+        uint3 tgpig,
+        ushort tiisg,
+        ushort sgitg) {
+    (void)shmem;
+    const int first_row = (tgpig.x * FC_mul_mv_nsg + sgitg) * nr0;
+    const uint i12 = tgpig.z % args.ne12;
+    const uint i13 = tgpig.z / args.ne12;
+    const uint64_t offset0 = (i12 / args.r2) * args.nb02 +
+                             (i13 / args.r3) * args.nb03;
+    const uint64_t offset1 = tgpig.y * args.nb11 + i12 * args.nb12 + i13 * args.nb13;
+    device const float *x = (device const float *)(src1 + offset1);
+    device float *out = (device float *)dst +
+        (uint64_t)tgpig.z * args.ne0 * args.ne1 + (uint64_t)tgpig.y * args.ne0;
+    for (int r = 0; r < nr0 && first_row + r < args.ne0; r++) {
+        device const char *row = src0 + offset0 + (uint64_t)(first_row + r) * args.nb01;
+        float sum = 0.0f;
+        for (uint k = tiisg; k < (uint)args.ne00; k += 32u) {
+            const float value = bits == 6 ?
+                ds4_glm_q6_K_value((device const block_q6_K *)row, k) :
+                ds4_glm_q5_K_value((device const block_q5_K *)row, k);
+            sum += value * x[k];
+        }
+        const float total = simd_sum(sum);
+        if (tiisg == 0) out[first_row + r] = total;
+    }
+}
+
 typedef void (kernel_mul_mv2_disp_t)(
         ds4_metal_args_mul_mv args,
         device const char * src0,
@@ -3362,6 +3399,8 @@ typedef decltype(kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q8_0_f32_impl<N_R0_Q8_0>>
 template [[host_name("kernel_mul_mv_id_q8_0_f32")]]    kernel kernel_mul_mv_id_q8_0_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q8_0_f32_impl<N_R0_Q8_0>>>;
 template [[host_name("kernel_mul_mv_id_q2_K_f32")]]    kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q2_K_f32_impl<N_R0_Q2_K>>>;
 template [[host_name("kernel_mul_mv_id_q4_K_f32")]]    kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q4_K_f32_impl<N_R0_Q4_K>>>;
+template [[host_name("kernel_mul_mv_id_q5_K_f32")]]    kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q5_q6_K_f32_impl<5, 2>>>;
+template [[host_name("kernel_mul_mv_id_q6_K_f32")]]    kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q5_q6_K_f32_impl<6, 2>>>;
 template [[host_name("kernel_mul_mv_id_q8_K_f32")]]    kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_q8_K_f32_impl<N_R0_Q8_K>>>;
 template [[host_name("kernel_mul_mv_id_iq2_xxs_f32")]] kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_iq2_xxs_f32_impl<N_R0_IQ2_XXS>>>;
 template [[host_name("kernel_mul_mv_id_mxfp4_f32")]]   kernel kernel_mul_mv_id_q_t kernel_mul_mv_id<mmv_fn<kernel_mul_mv_mxfp4_f32_impl<N_R0_MXFP4>>>;

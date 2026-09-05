@@ -15269,6 +15269,8 @@ static bool glm_graph_gate_pair_type_supported(uint32_t gate_type, uint32_t up_t
             gate_type == DS4_TENSOR_Q2_K ||
             gate_type == DS4_TENSOR_Q4_K ||
             gate_type == DS4_TENSOR_Q5_K ||
+            gate_type == DS4_TENSOR_Q6_K ||
+            gate_type == DS4_TENSOR_Q8_0 ||
             gate_type == DS4_TENSOR_MXFP4);
 }
 
@@ -15278,10 +15280,14 @@ static bool glm_graph_down_type_supported(uint32_t down_type) {
            down_type == DS4_TENSOR_Q4_K ||
            down_type == DS4_TENSOR_Q5_K ||
            down_type == DS4_TENSOR_Q6_K ||
+           down_type == DS4_TENSOR_Q8_0 ||
            down_type == DS4_TENSOR_MXFP4;
 }
 
 static float glm_routed_moe_dot_f32(uint32_t type, int n, const uint8_t *row, const float *x) {
+    if (type == DS4_TENSOR_Q8_0) {
+        return dot_q8_0_row_f32_ref(row, x, (uint64_t)n, (uint64_t)n / 32u);
+    }
     if (type == DS4_TENSOR_IQ2_XXS) {
         return ds4_vec_dot_iq2_xxs_f32(n, (const block_iq2_xxs *)row, x);
     }
@@ -42331,7 +42337,10 @@ static bool glm_graph_layer_uses_generic_routed_moe(
            l->ffn_gate_exps &&
            l->ffn_up_exps &&
            l->ffn_down_exps &&
-           l->ffn_gate_exps->type == DS4_TENSOR_IQ2_XXS;
+           (l->ffn_gate_exps->type == DS4_TENSOR_IQ2_XXS ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0 ||
+            l->ffn_down_exps->type == DS4_TENSOR_Q8_0);
 }
 
 static bool glm_tp_validate_ownership_kernels(
@@ -42342,6 +42351,16 @@ static bool glm_tp_validate_ownership_kernels(
     for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
         const ds4_layer_weights *l = &weights->layer[il];
         if (!l->ffn_gate_exps) continue;
+        /* Published high-precision expert fallbacks are validated for one
+         * device. Keep TP closed until their mixed ownership paths are tested. */
+        if (l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ||
+            l->ffn_gate_exps->type == DS4_TENSOR_Q8_0 ||
+            (l->ffn_down_exps && l->ffn_down_exps->type == DS4_TENSOR_Q8_0)) {
+            if (bad_layer) *bad_layer = il;
+            if (bad_type) *bad_type = l->ffn_gate_exps->type == DS4_TENSOR_Q6_K ?
+                DS4_TENSOR_Q6_K : DS4_TENSOR_Q8_0;
+            return false;
+        }
         if (glm_graph_layer_uses_generic_routed_moe(l) ||
             l->ffn_gate_exps->type == DS4_TENSOR_Q2_K ||
             l->ffn_gate_exps->type == DS4_TENSOR_Q4_K) {
