@@ -33,6 +33,7 @@ glm53flash_prefill*.md
 /tests/test_sampling
 /tests/test_glm53_kda
 /tests/test_glm_mixed_experts_metal
+/tests/test_glm_tp_layout
 /tests/test_deepseek4_vision_image
 *.o
 *.dSYM/
