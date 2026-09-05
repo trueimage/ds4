@@ -41074,7 +41074,6 @@ static uint64_t glm_graph_memory_guard_budget_bytes(
 }
 #endif
 
-#if !defined(DS4_NO_GPU) || defined(DS4_TEST_HOOKS)
 static bool glm_graph_layer_uses_generic_routed_moe(
         const ds4_layer_weights *l) {
     return l &&
@@ -41146,6 +41145,7 @@ static glm_expert_layout_policy glm_validate_requested_expert_layouts(
         ds4_backend       backend,
         ds4_tp_role       role,
         bool              ssd_streaming,
+        bool              inspect_only,
         uint32_t         *bad_layer,
         uint32_t         *bad_type) {
     if (!weights) return GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
@@ -41154,9 +41154,10 @@ static glm_expert_layout_policy glm_validate_requested_expert_layouts(
     if (glm_find_promoted_expert_layout(weights,
                                         &promoted_layer,
                                         &promoted_type) &&
-        (role != DS4_TP_NONE ||
-         ssd_streaming ||
-         (backend != DS4_BACKEND_CPU && backend != DS4_BACKEND_METAL))) {
+        !inspect_only &&
+        (backend != DS4_BACKEND_METAL ||
+         role != DS4_TP_NONE ||
+         ssd_streaming)) {
         if (bad_layer) *bad_layer = promoted_layer;
         if (bad_type) *bad_type = promoted_type;
         return GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE;
@@ -41167,7 +41168,6 @@ static glm_expert_layout_policy glm_validate_requested_expert_layouts(
     return glm_tp_validate_ownership_kernels(weights, bad_layer, bad_type) ?
         GLM_EXPERT_LAYOUT_ALLOWED : GLM_EXPERT_LAYOUT_UNSUPPORTED_TP;
 }
-#endif
 
 #ifndef DS4_NO_GPU
 typedef struct ds4_glm_gpu_graph {
@@ -63303,6 +63303,7 @@ int ds4_test_glm_expert_layout_policy(
         ds4_backend backend,
         ds4_tp_role role,
         bool        ssd_streaming,
+        bool        inspect_only,
         uint32_t    gate_type,
         uint32_t    up_type,
         uint32_t    down_type,
@@ -63320,6 +63321,7 @@ int ds4_test_glm_expert_layout_policy(
                                                       backend,
                                                       role,
                                                       ssd_streaming,
+                                                      inspect_only,
                                                       bad_layer,
                                                       bad_type);
 }
@@ -63796,7 +63798,6 @@ static int ds4_engine_open_internal(ds4_engine **out,
                  load_output,
                  load_output_optional);
 
-#ifndef DS4_NO_GPU
     if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
         uint32_t bad_layer = 0;
         uint32_t bad_type = 0;
@@ -63805,13 +63806,15 @@ static int ds4_engine_open_internal(ds4_engine **out,
                                                   e->backend,
                                                   opt->tp.role,
                                                   e->ssd_streaming,
+                                                  opt->inspect_only,
                                                   &bad_layer,
                                                   &bad_type);
         if (layout_policy == GLM_EXPERT_LAYOUT_UNSUPPORTED_SCOPE) {
             fprintf(stderr,
                     "ds4: GLM routed expert type %u in layer %u is supported "
-                    "only by CPU or resident single-device Metal "
-                    "(no streaming or tensor parallelism)\n",
+                    "only by resident single-device Metal; CPU execution, "
+                    "non-Metal GPU backends, streaming, and tensor "
+                    "parallelism are unsupported\n",
                     bad_type,
                     bad_layer);
             ds4_engine_close(e);
@@ -63830,6 +63833,7 @@ static int ds4_engine_open_internal(ds4_engine **out,
         }
     }
 
+#ifndef DS4_NO_GPU
     /* TP always maps one contiguous routed-expert half per rank. Decide
      * immediately after binding so memory guards account only the bytes this
      * rank owns (replicated dense weights plus its expert shard). */
