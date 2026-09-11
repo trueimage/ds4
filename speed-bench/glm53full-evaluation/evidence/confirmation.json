@@ -1,0 +1,316 @@
+[
+  {
+    "name": "main",
+    "label": "confirm-00-main",
+    "cwd": "/Users/jw/.cache/ds4-bench/glm53full-20260910/main",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-00-main.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "150.71",
+        "gen_tokens": "128",
+        "gen_tps": "18.10",
+        "gen_first_ms": "55.957",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.11",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "158.82",
+        "gen_tokens": "128",
+        "gen_tps": "16.42",
+        "gen_first_ms": "60.987",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.43",
+        "kvcache_bytes": "0"
+      }
+    ]
+  },
+  {
+    "name": "tail",
+    "label": "confirm-01-tail",
+    "cwd": "/Users/jw/ds4",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-01-tail.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1",
+      "DS4_METAL_DISABLE_GLM_FULL_ROUTER_TOP8": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "174.85",
+        "gen_tokens": "128",
+        "gen_tps": "18.02",
+        "gen_first_ms": "56.275",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.03",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "165.58",
+        "gen_tokens": "128",
+        "gen_tps": "16.46",
+        "gen_first_ms": "60.766",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.47",
+        "kvcache_bytes": "0"
+      }
+    ]
+  },
+  {
+    "name": "both",
+    "label": "confirm-02-both",
+    "cwd": "/Users/jw/ds4",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-02-both.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "175.09",
+        "gen_tokens": "128",
+        "gen_tps": "18.09",
+        "gen_first_ms": "55.983",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.10",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "165.61",
+        "gen_tokens": "128",
+        "gen_tps": "16.47",
+        "gen_first_ms": "60.776",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.48",
+        "kvcache_bytes": "0"
+      }
+    ]
+  },
+  {
+    "name": "both",
+    "label": "confirm-03-both",
+    "cwd": "/Users/jw/ds4",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-03-both.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "174.91",
+        "gen_tokens": "128",
+        "gen_tps": "18.07",
+        "gen_first_ms": "56.648",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.09",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "165.59",
+        "gen_tokens": "128",
+        "gen_tps": "16.47",
+        "gen_first_ms": "60.868",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.48",
+        "kvcache_bytes": "0"
+      }
+    ]
+  },
+  {
+    "name": "tail",
+    "label": "confirm-04-tail",
+    "cwd": "/Users/jw/ds4",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-04-tail.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1",
+      "DS4_METAL_DISABLE_GLM_FULL_ROUTER_TOP8": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "174.77",
+        "gen_tokens": "128",
+        "gen_tps": "18.05",
+        "gen_first_ms": "56.218",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.06",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "165.57",
+        "gen_tokens": "128",
+        "gen_tps": "16.40",
+        "gen_first_ms": "60.579",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.41",
+        "kvcache_bytes": "0"
+      }
+    ]
+  },
+  {
+    "name": "main",
+    "label": "confirm-05-main",
+    "cwd": "/Users/jw/.cache/ds4-bench/glm53full-20260910/main",
+    "cmd": [
+      "./ds4-bench",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--prompt-file",
+      "/Users/jw/ds4/speed-bench/promessi_sposi.txt",
+      "--ctx-start",
+      "512",
+      "--ctx-max",
+      "2048",
+      "--step-mul",
+      "4",
+      "--ctx-alloc",
+      "4096",
+      "--gen-tokens",
+      "128",
+      "--csv",
+      "/Users/jw/.cache/ds4-bench/glm53full-20260910/runs/confirm-05-main.csv"
+    ],
+    "flags": {
+      "DS4_BENCH_FORCE_SNAPSHOT": "1"
+    },
+    "exit": 0,
+    "csv": [
+      {
+        "ctx_tokens": "512",
+        "prefill_tokens": "512",
+        "prefill_tps": "150.53",
+        "gen_tokens": "128",
+        "gen_tps": "18.03",
+        "gen_first_ms": "55.802",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "18.04",
+        "kvcache_bytes": "98139812"
+      },
+      {
+        "ctx_tokens": "2048",
+        "prefill_tokens": "1536",
+        "prefill_tps": "158.71",
+        "gen_tokens": "128",
+        "gen_tps": "16.44",
+        "gen_first_ms": "60.791",
+        "gen_steady_tokens": "127",
+        "gen_steady_tps": "16.45",
+        "kvcache_bytes": "0"
+      }
+    ]
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "name": "full-kernels",
+    "cmd": [
+      "./tests/test_glm_full_metal"
+    ],
+    "exit": 0,
+    "seconds": 2.1181108336895704
+  },
+  {
+    "name": "ssd-experts",
+    "cmd": [
+      "./tests/test_metal_ssd_experts"
+    ],
+    "exit": 0,
+    "seconds": 0.7316819997504354
+  },
+  {
+    "name": "attention",
+    "cmd": [
+      "./tests/test_glm_attention"
+    ],
+    "exit": 0,
+    "seconds": 2.564993374980986
+  },
+  {
+    "name": "metal-kernels",
+    "cmd": [
+      "./ds4_test",
+      "--metal-kernels"
+    ],
+    "exit": 0,
+    "seconds": 2.0069287912920117
+  }
+]

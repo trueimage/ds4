@@ -1,0 +1,40 @@
+[
+  {
+    "name": "main",
+    "exit": 0,
+    "cmd": [
+      "./ds4",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--ctx",
+      "512",
+      "-p",
+      "Say hello in one short sentence.",
+      "--nothink",
+      "--temp",
+      "0",
+      "-n",
+      "32"
+    ],
+    "stdout": "Hello! \ud83d\udc4b\n"
+  },
+  {
+    "name": "final",
+    "exit": 0,
+    "cmd": [
+      "./ds4",
+      "-m",
+      "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "--ctx",
+      "512",
+      "-p",
+      "Say hello in one short sentence.",
+      "--nothink",
+      "--temp",
+      "0",
+      "-n",
+      "32"
+    ],
+    "stdout": "Hello! \ud83d\udc4b\n"
+  }
+]

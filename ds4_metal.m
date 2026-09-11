@@ -810,6 +810,7 @@ static uint64_t g_model_residency_count;
 static int g_model_residency_added_to_queue;
 static int g_glm_model_mode;
 static int g_ssd_streaming_mode;
+static uint64_t g_glm_full_tail_calls;
 static int g_glm_streaming_prefill_full_layer_runtime;
 static int g_metal4_runtime_available;
 static int g_metal4_family_supported;
@@ -11492,6 +11493,11 @@ int ds4_gpu_synchronize(void) {
 }
 
 void ds4_gpu_cleanup(void) {
+    if (getenv("DS4_METAL_GLM_FULL_STATS")) {
+        fprintf(stderr, "ds4: GLM full dispatches moe_tail=%llu\n",
+                (unsigned long long)g_glm_full_tail_calls);
+    }
+    g_glm_full_tail_calls = 0;
     if (!g_initialized) return;
     ds4_gpu_queue_keepalive_stop_thread();
 
@@ -42857,6 +42863,15 @@ int ds4_gpu_routed_moe_one_tensor(
     return 1;
 }
 
+/* Keep the measured ports local to resident, single-device M3 Ultra runs.
+ * Small kernel fixtures retain the same ownership exclusions. */
+static bool ds4_gpu_glm_full_tuning_available(void) {
+    return !g_ssd_streaming_mode && g_tp_split_world == 1 &&
+        !g_batch_encoder_concurrent &&
+        ((g_test_flags & DS4_GPU_TEST_GLM_FULL) != 0u ||
+         [g_device.name isEqualToString:@"Apple M3 Ultra"]);
+}
+
 int ds4_gpu_routed_moe_batch_tensor(
         ds4_gpu_tensor       *out,
         ds4_gpu_tensor       *gate,
@@ -43517,6 +43532,27 @@ int ds4_gpu_routed_moe_batch_tensor(
                 (use_mm_id_pair_swiglu && !pair_swiglu_mm_pipeline)) {
                 return 0;
             }
+        }
+
+        /* Port Flash's padding-only tile cull to the full model's generic
+         * IQ2 path. All threads still stage data and reach every barrier;
+         * only the unused half tile skips MMA/store work. */
+        const bool full_iq2_tail_cull = use_mm_id && !use_mm_id_pair_swiglu &&
+            gate_type == DS4_METAL_TENSOR_IQ2_XXS &&
+            down_type == DS4_METAL_TENSOR_IQ2_XXS &&
+            ds4_gpu_glm_full_tuning_available() &&
+            ((n_total_expert == 256u && n_expert == 8u &&
+              expert_in_dim == 6144u && expert_mid_dim == 2048u && out_dim == 6144u) ||
+             (g_test_flags & DS4_GPU_TEST_GLM_FULL) != 0u) &&
+            getenv("DS4_METAL_DISABLE_GLM_FULL_MOE_TAIL_CULL") == NULL;
+        if (full_iq2_tail_cull) {
+            g_glm_full_tail_calls++;
+            gate_mm_pipeline = up_mm_pipeline = ds4_gpu_get_mul_mm_id_pipeline(
+                "kernel_mul_mm_id_iq2_xxs_f32_tail_cull", false);
+            down_mm_pipeline = ds4_gpu_get_mul_mm_id_pipeline(request_mid_f16 ?
+                "kernel_mul_mm_id_iq2_xxs_f16_tail_cull" :
+                "kernel_mul_mm_id_iq2_xxs_f32_tail_cull", false);
+            if (!gate_mm_pipeline || !down_mm_pipeline) return 0;
         }
 
         if (use_iq2_cached_batch && use_mm_id) {

@@ -162,6 +162,13 @@ tests/test_metal_moe_prefill: tests/test_metal_moe_prefill.o $(CORE_OBJS)
 test-metal-moe-prefill: tests/test_metal_moe_prefill
 	./tests/test_metal_moe_prefill
 
+tests/test_glm_full_metal: tests/test_glm_full_metal.c ds4_gpu.h ds4_metal.o ds4_image.o
+	$(CC) $(CFLAGS) -fno-fast-math -I. -o $@ $< ds4_metal.o ds4_image.o $(METAL_LDLIBS)
+
+.PHONY: test-glm-full-metal
+test-glm-full-metal: tests/test_glm_full_metal
+	./tests/test_glm_full_metal
+
 tests/test_metal_ssd_experts.o: tests/test_metal_ssd_experts.c ds4_gpu.h
 	$(CC) $(CFLAGS) -fno-fast-math -I. -c -o $@ $<
 
@@ -850,7 +857,7 @@ clean:
 	rm -f tests/test_cuda_dspark_moe
 	rm -f tests/test_quality_api
 	rm -f tests/test_linux_memory tests/test_rocm_memory
-	rm -f tests/test_glm_attention tests/test_glm_attention_rocm
+	rm -f tests/test_glm_attention tests/test_glm_attention_rocm tests/test_glm_full_metal
 	rm -f tests/test_ssd_cache tests/test_engram
 	rm -f tests/test_session_state tests/test_session_state_gpu tests/test_tp_commands
 	rm -f tests/test_tp_rdma

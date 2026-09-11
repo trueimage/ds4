@@ -1,0 +1,17 @@
+{
+  "base": "6289c516273979173abbc062209a81dd3706b804",
+  "donor": "6d328a09962289f8b8865eb9fe1624d5ca745792",
+  "source_and_binary_sha256": {
+    "ds4.c": "c8699e137e82c8a9a3f1ea890a526c42ff1b93f2ca924129a9581496fff9fba5",
+    "ds4_metal.m": "2a7d5c1cb7d1f8e9aedf7491e41338ce414fbd3092c2907b17687d4ca8edefe3",
+    "ds4_gpu.h": "1c7e1aeff33098d17539cca601ac1d362af6e0394642d7936859b08ea45c2c4b",
+    "metal/dsv4_misc.metal": "94e48cd289bada052adbb9d84b0d4799bbc38b342ca89ade62d7a2d5cc2a37b3",
+    "metal/moe.metal": "492751829ba81812737774b810772d7b99f041d304115e7a5a96f302c96bc93c",
+    "tests/test_glm_full_metal.c": "79aa3e1088082667c3a0e7d86f9fb13e7e15ad0044a216d6b5445c9ca4adf14d",
+    "ds4": "308186f25102f8d5ea088fa294597c1f6e60cbe2d39694fdc6520e980def9101",
+    "ds4-bench": "e630f2b2c5e3858a563107257dd1d640d566b6dffc48c7576b92eb65073b14d0"
+  },
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.5.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+  "build_command": "make -j8 all ds4_test tests/test_glm_full_metal tests/test_metal_ssd_experts tests/test_glm_attention",
+  "build_warnings": 0
+}

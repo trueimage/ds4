@@ -1,0 +1,104 @@
+{
+  "main": {
+    "512": {
+      "prefill_tps": {
+        "mean": 150.62,
+        "min": 150.53,
+        "max": 150.71
+      },
+      "gen_tps": {
+        "mean": 18.065,
+        "min": 18.03,
+        "max": 18.1
+      }
+    },
+    "2048": {
+      "prefill_tps": {
+        "mean": 158.765,
+        "min": 158.71,
+        "max": 158.82
+      },
+      "gen_tps": {
+        "mean": 16.43,
+        "min": 16.42,
+        "max": 16.44
+      }
+    }
+  },
+  "tail": {
+    "512": {
+      "prefill_tps": {
+        "mean": 174.81,
+        "min": 174.77,
+        "max": 174.85
+      },
+      "gen_tps": {
+        "mean": 18.035,
+        "min": 18.02,
+        "max": 18.05
+      },
+      "vs_main_pct": {
+        "prefill_tps": 16.060284158810244,
+        "gen_tps": -0.16606698034874467
+      }
+    },
+    "2048": {
+      "prefill_tps": {
+        "mean": 165.575,
+        "min": 165.57,
+        "max": 165.58
+      },
+      "gen_tps": {
+        "mean": 16.43,
+        "min": 16.4,
+        "max": 16.46
+      },
+      "vs_main_pct": {
+        "prefill_tps": 4.289358485812356,
+        "gen_tps": 0.0
+      }
+    }
+  },
+  "both": {
+    "512": {
+      "prefill_tps": {
+        "mean": 175.0,
+        "min": 174.91,
+        "max": 175.09
+      },
+      "gen_tps": {
+        "mean": 18.08,
+        "min": 18.07,
+        "max": 18.09
+      },
+      "vs_main_pct": {
+        "prefill_tps": 16.18642942504316,
+        "gen_tps": 0.08303349017435568
+      },
+      "router_increment_pct": {
+        "prefill_tps": 0.10868943424289235,
+        "gen_tps": 0.2495148322705809
+      }
+    },
+    "2048": {
+      "prefill_tps": {
+        "mean": 165.60000000000002,
+        "min": 165.59,
+        "max": 165.61
+      },
+      "gen_tps": {
+        "mean": 16.47,
+        "min": 16.47,
+        "max": 16.47
+      },
+      "vs_main_pct": {
+        "prefill_tps": 4.305105029446055,
+        "gen_tps": 0.24345709068775978
+      },
+      "router_increment_pct": {
+        "prefill_tps": 0.015098897780485565,
+        "gen_tps": 0.24345709068775978
+      }
+    }
+  }
+}

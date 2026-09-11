@@ -349,6 +349,7 @@ enum {
     DS4_GPU_TEST_MXFP4_DOWN_HALF_LUT = 1u << 4,
     DS4_GPU_TEST_OUTPUT_HC_WEIGHTS4 = 1u << 5,
     DS4_GPU_TEST_HC_RMS_SCALE_PROJ = 1u << 6,
+    DS4_GPU_TEST_GLM_FULL = 1u << 8,
 };
 void ds4_gpu_test_set_flags(uint32_t flags);
 void ds4_gpu_release_zero_prefix_prefill_mask_cache(void);

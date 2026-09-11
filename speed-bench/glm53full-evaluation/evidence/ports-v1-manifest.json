@@ -1,0 +1,16 @@
+{
+  "model": "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+  "model_stat": {
+    "size": 211075860864,
+    "inode": 5290968,
+    "mtime_ns": 1788449550127614755
+  },
+  "host": "Apple M3 Ultra, 80 GPU cores, 512 GiB, macOS 26.5.2 (25F84)",
+  "prompt_sha256": "f53e0d80cb2d4492d24ebd63c7000c397b16ae70f9bf09b3763e5d8323ec209f",
+  "candidate_source_sha256": {
+    "ds4_metal.m": "a6f11f9999c0f911378abd9e4545c89c16db442a0d3db200edf47ee68ae2806d",
+    "ds4_gpu.h": "1c7e1aeff33098d17539cca601ac1d362af6e0394642d7936859b08ea45c2c4b",
+    "metal/dsv4_misc.metal": "0707f20b4809c66dfc1f6a632b9a0d6cd411334635a4b0a28cb003536f2db745",
+    "metal/moe.metal": "492751829ba81812737774b810772d7b99f041d304115e7a5a96f302c96bc93c"
+  }
+}
