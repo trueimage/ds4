@@ -1,0 +1,44 @@
+[
+  {
+    "name": "full-kernels",
+    "cmd": [
+      "./tests/test_glm_full_metal"
+    ],
+    "env": {
+      "MTL_DEBUG_LAYER": "1",
+      "DS4_METAL_GLM_FULL_STATS": "1"
+    },
+    "seconds": 3.212615966796875,
+    "rc": 0
+  },
+  {
+    "name": "ssd-experts",
+    "cmd": [
+      "./tests/test_metal_ssd_experts"
+    ],
+    "env": {
+      "DS4_METAL_GLM_FULL_STATS": "1"
+    },
+    "seconds": 0.5451810359954834,
+    "rc": 0
+  },
+  {
+    "name": "attention",
+    "cmd": [
+      "./tests/test_glm_attention"
+    ],
+    "env": {},
+    "seconds": 2.3969998359680176,
+    "rc": 0
+  },
+  {
+    "name": "metal-kernels",
+    "cmd": [
+      "./ds4_test",
+      "--metal-kernels"
+    ],
+    "env": {},
+    "seconds": 1.9958460330963135,
+    "rc": 0
+  }
+]

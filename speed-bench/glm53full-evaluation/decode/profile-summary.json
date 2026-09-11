@@ -1,0 +1,235 @@
+{
+  "512": {
+    "tokens": 8,
+    "encoder_ms_per_token": 58.08930625,
+    "kernels": [
+      {
+        "kernel": "kernel_mul_mv_q8_0_f32",
+        "ms_per_token": 23.823874999999997,
+        "percent": 41.01249702908958
+      },
+      {
+        "kernel": "kernel_mul_mv_id_iq2_xxs_pair_swiglu_f32",
+        "ms_per_token": 10.448278750000002,
+        "percent": 17.986578639850777
+      },
+      {
+        "kernel": "kernel_mul_mv_id_iq2_xxs_f32",
+        "ms_per_token": 5.777300000000001,
+        "percent": 9.945548282391478
+      },
+      {
+        "kernel": "kernel_dsv4_shared_mid_swiglu_q8_0",
+        "ms_per_token": 3.5246525000000006,
+        "percent": 6.067644335139569
+      },
+      {
+        "kernel": "kernel_glm_attention_indexed_decode_split_group8_reduce",
+        "ms_per_token": 2.98121,
+        "percent": 5.1321150009430525
+      },
+      {
+        "kernel": "kernel_glm_attention_indexed_decode_split_group8_partial_valid_fullheads",
+        "ms_per_token": 2.2150425,
+        "percent": 3.8131674192614406
+      },
+      {
+        "kernel": "kernel_glm_qk_lowrank_q8_0_glm52_sg",
+        "ms_per_token": 1.5854450000000002,
+        "percent": 2.729323351146064
+      },
+      {
+        "kernel": "kernel_mul_mv_f32_f32_4",
+        "ms_per_token": 1.28223625,
+        "percent": 2.207353354301765
+      },
+      {
+        "kernel": "kernel_glm_router_select_one",
+        "ms_per_token": 1.1622200000000003,
+        "percent": 2.000746910280066
+      },
+      {
+        "kernel": "kernel_dsv4_moe_sum8_f32",
+        "ms_per_token": 1.0891262499999999,
+        "percent": 1.874916951689365
+      },
+      {
+        "kernel": "kernel_add_rms_norm_mul_f32_4",
+        "ms_per_token": 0.89571125,
+        "percent": 1.5419554954660866
+      },
+      {
+        "kernel": "kernel_rms_norm_mul_f32_4",
+        "ms_per_token": 0.8002600000000001,
+        "percent": 1.3776373857107307
+      },
+      {
+        "kernel": "kernel_dsv4_shared_gate_up_swiglu_q8_0",
+        "ms_per_token": 0.6946775000000001,
+        "percent": 1.1958784582661461
+      },
+      {
+        "kernel": "kernel_glm_qkv_norm_store_compact_kv",
+        "ms_per_token": 0.51526375,
+        "percent": 0.8870199753848843
+      },
+      {
+        "kernel": "kernel_glm_indexer_rope_tail_f32",
+        "ms_per_token": 0.508805,
+        "percent": 0.8759013196168098
+      },
+      {
+        "kernel": "kernel_add3_f32",
+        "ms_per_token": 0.35345125,
+        "percent": 0.6084618199412564
+      },
+      {
+        "kernel": "kernel_glm_store_indexer_k",
+        "ms_per_token": 0.2307725,
+        "percent": 0.397271916119673
+      },
+      {
+        "kernel": "kernel_mul_mv_q8_0_f32+kernel_dsv4_tp_keepalive",
+        "ms_per_token": 0.17359875,
+        "percent": 0.2988480345295912
+      },
+      {
+        "kernel": "kernel_add2_f32",
+        "ms_per_token": 0.012561250000000001,
+        "percent": 0.02162403170376992
+      },
+      {
+        "kernel": "kernel_glm_fill_selected_range",
+        "ms_per_token": 0.00783375,
+        "percent": 0.013485700735150371
+      },
+      {
+        "kernel": "kernel_get_rows_q8_0_f32",
+        "ms_per_token": 0.006985,
+        "percent": 0.012024588432746173
+      }
+    ]
+  },
+  "2048": {
+    "tokens": 8,
+    "encoder_ms_per_token": 63.84027125,
+    "kernels": [
+      {
+        "kernel": "kernel_mul_mv_q8_0_f32",
+        "ms_per_token": 24.265529999999995,
+        "percent": 38.00975391375705
+      },
+      {
+        "kernel": "kernel_mul_mv_id_iq2_xxs_pair_swiglu_f32",
+        "ms_per_token": 10.472220000000002,
+        "percent": 16.403783685364594
+      },
+      {
+        "kernel": "kernel_glm_attention_indexed_decode_split_group8_partial_valid_fullheads",
+        "ms_per_token": 6.3856275,
+        "percent": 10.002506842418843
+      },
+      {
+        "kernel": "kernel_mul_mv_id_iq2_xxs_f32",
+        "ms_per_token": 5.76398125,
+        "percent": 9.028754322531173
+      },
+      {
+        "kernel": "kernel_dsv4_shared_mid_swiglu_q8_0",
+        "ms_per_token": 3.526615,
+        "percent": 5.524122831793263
+      },
+      {
+        "kernel": "kernel_glm_attention_indexed_decode_split_group8_reduce16",
+        "ms_per_token": 2.39231625,
+        "percent": 3.7473466248782583
+      },
+      {
+        "kernel": "kernel_glm_qk_lowrank_q8_0_glm52_sg",
+        "ms_per_token": 1.59027875,
+        "percent": 2.4910275580948444
+      },
+      {
+        "kernel": "kernel_mul_mv_f32_f32_4",
+        "ms_per_token": 1.5135999999999998,
+        "percent": 2.3709172444971403
+      },
+      {
+        "kernel": "kernel_glm_router_select_one",
+        "ms_per_token": 1.1653512499999998,
+        "percent": 1.8254171343296104
+      },
+      {
+        "kernel": "kernel_dsv4_moe_sum8_f32",
+        "ms_per_token": 1.0943687500000003,
+        "percent": 1.7142294801888087
+      },
+      {
+        "kernel": "kernel_add_rms_norm_mul_f32_4",
+        "ms_per_token": 0.8722774999999998,
+        "percent": 1.3663436619561666
+      },
+      {
+        "kernel": "kernel_rms_norm_mul_f32_4",
+        "ms_per_token": 0.8043100000000002,
+        "percent": 1.2598787321098674
+      },
+      {
+        "kernel": "kernel_dsv4_shared_gate_up_swiglu_q8_0",
+        "ms_per_token": 0.6939775,
+        "percent": 1.0870528686859238
+      },
+      {
+        "kernel": "kernel_argsort_f32_i32_desc",
+        "ms_per_token": 0.6544425,
+        "percent": 1.0251248736666356
+      },
+      {
+        "kernel": "kernel_glm_indexer_rope_tail_f32",
+        "ms_per_token": 0.6186375000000001,
+        "percent": 0.9690395856518232
+      },
+      {
+        "kernel": "kernel_glm_qkv_norm_store_compact_kv",
+        "ms_per_token": 0.5105675,
+        "percent": 0.7997577234604875
+      },
+      {
+        "kernel": "kernel_argsort_merge_f32_i32_desc",
+        "ms_per_token": 0.41291125,
+        "percent": 0.6467880569977998
+      },
+      {
+        "kernel": "kernel_add3_f32",
+        "ms_per_token": 0.345285,
+        "percent": 0.5408576643539873
+      },
+      {
+        "kernel": "kernel_glm_indexer_score_one_direct",
+        "ms_per_token": 0.3378325,
+        "percent": 0.5291839984154202
+      },
+      {
+        "kernel": "kernel_glm_store_indexer_k",
+        "ms_per_token": 0.22844,
+        "percent": 0.3578305598129801
+      },
+      {
+        "kernel": "kernel_mul_mv_q8_0_f32+kernel_dsv4_tp_keepalive",
+        "ms_per_token": 0.17279750000000002,
+        "percent": 0.27067162563160324
+      },
+      {
+        "kernel": "kernel_add2_f32",
+        "ms_per_token": 0.01275875,
+        "percent": 0.01998542573548354
+      },
+      {
+        "kernel": "kernel_get_rows_q8_0_f32",
+        "ms_per_token": 0.006144999999999999,
+        "percent": 0.00962558566823132
+      }
+    ]
+  },
+  "caveat": "Encoder sampling adds serialization. These instrumented GPU durations describe anatomy, not release throughput."
+}

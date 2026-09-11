@@ -1,0 +1,15 @@
+{
+  "full_kernel_fused_dispatches": [
+    0,
+    8,
+    8,
+    8
+  ],
+  "ssd_fused_dispatches": [
+    0,
+    0
+  ],
+  "build_warnings": 0,
+  "frozen_hashes_match": true,
+  "model_stat_unchanged": true
+}

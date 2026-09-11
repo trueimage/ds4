@@ -1,0 +1,18 @@
+{
+  "cmd": [
+    "./ds4",
+    "-m",
+    "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "-p",
+    "Explain why the sky looks blue in two sentences.",
+    "--nothink",
+    "--temp",
+    "0",
+    "-n",
+    "64",
+    "--ctx",
+    "512"
+  ],
+  "byte_identical": true,
+  "output": "The sky appears blue because air molecules scatter shorter wavelengths of light, like blue and violet, more strongly than longer wavelengths, a phenomenon called Rayleigh scattering. Although violet light is scattered even more, our eyes are more sensitive to blue and the sun emits less violet, so we perceive the sky as blue.\n"
+}

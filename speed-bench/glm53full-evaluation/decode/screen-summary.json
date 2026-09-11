@@ -1,0 +1,98 @@
+{
+  "baseline-screen": [
+    {
+      "ctx_tokens": "512",
+      "prefill_tokens": "512",
+      "prefill_tps": "174.94",
+      "gen_tokens": "64",
+      "gen_tps": "18.14",
+      "gen_first_ms": "55.775",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "18.15",
+      "kvcache_bytes": "98139812"
+    },
+    {
+      "ctx_tokens": "2048",
+      "prefill_tokens": "1536",
+      "prefill_tps": "165.66",
+      "gen_tokens": "64",
+      "gen_tps": "16.50",
+      "gen_first_ms": "60.683",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "16.51",
+      "kvcache_bytes": "0"
+    }
+  ],
+  "qkv-screen": [
+    {
+      "ctx_tokens": "512",
+      "prefill_tokens": "512",
+      "prefill_tps": "174.86",
+      "gen_tokens": "64",
+      "gen_tps": "18.17",
+      "gen_first_ms": "56.617",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "18.19",
+      "kvcache_bytes": "98139812"
+    },
+    {
+      "ctx_tokens": "2048",
+      "prefill_tokens": "1536",
+      "prefill_tps": "165.55",
+      "gen_tokens": "64",
+      "gen_tps": "16.53",
+      "gen_first_ms": "61.625",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "16.54",
+      "kvcache_bytes": "0"
+    }
+  ],
+  "down-screen": [
+    {
+      "ctx_tokens": "512",
+      "prefill_tokens": "512",
+      "prefill_tps": "174.98",
+      "gen_tokens": "64",
+      "gen_tps": "18.45",
+      "gen_first_ms": "54.809",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "18.47",
+      "kvcache_bytes": "98139812"
+    },
+    {
+      "ctx_tokens": "2048",
+      "prefill_tokens": "1536",
+      "prefill_tps": "165.49",
+      "gen_tokens": "64",
+      "gen_tps": "16.78",
+      "gen_first_ms": "60.093",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "16.79",
+      "kvcache_bytes": "0"
+    }
+  ],
+  "down-nr8-screen": [
+    {
+      "ctx_tokens": "512",
+      "prefill_tokens": "512",
+      "prefill_tps": "175.10",
+      "gen_tokens": "64",
+      "gen_tps": "18.44",
+      "gen_first_ms": "55.316",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "18.45",
+      "kvcache_bytes": "98139812"
+    },
+    {
+      "ctx_tokens": "2048",
+      "prefill_tokens": "1536",
+      "prefill_tps": "165.47",
+      "gen_tokens": "64",
+      "gen_tps": "16.72",
+      "gen_first_ms": "59.877",
+      "gen_steady_tokens": "63",
+      "gen_steady_tps": "16.73",
+      "kvcache_bytes": "0"
+    }
+  ]
+}

@@ -811,6 +811,7 @@ static int g_model_residency_added_to_queue;
 static int g_glm_model_mode;
 static int g_ssd_streaming_mode;
 static uint64_t g_glm_full_tail_calls;
+static uint64_t g_glm_full_down_sum_calls;
 static int g_glm_streaming_prefill_full_layer_runtime;
 static int g_metal4_runtime_available;
 static int g_metal4_family_supported;
@@ -11494,10 +11495,12 @@ int ds4_gpu_synchronize(void) {
 
 void ds4_gpu_cleanup(void) {
     if (getenv("DS4_METAL_GLM_FULL_STATS")) {
-        fprintf(stderr, "ds4: GLM full dispatches moe_tail=%llu\n",
-                (unsigned long long)g_glm_full_tail_calls);
+        fprintf(stderr, "ds4: GLM full dispatches moe_tail=%llu iq2_down_sum=%llu\n",
+                (unsigned long long)g_glm_full_tail_calls,
+                (unsigned long long)g_glm_full_down_sum_calls);
     }
     g_glm_full_tail_calls = 0;
+    g_glm_full_down_sum_calls = 0;
     if (!g_initialized) return;
     ds4_gpu_queue_keepalive_stop_thread();
 
@@ -40222,6 +40225,15 @@ static bool ds4_gpu_mxfp4_moe_decode_nsg1_enabled(uint32_t n_tokens) {
            getenv("DS4_METAL_DISABLE_PRE_M5_MXFP4_MOE_DECODE_NSG1") == NULL;
 }
 
+/* Keep the measured ports local to resident, single-device M3 Ultra runs.
+ * Small kernel fixtures retain the same ownership exclusions. */
+static bool ds4_gpu_glm_full_tuning_available(void) {
+    return !g_ssd_streaming_mode && g_tp_split_world == 1 &&
+        !g_batch_encoder_concurrent &&
+        ((g_test_flags & DS4_GPU_TEST_GLM_FULL) != 0u ||
+         [g_device.name isEqualToString:@"Apple M3 Ultra"]);
+}
+
 int ds4_gpu_routed_moe_one_tensor(
         ds4_gpu_tensor       *out,
         ds4_gpu_tensor       *gate,
@@ -40575,11 +40587,22 @@ int ds4_gpu_routed_moe_one_tensor(
              * bytes are not at their model-map offsets when streamed). */
             down_sum6_pipeline = g_moe_mul_mv_id_iq2_xxs_sum6_pipeline;
         }
-        const bool direct_down_sum =
+        const bool full_iq2_down_sum =
+            ds4_gpu_glm_full_tuning_available() &&
+            gate_type == DS4_METAL_TENSOR_IQ2_XXS &&
+            down_type == DS4_METAL_TENSOR_IQ2_XXS &&
+            n_expert == 8 && (out_dim & 3u) == 0 && add_in == NULL &&
+            !g_quality_mode && !write_clamped_moe &&
+            ((n_total_expert == 256 && expert_in_dim == 6144 &&
+              expert_mid_dim == 2048 && out_dim == 6144) ||
+             (g_test_flags & DS4_GPU_TEST_GLM_FULL) != 0u) &&
+            getenv("DS4_METAL_DISABLE_GLM_FULL_IQ2_DOWN_SUM") == NULL &&
+            getenv("DS4_METAL_GRAPH_DUMP_PREFIX") == NULL;
+        const bool direct_down_sum = full_iq2_down_sum || (
             !g_quality_mode &&
             (n_expert == 6 || (n_expert == 8 && g_tp_split_world == 2)) &&
             n_tokens == 1 &&
-            down_sum6_pipeline != nil;
+            down_sum6_pipeline != nil);
 
         if (g_parallel_q8_pending) {
             /* A concurrent encoder invalidates every implicit dependency in
@@ -42800,6 +42823,21 @@ int ds4_gpu_routed_moe_one_tensor(
                                                        down_smem,
                                                        2);
             }
+        } else if (ok && full_iq2_down_sum) {
+            id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline(
+                    "kernel_mul_mv_id_iq2_xxs_sum8_exact_f32");
+            if (!pipeline) return 0;
+            id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
+            [enc setComputePipelineState:pipeline];
+            [enc setBytes:&down_args length:sizeof(down_args) atIndex:0];
+            [enc setBuffer:down_buf offset:(NSUInteger)down_inner atIndex:1];
+            [enc setBuffer:midbuf offset:ds4_gpu_tensor_offset(mid) atIndex:2];
+            [enc setBuffer:outbuf offset:ds4_gpu_tensor_offset(out) atIndex:3];
+            [enc setBuffer:selectedbuf offset:ds4_gpu_tensor_offset(selected) atIndex:4];
+            [enc dispatchThreadgroups:MTLSizeMake((out_dim + 3u) / 4u, 1, 1)
+                 threadsPerThreadgroup:MTLSizeMake(32, 8, 1)];
+            ds4_gpu_end_compute_encoder(cb, enc);
+            g_glm_full_down_sum_calls++;
         } else if (ok && direct_down_sum) {
             ok = ds4_gpu_encode_mul_mv_id_sum6(cb,
                                                  down_sum6_pipeline,
@@ -42865,12 +42903,6 @@ int ds4_gpu_routed_moe_one_tensor(
 
 /* Keep the measured ports local to resident, single-device M3 Ultra runs.
  * Small kernel fixtures retain the same ownership exclusions. */
-static bool ds4_gpu_glm_full_tuning_available(void) {
-    return !g_ssd_streaming_mode && g_tp_split_world == 1 &&
-        !g_batch_encoder_concurrent &&
-        ((g_test_flags & DS4_GPU_TEST_GLM_FULL) != 0u ||
-         [g_device.name isEqualToString:@"Apple M3 Ultra"]);
-}
 
 int ds4_gpu_routed_moe_batch_tensor(
         ds4_gpu_tensor       *out,

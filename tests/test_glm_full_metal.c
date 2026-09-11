@@ -107,9 +107,88 @@ static void moe_cases(void) {
     fprintf(stderr,"GLM full MoE: 21 exact cases with repeated poisoned outputs passed\n");
 }
 
+
+static void decode_cases(void) {
+    const unsigned shapes[][3]={{256,256,260},{6144,2048,6144},{6144,2048,260}};
+    enum { E=16, K=8 };
+    typedef struct { uint16_t d; uint8_t qs[64]; } iq2_block;
+    for (unsigned shape=0; shape<sizeof(shapes)/sizeof(*shapes); shape++) {
+        const unsigned D=shapes[shape][0], H=shapes[shape][1], O=shapes[shape][2];
+        const size_t row=(D/256)*sizeof(iq2_block), dr=(H/256)*sizeof(iq2_block);
+        const size_t expert=H*row, de=O*dr, up=E*expert, down=2*up;
+        const size_t bytes=(down+E*de+16383u)&~16383u;
+        unsigned char *model=model_alloc(bytes);
+        for (int w=0; w<3; w++) {
+            const size_t off=w==2 ? down : w*up, size=w==2 ? E*de : E*expert;
+            iq2_block *b=(iq2_block *)(model+off);
+            for (size_t j=0; j<size/sizeof(*b); j++) {
+                b[j].d=0x0800+(random_u32()%0x1000);
+                for (unsigned q=0; q<64; q++) b[j].qs[q]=random_u32();
+            }
+        }
+        require(ds4_gpu_init() && ds4_gpu_set_model_map(model,bytes),"decode map");
+        ds4_gpu_test_set_flags(DS4_GPU_TEST_GLM_FULL);
+        float *x=malloc(D*4), weights[K]; int32_t ids[K];
+        require(x!=NULL,"decode input");
+        ds4_gpu_tensor *xt=tensor(D*4), *it=tensor(K*4), *wt=tensor(K*4);
+        const size_t sizes[]={K*H*4,K*H*4,K*H*4,K*O*4,O*4};
+        ds4_gpu_tensor *out[5]; void *ref[5], *actual[5];
+        for (int i=0; i<5; i++) {
+            out[i]=tensor(sizes[i]);ref[i]=malloc(sizes[i]);actual[i]=malloc(sizes[i]);
+            require(ref[i] && actual[i],"decode outputs");
+        }
+        for (int mode=0; mode<3; mode++) for (int trial=0; trial<4; trial++) {
+            ds4_gpu_set_quality(mode==1); ds4_gpu_set_ssd_streaming(mode==2);
+            for (unsigned j=0; j<D; j++) x[j]=sample()/32.0f;
+            for (int j=0; j<K; j++) {
+                ids[j]=trial==0 ? E-1-j : trial==1 ? 0 : random_u32()%E;
+                weights[j]=trial==2 ? (j==0 ? 1.0f : 0.0f) : sample()/16.0f;
+            }
+            require(ds4_gpu_tensor_write(xt,0,x,D*4) && ds4_gpu_tensor_write(it,0,ids,K*4) &&
+                    ds4_gpu_tensor_write(wt,0,weights,K*4),"decode upload");
+            for (int arm=0; arm<3; arm++) {
+                if (arm==0) setenv("DS4_METAL_DISABLE_GLM_FULL_IQ2_DOWN_SUM","1",1);
+                else unsetenv("DS4_METAL_DISABLE_GLM_FULL_IQ2_DOWN_SUM");
+                for (int i=0; i<5; i++) {
+                    memset(actual[i],0xa5,sizes[i]);
+                    require(ds4_gpu_tensor_write(out[i],0,actual[i],sizes[i]),"decode poison");
+                }
+                require(ds4_gpu_begin_commands(),"decode begin");
+                require(ds4_gpu_routed_moe_one_tensor(out[4],out[0],out[1],out[2],out[3],
+                        model,bytes,0,up,down,16,16,expert,row,de,dr,D,H,O,it,wt,E,K,
+                        0.0f,xt,NULL,0,true),"decode dispatch");
+                require(ds4_gpu_end_commands(),"decode end");
+                for (int i=0; i<5; i++) {
+                    if (i<2 && mode!=1) continue; /* gate/up are dead scratch under fused activation */
+                    if (i==3 && mode==0) continue; /* fused path has no expert scratch output */
+                    require(ds4_gpu_tensor_read(out[i],0,actual[i],sizes[i]),"decode read");
+                    for (size_t j=0; j<sizes[i]/4; j++) require(isfinite(((float *)actual[i])[j]),"decode finite");
+                    if (!arm) memcpy(ref[i],actual[i],sizes[i]);
+                    else if (memcmp(ref[i],actual[i],sizes[i])) {
+                        fprintf(stderr,"decode shape=%u mode=%d trial=%d arm=%d output=%d\n",shape,mode,trial,arm,i);
+                        for (size_t j=0, printed=0; j<sizes[i]/4 && printed<8; j++) {
+                            if (((uint32_t *)ref[i])[j]!=((uint32_t *)actual[i])[j]) {
+                                fprintf(stderr," idx=%zu ref=%g actual=%g bits=%08x/%08x\n",j,
+                                    ((float *)ref[i])[j],((float *)actual[i])[j],((uint32_t *)ref[i])[j],((uint32_t *)actual[i])[j]); printed++;
+                            }
+                        }
+                        require(0,"decode exact");
+                    }
+                }
+            }
+        }
+        for (int i=0; i<5; i++) {ds4_gpu_tensor_free(out[i]);free(ref[i]);free(actual[i]);}
+        ds4_gpu_tensor_free(xt);ds4_gpu_tensor_free(it);ds4_gpu_tensor_free(wt);free(x);
+        ds4_gpu_set_ssd_streaming(false);ds4_gpu_set_quality(false);
+        ds4_gpu_cleanup();free(model);
+    }
+    fprintf(stderr,"GLM full decode: 36 exact cases with repeated poisoned outputs passed\n");
+}
+
 int main(void) {
     require(ds4_gpu_init(),"GPU initialization");
     ds4_gpu_test_set_flags(DS4_GPU_TEST_GLM_FULL);
     moe_cases();
+    decode_cases();
     return 0;
 }

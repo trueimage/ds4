@@ -5793,6 +5793,91 @@ kernel void kernel_mul_mv_group_q4_K_pair_swiglu_f32(
 }
 
 
+// Each SIMDgroup owns one route. Keep the existing per-expert dot reduction
+// and F32 scaling, then sum the eight rounded outputs in route order. Sharing
+// the IQ2 lookup tables avoids the intermediate device writes and sum dispatch.
+kernel void kernel_mul_mv_id_iq2_xxs_sum8_exact_f32(
+        constant ds4_metal_args_mul_mv_id &args,
+        device const char *src0,
+        device const char *src1,
+        device char *dst,
+        device const char *ids,
+        uint3 tgpig [[threadgroup_position_in_grid]],
+        ushort tid [[thread_index_in_threadgroup]],
+        ushort tiisg [[thread_index_in_simdgroup]],
+        ushort sgitg [[simdgroup_index_in_threadgroup]]) {
+    constexpr short nr0 = N_R0_IQ2_XXS;
+    const int first_row = tgpig.x * nr0;
+    const uint token = tgpig.y;
+    const int expert = ((device const int32_t *)(ids + token * args.nbi1))[sgitg];
+    device const block_iq2_xxs *x = (device const block_iq2_xxs *)(
+            src0 + (uint64_t)expert * args.nb02 + first_row * args.nb01);
+    device const float *y = (device const float *)(
+            src1 + token * args.nb12 + sgitg * args.nb11);
+    threadgroup uint64_t svalues[256];
+    threadgroup uint8_t ssigns[128];
+    threadgroup volatile float partial[8 * nr0];
+    svalues[tid] = ds4_metal_iq2xxs_grid[tid];
+    if (tid < 128) ssigns[tid] = ds4_metal_ksigns_iq2xs[tid];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    float yl[32];
+    float sumf[nr0] = {0.f};
+    const int nb32 = (args.ne00 / QK_K) * (QK_K / 32);
+    const int ix = tiisg;
+    device const float *y4 = y + 32 * ix;
+    for (int ib32 = ix; ib32 < nb32; ib32 += 32) {
+        for (short i = 0; i < 32; ++i) {
+            yl[i] = y4[i];
+        }
+
+        const int ibl = ib32 / (QK_K / 32);
+        const int ib  = ib32 % (QK_K / 32);
+
+        device const block_iq2_xxs * xr = x + ibl;
+        device const uint16_t * q2 = xr->qs + 4 * ib;
+        device const half * dh = &xr->d;
+
+        for (short row = 0; row < nr0; row++) {
+            const float db = dh[0];
+            device const uint8_t * aux8 = (device const uint8_t *)q2;
+            const uint32_t aux32 = q2[2] | (q2[3] << 16);
+            const float d = db * (0.5f + (aux32 >> 28));
+
+            float sum = 0;
+            for (short l = 0; l < 4; ++l) {
+                const threadgroup uint8_t * grid = (const threadgroup uint8_t *)(svalues + aux8[l]);
+                const uint8_t signs = ssigns[(aux32 >> 7*l) & 127];
+                for (short j = 0; j < 8; ++j) {
+                    sum += yl[8*l + j] * grid[j] * (signs & ds4_metal_kmask_iq2xs[j] ? -1.f : 1.f);
+                }
+            }
+            sumf[row] += d * sum;
+
+            dh += args.nb01/2;
+            q2 += args.nb01/2;
+        }
+
+        y4 += 32 * 32;
+    }
+
+    for (int row = 0; row < nr0; row++) {
+        const float reduced = simd_sum(sumf[row]);
+        if (tiisg == 0) partial[sgitg * nr0 + row] = reduced * 0.25f;
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < nr0 && first_row + tid < args.ne0) {
+        float v = partial[tid];
+        v += partial[nr0 + tid];
+        v += partial[2 * nr0 + tid];
+        v += partial[3 * nr0 + tid];
+        v += partial[4 * nr0 + tid];
+        v += partial[5 * nr0 + tid];
+        v += partial[6 * nr0 + tid];
+        v += partial[7 * nr0 + tid];
+        ((device float *)(dst + token * args.nb1))[first_row + tid] = v;
+    }
+}
+
 /* IQ2_XXS down projection summed over the token's selected experts (the
  * GLM 5.2 routed blobs are IQ2_XXS end to end, unlike DS4 Flash's Q2_K
  * down).  Same contract as the q2_K sum kernel: mid rows already carry

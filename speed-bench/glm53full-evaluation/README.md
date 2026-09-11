@@ -6,6 +6,8 @@ The retained port skips unused half tiles in IQ2_XXS expert prefill. It preserve
 
 The unchanged local file is `gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf`, 211,075,860,864 bytes. Its name metadata is `GLM-5.3`, architecture `glm-dsa`; the engine runs it through its GLM 5.2/full path. It has 78 inference layers plus an MTP layer, 256 experts with eight selected, 6144-wide activations, and IQ2_XXS routed weights. This is different from Flash's `glm5-next` architecture, 4096-wide activations and 288 experts. The file was not requantized or modified.
 
+A subsequent [decode evaluation](decode/README.md) retains an exact IQ2 down/sum fusion and measures a further 1.5–1.9% generation improvement against this prefill-only baseline.
+
 ## Results
 
 Final retest: main → final → final → main, two serial processes per arm, with matching source files and no timing instrumentation.

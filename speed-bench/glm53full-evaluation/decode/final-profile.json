@@ -1,0 +1,53 @@
+{
+  "512": {
+    "tokens": 8,
+    "kernel_ms_per_token": {
+      "kernel_mul_mv_q8_0_f32": 23.9340725,
+      "kernel_mul_mv_id_iq2_xxs_pair_swiglu_f32": 10.47514875,
+      "kernel_mul_mv_id_iq2_xxs_sum8_exact_f32": 5.8379775,
+      "kernel_dsv4_shared_mid_swiglu_q8_0": 3.514153750000001,
+      "kernel_glm_attention_indexed_decode_split_group8_reduce": 2.9904075,
+      "kernel_glm_attention_indexed_decode_split_group8_partial_valid_fullheads": 2.2188212499999995,
+      "kernel_glm_qk_lowrank_q8_0_glm52_sg": 1.5916212499999998,
+      "kernel_mul_mv_f32_f32_4": 1.2876612500000002,
+      "kernel_glm_router_select_one": 1.1651887499999998,
+      "kernel_add_rms_norm_mul_f32_4": 0.89408375,
+      "kernel_rms_norm_mul_f32_4": 0.8119262500000001,
+      "kernel_dsv4_shared_gate_up_swiglu_q8_0": 0.69476375,
+      "kernel_glm_indexer_rope_tail_f32": 0.5280575,
+      "kernel_glm_qkv_norm_store_compact_kv": 0.5131924999999999,
+      "kernel_add3_f32": 0.38507125000000003,
+      "kernel_glm_store_indexer_k": 0.232525,
+      "kernel_mul_mv_q8_0_f32+kernel_dsv4_tp_keepalive": 0.17201499999999997,
+      "kernel_add2_f32": 0.01255375,
+      "kernel_get_rows_q8_0_f32": 0.00659875,
+      "kernel_glm_fill_selected_range": 0.005792500000000001
+    }
+  },
+  "2048": {
+    "tokens": 8,
+    "kernel_ms_per_token": {
+      "kernel_mul_mv_q8_0_f32": 24.53947875,
+      "kernel_mul_mv_id_iq2_xxs_pair_swiglu_f32": 10.478323750000001,
+      "kernel_glm_attention_indexed_decode_split_group8_partial_valid_fullheads": 6.377277499999999,
+      "kernel_mul_mv_id_iq2_xxs_sum8_exact_f32": 5.821223750000001,
+      "kernel_dsv4_shared_mid_swiglu_q8_0": 3.5012137499999993,
+      "kernel_glm_attention_indexed_decode_split_group8_reduce16": 2.3869875,
+      "kernel_glm_qk_lowrank_q8_0_glm52_sg": 1.5991712500000004,
+      "kernel_mul_mv_f32_f32_4": 1.5032262500000004,
+      "kernel_glm_router_select_one": 1.12973125,
+      "kernel_add_rms_norm_mul_f32_4": 0.94114,
+      "kernel_rms_norm_mul_f32_4": 0.8460100000000002,
+      "kernel_dsv4_shared_gate_up_swiglu_q8_0": 0.69595875,
+      "kernel_argsort_f32_i32_desc": 0.65346375,
+      "kernel_glm_indexer_rope_tail_f32": 0.6423037499999998,
+      "kernel_glm_qkv_norm_store_compact_kv": 0.48998375,
+      "kernel_argsort_merge_f32_i32_desc": 0.42328125,
+      "kernel_add3_f32": 0.35756374999999996,
+      "kernel_glm_indexer_score_one_direct": 0.340645,
+      "kernel_glm_store_indexer_k": 0.23907,
+      "kernel_add2_f32": 0.01246125,
+      "kernel_get_rows_q8_0_f32": 0.0062275
+    }
+  }
+}

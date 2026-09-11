@@ -1,0 +1,11 @@
+{
+  "model": "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+  "model_stat": {
+    "size": 211075860864,
+    "inode": 5290968,
+    "mtime_ns": 1788449550127614755
+  },
+  "baseline_commit": "cc1ab21",
+  "hardware": "Apple M3 Ultra, 80 GPU cores, 512 GiB",
+  "prompt_sha256": "f53e0d80cb2d4492d24ebd63c7000c397b16ae70f9bf09b3763e5d8323ec209f"
+}

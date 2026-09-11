@@ -1,0 +1,240 @@
+{
+  "runs": [
+    {
+      "name": "final-01-baseline",
+      "tree": "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/baseline",
+      "cmd": [
+        "./ds4-bench",
+        "-m",
+        "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+        "--prompt-file",
+        "speed-bench/promessi_sposi.txt",
+        "--ctx-start",
+        "512",
+        "--ctx-max",
+        "2048",
+        "--step-mul",
+        "4",
+        "--ctx-alloc",
+        "4096",
+        "--gen-tokens",
+        "128",
+        "--csv",
+        "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/runs/final-01-baseline.csv"
+      ],
+      "env": {
+        "DS4_BENCH_FORCE_SNAPSHOT": "1"
+      },
+      "seconds": 30.557533025741577,
+      "rc": 0,
+      "rows": [
+        {
+          "ctx_tokens": "512",
+          "prefill_tokens": "512",
+          "prefill_tps": "174.91",
+          "gen_tokens": "128",
+          "gen_tps": "18.15",
+          "gen_first_ms": "56.507",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "18.16",
+          "kvcache_bytes": "98139812"
+        },
+        {
+          "ctx_tokens": "2048",
+          "prefill_tokens": "1536",
+          "prefill_tps": "165.53",
+          "gen_tokens": "128",
+          "gen_tps": "16.50",
+          "gen_first_ms": "60.889",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "16.51",
+          "kvcache_bytes": "0"
+        }
+      ]
+    },
+    {
+      "name": "final-02-down",
+      "tree": "/Users/jw/ds4",
+      "cmd": [
+        "./ds4-bench",
+        "-m",
+        "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+        "--prompt-file",
+        "speed-bench/promessi_sposi.txt",
+        "--ctx-start",
+        "512",
+        "--ctx-max",
+        "2048",
+        "--step-mul",
+        "4",
+        "--ctx-alloc",
+        "4096",
+        "--gen-tokens",
+        "128",
+        "--csv",
+        "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/runs/final-02-down.csv"
+      ],
+      "env": {
+        "DS4_BENCH_FORCE_SNAPSHOT": "1"
+      },
+      "seconds": 30.762234210968018,
+      "rc": 0,
+      "rows": [
+        {
+          "ctx_tokens": "512",
+          "prefill_tokens": "512",
+          "prefill_tps": "174.59",
+          "gen_tokens": "128",
+          "gen_tps": "18.47",
+          "gen_first_ms": "55.634",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "18.49",
+          "kvcache_bytes": "98139812"
+        },
+        {
+          "ctx_tokens": "2048",
+          "prefill_tokens": "1536",
+          "prefill_tps": "165.55",
+          "gen_tokens": "128",
+          "gen_tps": "16.80",
+          "gen_first_ms": "59.656",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "16.81",
+          "kvcache_bytes": "0"
+        }
+      ]
+    },
+    {
+      "name": "final-03-down",
+      "tree": "/Users/jw/ds4",
+      "cmd": [
+        "./ds4-bench",
+        "-m",
+        "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+        "--prompt-file",
+        "speed-bench/promessi_sposi.txt",
+        "--ctx-start",
+        "512",
+        "--ctx-max",
+        "2048",
+        "--step-mul",
+        "4",
+        "--ctx-alloc",
+        "4096",
+        "--gen-tokens",
+        "128",
+        "--csv",
+        "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/runs/final-03-down.csv"
+      ],
+      "env": {
+        "DS4_BENCH_FORCE_SNAPSHOT": "1"
+      },
+      "seconds": 28.821977853775024,
+      "rc": 0,
+      "rows": [
+        {
+          "ctx_tokens": "512",
+          "prefill_tokens": "512",
+          "prefill_tps": "174.42",
+          "gen_tokens": "128",
+          "gen_tps": "18.46",
+          "gen_first_ms": "54.472",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "18.47",
+          "kvcache_bytes": "98139812"
+        },
+        {
+          "ctx_tokens": "2048",
+          "prefill_tokens": "1536",
+          "prefill_tps": "165.46",
+          "gen_tokens": "128",
+          "gen_tps": "16.77",
+          "gen_first_ms": "59.471",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "16.77",
+          "kvcache_bytes": "0"
+        }
+      ]
+    },
+    {
+      "name": "final-04-baseline",
+      "tree": "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/baseline",
+      "cmd": [
+        "./ds4-bench",
+        "-m",
+        "/Users/jw/ds4/gguf/GLM-5.3-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+        "--prompt-file",
+        "speed-bench/promessi_sposi.txt",
+        "--ctx-start",
+        "512",
+        "--ctx-max",
+        "2048",
+        "--step-mul",
+        "4",
+        "--ctx-alloc",
+        "4096",
+        "--gen-tokens",
+        "128",
+        "--csv",
+        "/Users/jw/.cache/ds4-bench/glm53full-decode-20260910/runs/final-04-baseline.csv"
+      ],
+      "env": {
+        "DS4_BENCH_FORCE_SNAPSHOT": "1"
+      },
+      "seconds": 30.72446298599243,
+      "rc": 0,
+      "rows": [
+        {
+          "ctx_tokens": "512",
+          "prefill_tokens": "512",
+          "prefill_tps": "174.58",
+          "gen_tokens": "128",
+          "gen_tps": "18.10",
+          "gen_first_ms": "56.850",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "18.11",
+          "kvcache_bytes": "98139812"
+        },
+        {
+          "ctx_tokens": "2048",
+          "prefill_tokens": "1536",
+          "prefill_tps": "165.48",
+          "gen_tokens": "128",
+          "gen_tps": "16.57",
+          "gen_first_ms": "61.033",
+          "gen_steady_tokens": "127",
+          "gen_steady_tps": "16.58",
+          "kvcache_bytes": "0"
+        }
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "ctx_tokens": 512,
+      "gen_tps": {
+        "baseline": 18.125,
+        "final": 18.465,
+        "percent": 1.875862068965506
+      },
+      "prefill_tps": {
+        "baseline": 174.745,
+        "final": 174.505,
+        "percent": -0.1373429854931496
+      }
+    },
+    {
+      "ctx_tokens": 2048,
+      "gen_tps": {
+        "baseline": 16.535,
+        "final": 16.785,
+        "percent": 1.5119443604475258
+      },
+      "prefill_tps": {
+        "baseline": 165.505,
+        "final": 165.505,
+        "percent": 0.0
+      }
+    }
+  ]
+}

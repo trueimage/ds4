@@ -1,0 +1,11 @@
+{
+  "source_and_binary_sha256": {
+    "ds4.c": "c8699e137e82c8a9a3f1ea890a526c42ff1b93f2ca924129a9581496fff9fba5",
+    "ds4_metal.m": "fb4df94e7296e45ae37ce0a537040f1b93f7cd752b9a68f5e82aae892c1c2c96",
+    "metal/moe.metal": "15e38e510a73ce51a5322915d803701a7ef632e257decc5600fc95278e8cca90",
+    "ds4-bench": "ed5bb91ac4eef04372a01462356b6ab5ddaed661f007dc69618e945d710e65b6",
+    "ds4": "b2ea5a668efeea6953b0e8e04edc75643cd63c97623920472a2c919b1e3754a0",
+    "tests/test_glm_full_metal": "898f08081df6c69ea5778fe9cea4370d9e4f8ae27ee9198aba0143eaceca0a0e"
+  },
+  "diff_stat": " ds4_metal.m                 | 52 +++++++++++++++++++++------\n metal/moe.metal             | 85 +++++++++++++++++++++++++++++++++++++++++++++\n tests/test_glm_full_metal.c | 79 +++++++++++++++++++++++++++++++++++++++++\n 3 files changed, 206 insertions(+), 10 deletions(-)\n"
+}
