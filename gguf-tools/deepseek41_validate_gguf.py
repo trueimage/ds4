@@ -16,7 +16,7 @@ import sys
 from deepseek41_metadata import GGUF_ALIGNMENT
 from deepseek41_quantize import (SourceDB, NativeQuantizer, Imatrix, build_plan, build_dspark_plan,
                                   calibration, validate_scales, scale_name, QUANTIZATION)
-from glm53_quantize import (QTYPE_MXFP4, align, read_exact, read_u32, read_u64,
+from glm53_quantize import (GGUF_ARRAY, GGUF_UINT32, QTYPE_MXFP4, align, read_exact, read_u32, read_u64,
                             read_gguf_string, skip_gguf_value)
 from glm53_validate_gguf import read_selected_metadata
 
@@ -79,6 +79,17 @@ def validate(args):
         plan = build_dspark_plan(db, config) if dspark_support else build_plan(db, config, args.quant)
         if dspark_support:
             expected = {"general.architecture": "deepseek41-dspark"}
+            c = config["text_config"]
+            expected.update({
+                "dspark.block_size": c["dspark_block_size"],
+                "dspark.markov_rank": c["dspark_markov_rank"],
+                "dspark.noise_token_id": c["dspark_noise_token_id"],
+                "dspark.target_layer_ids": c["dspark_target_layer_ids"],
+                "dspark.stage_count": c["num_nextn_predict_layers"],
+                "dspark.n_layers": c["num_hidden_layers"],
+                "dspark.expert_count": c["dspark_n_routed_experts"],
+                "dspark.expert_used_count": c["dspark_num_experts_per_tok"],
+            })
         else:
             expected = {"general.architecture": "deepseek41",
                         "deepseek41.quantization": QUANTIZATION[args.quant],
@@ -93,11 +104,23 @@ def validate(args):
             for _ in range(read_u64(fp, "metadata count")):
                 key = read_gguf_string(fp, "metadata key")
                 kind = read_u32(fp, "metadata type")
-                if key in {"general.architecture", "general.alignment", "general.source.revision",
-                            "deepseek41.calibration", "deepseek41.quantization"}:
+                if key in expected or key in {"deepseek41.calibration", "deepseek41.quantization"}:
                     if key in metadata:
                         raise ValueError(f"duplicate metadata: {key}")
-                    metadata[key] = read_selected_metadata(fp, kind)
+                    if key.startswith("dspark."):
+                        if key == "dspark.target_layer_ids":
+                            if kind != GGUF_ARRAY or read_u32(fp, f"{key} element type") != GGUF_UINT32:
+                                raise ValueError(f"{key}: expected uint32 array")
+                            count = read_u64(fp, f"{key} count")
+                            if count != len(expected[key]):
+                                raise ValueError(f"{key}: expected {len(expected[key])} elements, got {count}")
+                            metadata[key] = [read_u32(fp, key) for _ in range(count)]
+                        else:
+                            if kind != GGUF_UINT32:
+                                raise ValueError(f"{key}: expected uint32")
+                            metadata[key] = read_u32(fp, key)
+                    else:
+                        metadata[key] = read_selected_metadata(fp, kind)
                 else:
                     skip_gguf_value(fp, kind)
             if metadata != expected:
