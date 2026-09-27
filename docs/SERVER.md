@@ -101,6 +101,11 @@ base64 image sources. Remote URLs and server-side file paths are rejected.
 Image blocks preserve their order in the request. The limit is 16 images and
 a 64 MiB HTTP body.
 
+On macOS, critical system memory pressure rejects new inference requests with
+HTTP 503 and `Retry-After: 5`. At warning pressure the server releases cached
+image embeddings at the next job boundary. Running requests keep their state.
+`DS4_SERVER_IGNORE_MEMORY_PRESSURE=1` disables this admission check for diagnosis.
+
 ## Disk KV cache
 
 Disk caching saves useful prefixes across slot reuse and server restarts:
@@ -132,9 +137,10 @@ private. It is disposable; stop the server before clearing it.
 
 ## Tool history and debugging
 
-For DeepSeek, the server preserves sampled DSML tool blocks and assigns
-unguessable tool IDs. Replaying those IDs avoids retokenizing a differently
-formatted JSON history. The bounded replay map can be stored in cache files.
+For DeepSeek and GLM, the server preserves sampled tool blocks in each model's
+native syntax and assigns unguessable tool IDs. Replaying those IDs preserves
+the original tool-block bytes instead of retokenizing a differently formatted
+JSON history. The bounded replay map can be stored in cache files.
 When exact replay is unavailable, canonical rendering may require rebuilding
 part of the prefix.
 

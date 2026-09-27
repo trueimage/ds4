@@ -815,7 +815,7 @@ ds4_prompt_prefix.o: ds4_prompt_prefix.c ds4_prompt_prefix.h ds4.h
 ds4_gpu_args.o: ds4_gpu_args.c ds4_gpu_args.h ds4_gpu_mgpu.h
 	$(CC) $(CFLAGS) -c -o $@ ds4_gpu_args.c
 
-ds4_server.o: ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
+ds4_server.o: ds4_server.c ds4_host_memory.h ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
 	$(CC) $(CFLAGS) -c -o $@ ds4_server.c
 
 ds4_bench.o: ds4_bench.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h
@@ -836,7 +836,7 @@ ds4_web.o: ds4_web.c ds4_web.h
 ds4_kvstore.o: ds4_kvstore.c ds4_kvstore.h ds4.h ds4_ssd.h
 	$(CC) $(CFLAGS) -c -o $@ ds4_kvstore.c
 
-ds4_test.o: tests/ds4_test.c ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
+ds4_test.o: tests/ds4_test.c ds4_server.c ds4_host_memory.h ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
 	$(CC) $(CFLAGS) -Wno-unused-function -c -o $@ tests/ds4_test.c
 
 ds4_agent_test.o: tests/ds4_agent_test.c ds4_agent.c ds4.h ds4_ssd.h ds4_distributed.h ds4_tp.h ds4_help.h ds4_prompt_prefix.h ds4_kvstore.h ds4_web.h linenoise.h
@@ -860,7 +860,7 @@ ds4_cli_cpu.o: ds4_cli.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_prompt
 ds4_gpu_args_cpu.o: ds4_gpu_args.c ds4_gpu_args.h ds4_gpu_mgpu.h
 	$(CC) $(CFLAGS) -DDS4_NO_GPU -c -o $@ ds4_gpu_args.c
 
-ds4_server_cpu.o: ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
+ds4_server_cpu.o: ds4_server.c ds4_host_memory.h ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
 	$(CC) $(CFLAGS) -DDS4_NO_GPU -c -o $@ ds4_server.c
 
 ds4_bench_cpu.o: ds4_bench.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h
@@ -921,6 +921,9 @@ test-metal-half-conversion: tests/test_metal_half_conversion
 
 tests/test_metal_coherence: tests/test_metal_coherence.m tests/metal_coherence.metal
 	$(CC) $(OBJCFLAGS) $< -o $@ $(METAL_LDLIBS)
+
+speed-bench/kvstore_write_bench: speed-bench/kvstore_write_bench.c ds4_kvstore.o $(CORE_OBJS)
+	$(CC) $(CFLAGS) -I. $^ -o $@ $(METAL_LDLIBS)
 
 .PHONY: test-metal-coherence
 test-metal-coherence: tests/test_metal_coherence
@@ -1033,6 +1036,13 @@ tests/test_linux_memory: tests/test_linux_memory.c ds4_linux_memory.h
 
 tests/test_rocm_memory: tests/test_rocm_memory.cu ds4_rocm_memory.h ds4_linux_memory.h
 	$(HIPCC) $(ROCM_CFLAGS) -I. -o $@ $<
+
+tests/test_host_memory: tests/test_host_memory.c ds4_host_memory.h
+	$(CC) $(filter-out -ffast-math,$(CFLAGS)) -I. $< -o $@
+
+.PHONY: test-host-memory
+test-host-memory: tests/test_host_memory
+	./tests/test_host_memory
 
 .PHONY: test-linux-memory test-rocm-memory
 test-linux-memory: tests/test_linux_memory
@@ -1375,7 +1385,7 @@ test-web-recovery: tests/test_web_recovery
 tests/test_web_recovery: tests/test_web_recovery.c ds4_web.c ds4_web.h
 	$(CC) $(CFLAGS) -Wno-unused-function -o $@ tests/test_web_recovery.c
 
-test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test test-session-state test-linux-memory test-engram test-web-recovery \
+test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test test-session-state test-linux-memory test-host-memory test-engram test-web-recovery \
 	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args \
 	tests/test_deepseek4_vision_image tests/test_image_decode tests/test_prompt_prefix $(SAMPLING_TEST) $(GLM53_KDA_DEFAULT_TEST) \
 	$(DEEPSEEK41_EXACT_DEFAULT_TESTS) \

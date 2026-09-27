@@ -507,7 +507,7 @@ bool ds4_kvstore_touch_file(const char *path, uint32_t hits) {
     return ok;
 }
 
-static bool kv_cache_incoming_supersedes_continued(
+static bool kv_cache_incoming_can_supersede(
         const ds4_kvstore_entry *e,
         const ds4_kvstore_eviction_context *incoming) {
     if (!e || !incoming || !incoming->text) return false;
@@ -522,7 +522,13 @@ static bool kv_cache_incoming_supersedes_continued(
      * the reverse.  The incoming checkpoint dominates this one only if it is at
      * least as widely reusable. */
     if (incoming->ctx_size > e->ctx_size) return false;
+    return true;
+}
 
+static bool kv_cache_incoming_supersedes_continued(
+        const ds4_kvstore_entry *e,
+        const ds4_kvstore_eviction_context *incoming) {
+    if (!kv_cache_incoming_can_supersede(e, incoming)) return false;
     char prefix_sha[41];
     ds4_kvstore_sha1_bytes_hex(incoming->text, (size_t)e->text_bytes,
                                prefix_sha);
@@ -535,13 +541,11 @@ static bool kv_cache_reason_is_anchor(uint8_t reason) {
            reason == DS4_KVSTORE_REASON_SHUTDOWN;
 }
 
-double ds4_kvstore_entry_eviction_score(
+static double kv_cache_eviction_score(
         const ds4_kvstore_entry *e,
-        const ds4_tokens *live,
         uint64_t now,
-        const ds4_kvstore_eviction_context *incoming) {
+        bool superseded) {
     if (!e || e->file_size == 0) return 0.0;
-    (void)live;
     double effective_hits = (double)e->hits;
     uint64_t used_at = e->last_used ? e->last_used : e->created_at;
     if (used_at == 0) {
@@ -555,13 +559,62 @@ double ds4_kvstore_entry_eviction_score(
                    (double)e->tokens / (double)e->file_size;
     if (kv_cache_reason_is_anchor(e->reason))
         score *= KV_CACHE_ANCHOR_REASON_SCORE_FACTOR;
-    if (kv_cache_incoming_supersedes_continued(e, incoming)) {
+    if (superseded) {
         double h = effective_hits > 0.0 ?
             effective_hits / (effective_hits + 1.0) : 0.0;
         score *= KV_CACHE_CONTINUED_PREFIX_MIN_FACTOR +
                  KV_CACHE_CONTINUED_PREFIX_HIT_FACTOR * h;
     }
     return score;
+}
+
+double ds4_kvstore_entry_eviction_score(
+        const ds4_kvstore_entry *e, const ds4_tokens *live, uint64_t now,
+        const ds4_kvstore_eviction_context *incoming) {
+    (void)live;
+    return kv_cache_eviction_score(e, now,
+        kv_cache_incoming_supersedes_continued(e, incoming));
+}
+
+typedef struct { size_t bytes; int index; } kv_prefix_candidate;
+
+static int kv_prefix_length_order(const void *a, const void *b) {
+    const kv_prefix_candidate *x = a, *y = b;
+    return (x->bytes > y->bytes) - (x->bytes < y->bytes);
+}
+
+/* Finalize copies of the running SHA state at candidate lengths. The entry
+ * array keeps directory order, including its existing equal-score tie rules.
+ * matches starts with eligible entries and ends with their hash matches. */
+static size_t kv_cache_prefix_matches(const ds4_kvstore *kc,
+                                      const char *text, size_t bytes, bool *matches) {
+    kv_prefix_candidate *candidates = kv_xmalloc((size_t)kc->len * sizeof(*candidates));
+    int n = 0;
+    for (int i = 0; i < kc->len; ++i) {
+        if (matches[i] && kc->entry[i].text_bytes <= bytes)
+            candidates[n++] = (kv_prefix_candidate){(size_t)kc->entry[i].text_bytes, i};
+        matches[i] = false;
+    }
+    qsort(candidates, (size_t)n, sizeof(*candidates), kv_prefix_length_order);
+    sha1_ctx scan;
+    sha1_init(&scan);
+    size_t consumed = 0;
+    char sha[41];
+    for (int i = 0; i < n; ++i) {
+        const size_t length = candidates[i].bytes;
+        if (!i || length != consumed) {
+            sha1_update(&scan, text + consumed, length - consumed);
+            consumed = length;
+            sha1_ctx copy = scan;
+            uint8_t digest[20];
+            sha1_final(&copy, digest);
+            hex20(digest, sha);
+        }
+        const int index = candidates[i].index;
+        matches[index] = strcmp(sha, kc->entry[index].sha) == 0;
+    }
+    free(candidates);
+    return consumed;
 }
 
 void ds4_kvstore_evict(ds4_kvstore *kc, const ds4_tokens *live,
@@ -574,15 +627,25 @@ void ds4_kvstore_evict(ds4_kvstore *kc, const ds4_tokens *live,
     uint64_t total = 0;
     for (int i = 0; i < kc->len; i++) total += kc->entry[i].file_size;
     const uint64_t target = kc->budget_bytes - extra_bytes;
+    if (total <= target || kc->len == 0) return;
+    bool *matches = NULL;
+    if (incoming && incoming->text) {
+        matches = kv_xmalloc((size_t)kc->len * sizeof(*matches));
+        for (int i = 0; i < kc->len; ++i)
+            matches[i] = kv_cache_incoming_can_supersede(&kc->entry[i], incoming);
+        kv_cache_prefix_matches(kc, incoming->text, incoming->text_len, matches);
+    }
+    double *scores = kv_xmalloc((size_t)kc->len * sizeof(*scores));
+    for (int i = 0; i < kc->len; ++i)
+        scores[i] = kv_cache_eviction_score(&kc->entry[i], now,
+            matches && matches[i]);
+    free(matches);
+    (void)live;
     while (total > target && kc->len > 0) {
         int victim = 0;
-        double victim_score =
-            ds4_kvstore_entry_eviction_score(&kc->entry[0], live, now,
-                                             incoming);
+        double victim_score = scores[0];
         for (int i = 1; i < kc->len; i++) {
-            double score =
-                ds4_kvstore_entry_eviction_score(&kc->entry[i], live, now,
-                                                 incoming);
+            double score = scores[i];
             if (score < victim_score ||
                 (score == victim_score &&
                  kc->entry[i].last_used < kc->entry[victim].last_used))
@@ -608,8 +671,11 @@ void ds4_kvstore_evict(ds4_kvstore *kc, const ds4_tokens *live,
         ds4_kvstore_entry_free(&e);
         memmove(kc->entry + victim, kc->entry + victim + 1,
                 (size_t)(kc->len - victim - 1) * sizeof(kc->entry[0]));
+        memmove(scores + victim, scores + victim + 1,
+                (size_t)(kc->len - victim - 1) * sizeof(*scores));
         kc->len--;
     }
+    free(scores);
 }
 
 bool ds4_kvstore_open(ds4_kvstore *kc, const char *dir, uint64_t budget_mb,
@@ -1010,8 +1076,14 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
         return true;
     }
 
+    const double save_t0 = kv_now_sec();
     ds4_session_payload_file staged = {0};
-    if (ds4_session_stage_payload(session, &staged,
+    /* Local sessions know the serialized length. Write their payload directly
+     * into the unpublished file, avoiding a full temporary-file round trip.
+     * Distributed sessions still stage to discover their payload length. */
+    uint64_t payload_bytes = getenv("DS4_KVSTORE_STAGE_PAYLOAD") ? 0 :
+        ds4_session_payload_bytes(session);
+    if (!payload_bytes && ds4_session_stage_payload(session, &staged,
                                   save_err, sizeof(save_err)) != 0) {
         kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
                 "%s: kv cache skipped tokens=%d reason=%s because KV payload staging failed: %s",
@@ -1026,7 +1098,7 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
         ds4_tokens_free(&store_tokens);
         return false;
     }
-    uint64_t payload_bytes = staged.bytes;
+    if (!payload_bytes) payload_bytes = staged.bytes;
 
     uint64_t est_file_bytes = 0, est_required_bytes = 0;
     if (!ds4_kvstore_file_size_fits(kc, (uint64_t)text_len, payload_bytes,
@@ -1060,7 +1132,6 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
     kv_buf tmpb = {0};
     kv_buf_printf(&tmpb, "%s.tmp.%ld", path, (long)getpid());
     char *tmp = kv_buf_take(&tmpb);
-    const double save_t0 = kv_now_sec();
     FILE *fp = fopen(tmp, "wb");
     if (!fp) {
         kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
@@ -1074,6 +1145,7 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
         ds4_tokens_free(&store_tokens);
         return false;
     }
+
 
     const uint64_t now = (uint64_t)time(NULL);
     uint8_t h[DS4_KVSTORE_FIXED_HEADER];
@@ -1090,11 +1162,18 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
     errno = 0;
     bool ok = fwrite(h, 1, sizeof(h), fp) == sizeof(h) &&
               fwrite(tb, 1, sizeof(tb), fp) == sizeof(tb) &&
-              fwrite(text, 1, text_len, fp) == text_len &&
-              ds4_session_write_staged_payload(&staged, fp,
-                                               save_err, sizeof(save_err)) == 0 &&
-              kv_trailer_write(hooks, fp, text, &trailer_bytes) &&
-              fflush(fp) == 0;
+              fwrite(text, 1, text_len, fp) == text_len;
+    const off_t payload_start = ok ? ftello(fp) : -1;
+    if (ok) ok = payload_start >= 0 && (staged.bytes ?
+        ds4_session_write_staged_payload(&staged, fp, save_err, sizeof(save_err)) :
+        ds4_session_save_payload(session, fp, save_err, sizeof(save_err))) == 0;
+    const off_t payload_end = ok ? ftello(fp) : -1;
+    if (ok && (payload_end < payload_start ||
+               (uint64_t)(payload_end - payload_start) != payload_bytes)) {
+        snprintf(save_err, sizeof(save_err), "KV payload size changed while saving");
+        ok = false;
+    }
+    if (ok) ok = kv_trailer_write(hooks, fp, text, &trailer_bytes) && fflush(fp) == 0;
     int saved_errno = errno;
     if (fclose(fp) != 0) {
         if (!saved_errno) saved_errno = errno;
@@ -1196,25 +1275,38 @@ bool ds4_kvstore_maybe_store_continued(ds4_kvstore *kc,
 int ds4_kvstore_find_text_prefix(ds4_kvstore *kc, const char *prompt_text,
                                  int model_id, int quant_bits, int ctx_size) {
     if (!prompt_text) return -1;
+    const double lookup_t0 = kv_now_sec();
     const size_t prompt_bytes = strlen(prompt_text);
     kv_cache_refresh(kc);
-    int best = -1;
+    if (kc->len == 0) return -1;
+    bool *matches = kv_xmalloc((size_t)kc->len * sizeof(*matches));
     for (int i = 0; i < kc->len; i++) {
         ds4_kvstore_entry *e = &kc->entry[i];
+        matches[i] = false;
         if (e->text_bytes > prompt_bytes || e->text_bytes > SIZE_MAX) continue;
         if ((int)e->tokens < kc->opt.min_tokens) continue;
         if (e->model_id != (uint8_t)model_id) continue;
         if ((uint32_t)ctx_size < e->ctx_size) continue;
         if (kc->reject_different_quant && e->quant_bits != (uint8_t)quant_bits) continue;
+        matches[i] = true;
+    }
+    const size_t hashed = kv_cache_prefix_matches(kc, prompt_text, prompt_bytes, matches);
+    int best = -1;
+    for (int i = 0; i < kc->len; i++) {
+        if (!matches[i]) continue;
+        ds4_kvstore_entry *e = &kc->entry[i];
         if (best >= 0) {
             ds4_kvstore_entry *b = &kc->entry[best];
             if (e->text_bytes < b->text_bytes) continue;
             if (e->text_bytes == b->text_bytes && e->tokens <= b->tokens) continue;
         }
-        char sha[41];
-        ds4_kvstore_sha1_bytes_hex(prompt_text, (size_t)e->text_bytes, sha);
-        if (!strcmp(sha, e->sha)) best = i;
+        best = i;
     }
+    free(matches);
+    kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
+        "%s: kv cache lookup=%.2f ms entries=%d hashed_bytes=%zu matched=%s",
+        kv_log_name(kc), (kv_now_sec() - lookup_t0) * 1000.0,
+        kc->len, hashed, best >= 0 ? "yes" : "no");
     return best;
 }
 
