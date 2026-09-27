@@ -1,0 +1,66 @@
+cc -O2 -Wall -Wextra -std=c99 -o tests/test_q4k_dot tests/test_q4k_dot.c -lm -pthread
+cc -O2 -Wall -Wextra -std=c99 -o tests/test_mxfp4_dot tests/test_mxfp4_dot.c -lm
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -Wno-unused-function -DDS4_NO_GPU -I. -c -o tests/test_session_state.o tests/test_session_state.c
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -I. -c -o tests/test_tp_commands.o tests/test_tp_commands.c
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -I. -c -o tests/test_tp_rdma.o tests/test_tp_rdma.c
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -I. -c -o tests/test_tp_tcp.o tests/test_tp_tcp.c
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -I. -o tests/test_linux_memory tests/test_linux_memory.c
+cc -O3 -g -mcpu=native -Wall -Wextra -std=c99 -I. tests/test_host_memory.c -o tests/test_host_memory
+cc -O3 -g -mcpu=native -Wall -Wextra -std=c99 -I. -o tests/test_engram tests/test_engram.c ds4_engram.c -lm -pthread
+./tests/test_mxfp4_dot
+./tests/test_q4k_dot
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -Wno-unused-function -o tests/test_web_recovery tests/test_web_recovery.c
+MXFP4 unit tests:
+  block size: 17 (expect 17): PASS
+  E8M0 scale conversion: PASS
+  nibble order: -32.0 (expect -32.0): PASS
+  dot vs independent reference: PASS
+
+4/4 tests passed
+./tests/test_linux_memory
+Q4_K unit tests:
+  block sizes: Q4_K=144 (expect 144), Q8_K=292 (expect 292): PASS
+  scale extraction: PASS
+  dot known: result=2048.0 expected=2048.0: PASS
+  dot vs reference (50 random blocks): PASS
+
+4/4 tests passed
+./tests/test_host_memory
+Linux nonmovable memory: PASS
+host memory: estimates/overflow exact; pressure=1 available=531687211008
+python3 tests/test_web_recovery.py ./tests/test_web_recovery
+./tests/test_engram
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -o tests/test_tp_rdma tests/test_tp_rdma.o ds4_cpu.o ds4_image.o ds4_distributed.o ds4_ssd.o ds4_layer_pack.o -lm -pthread
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -o tests/test_tp_tcp tests/test_tp_tcp.o ds4_cpu.o ds4_image.o ds4_distributed.o ds4_ssd.o ds4_layer_pack.o -lm -pthread
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -o tests/test_tp_commands tests/test_tp_commands.o ds4_cpu.o ds4_image.o ds4_distributed.o ds4_ssd.o ds4_layer_pack.o -lm -pthread
+Chrome target recovery: ok
+Engram hashes, history and bounded disk rows: PASS
+cc -O3 -ffast-math -g -mcpu=native -Wall -Wextra -std=c99 -o tests/test_session_state tests/test_session_state.o ds4_image.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o -lm -pthread
+./tests/test_session_state
+session state tests: ok
+./tests/test_tp_commands
+ds4-tp: big gate payload exchange failed (layer 39): Connection reset by peer
+ds4-tp: big gate desync: got l=38 tag=b16 seq=17, want l=39 seq=17
+ds4-tp: big gate header exchange failed or peer closed (layer 39 seq 17): Resource temporarily unavailable
+ds4-tp: bad logits frame (type 0 bytes 0)
+ds4-tp: bad logits frame (type 5 bytes 32)
+ds4-tp: bad logits frame (type 10 bytes 28)
+ds4-tp: bad logits frame (type 0 bytes 0)
+TP backend and mutually exclusive placement options: ok
+TP bulk TCP: exact payloads, chunk boundaries, delayed peer, EOF/desync/timeout: ok
+TP cancellation agreement, reuse, interrupted acknowledgment, mismatch and timeout: ok
+TP logits halves: exact frames, reuse, canaries, EOF, invalid frames and timeout: ok
+TP command tests: ok
+./tests/test_tp_rdma
+ds4-tp: duplicate or invalid big gate completion 9223372036854775809
+ds4-tp: big gate chunk 0 received 16385 bytes, expected 16384
+ds4-tp: big gate completion error: wc status 21
+ds4-tp: duplicate or invalid big gate completion 9223372036854776807
+RDMA per-message completion accounting, bulk/decode/drain/verify: PASS
+./tests/test_tp_tcp
+Unix tiny-buffer decode, 1..8-row gates and bulk payloads, nonblocking=0: PASS
+Unix tiny-buffer decode, 1..8-row gates and bulk payloads, nonblocking=1: PASS
+TCP stalled, half-closed and disconnected peers: PASS
+TCP tiny-buffer decode, 1..8-row gates and bulk payloads, nonblocking=0: PASS
+TCP tiny-buffer decode, 1..8-row gates and bulk payloads, nonblocking=1: PASS
+TCP stalled, half-closed and disconnected peers: PASS

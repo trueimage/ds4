@@ -1,0 +1,44 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 4.493 ms, residency requested in 52025.606 ms, warmup 7.328 ms (mapped 182024.03 MiB from offset 9.07 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.37 GiB (raw 0.00 + compressed 0.37) + buffers 2.98 GiB + resident model 177.76 GiB = 181.10 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=2048 raw_kv_rows=0 compressed_kv_rows=32768 backend=metal
+ds4: GLM session ctx=32768 (model max=1048576); prefill/work cap=4096; dense attention limit=2051
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=32768 logical_ctx=32768 kv_layers=45 indexer_layers=11 f16 0.37 GiB
+ds4: GLM compact indexed prefill chunk=2048 score_rows=2048 score_scratch=64.00 MiB
+{"pos":512,"staged":false,"cached_io":true,"load_ms":12.988000,"resident_fraction":1.000000,"rep":0,"ms":17.548000,"copy_ms":12.220000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":14.523000,"resident_fraction":0.000000,"rep":1,"ms":30.318000,"copy_ms":5.564000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":14.492000,"resident_fraction":0.000000,"rep":2,"ms":30.103000,"copy_ms":5.750000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.413000,"resident_fraction":1.000000,"rep":3,"ms":17.403000,"copy_ms":5.851000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.230000,"resident_fraction":1.000000,"rep":4,"ms":17.410000,"copy_ms":5.960000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":14.776000,"resident_fraction":0.000000,"rep":5,"ms":30.647000,"copy_ms":5.777000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":14.538000,"resident_fraction":0.000000,"rep":6,"ms":29.919000,"copy_ms":5.715000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":12.387000,"resident_fraction":1.000000,"rep":7,"ms":18.060000,"copy_ms":5.680000,"bytes":165557300,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":18.767000,"resident_fraction":1.000000,"rep":0,"ms":23.309000,"copy_ms":17.846000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":19.858000,"resident_fraction":0.000000,"rep":1,"ms":38.769000,"copy_ms":9.022000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":19.763000,"resident_fraction":0.000000,"rep":2,"ms":38.379000,"copy_ms":9.036000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":17.819000,"resident_fraction":1.000000,"rep":3,"ms":22.802000,"copy_ms":8.990000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":17.558000,"resident_fraction":1.000000,"rep":4,"ms":23.120000,"copy_ms":9.018000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":19.774000,"resident_fraction":0.000000,"rep":5,"ms":38.850000,"copy_ms":9.154000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":19.889000,"resident_fraction":0.000000,"rep":6,"ms":38.222000,"copy_ms":8.825000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":17.589000,"resident_fraction":1.000000,"rep":7,"ms":23.126000,"copy_ms":9.026000,"bytes":202334117,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":40.526000,"resident_fraction":1.000000,"rep":0,"ms":45.864000,"copy_ms":36.530000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":40.656000,"resident_fraction":0.000000,"rep":1,"ms":74.107000,"copy_ms":22.257000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":40.861000,"resident_fraction":0.000000,"rep":2,"ms":74.022000,"copy_ms":22.184000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":38.368000,"resident_fraction":1.000000,"rep":3,"ms":45.127000,"copy_ms":22.255000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":38.637000,"resident_fraction":1.000000,"rep":4,"ms":45.988000,"copy_ms":22.278000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":40.668000,"resident_fraction":0.000000,"rep":5,"ms":74.102000,"copy_ms":22.281000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":40.150000,"resident_fraction":0.000000,"rep":6,"ms":74.200000,"copy_ms":22.609000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":39.430000,"resident_fraction":1.000000,"rep":7,"ms":44.803000,"copy_ms":23.108000,"bytes":349463633,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":126.276000,"resident_fraction":1.000000,"rep":0,"ms":134.392000,"copy_ms":114.903000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":124.462000,"resident_fraction":0.000000,"rep":1,"ms":217.225000,"copy_ms":76.806000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":119.414000,"resident_fraction":0.000000,"rep":2,"ms":215.044000,"copy_ms":74.177000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":114.704000,"resident_fraction":1.000000,"rep":3,"ms":136.323000,"copy_ms":74.715000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":114.972000,"resident_fraction":1.000000,"rep":4,"ms":141.237000,"copy_ms":74.981000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":124.435000,"resident_fraction":0.000000,"rep":5,"ms":213.641000,"copy_ms":74.820000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":119.714000,"resident_fraction":0.000000,"rep":6,"ms":213.745000,"copy_ms":74.366000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":114.519000,"resident_fraction":1.000000,"rep":7,"ms":141.123000,"copy_ms":74.498000,"bytes":936308225,"exact":true}

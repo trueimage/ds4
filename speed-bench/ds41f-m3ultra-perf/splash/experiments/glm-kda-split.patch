@@ -1,0 +1,482 @@
+--- a/metal/glm53_kda.metal
++++ b/metal/glm53_kda.metal
+@@ -195,7 +195,268 @@
+     }
+ }
+ 
++// Independent value ranges with one atomic last-arriver finish.
++template<uint SPLIT>
++kernel void kernel_glm53_kda_decode_split(
++        constant glm53_kda_args &args,
++        device const float   *q_in,
++        device const float   *k_in,
++        device const float   *v_in,
++        device const float   *raw_gate,
++        device const float   *raw_beta,
++        device const float   *output_gate,
++        device const float   *q_conv,
++        device const float   *k_conv,
++        device const float   *v_conv,
++        device const float   *a_log,
++        device const float   *dt_bias,
++        device const float   *output_norm,
++        device float         *conv_state,
++        device float         *state,
++        device float         *out,
++        device atomic_uint   *partials,
++        device atomic_uint   *arrivals,
++        threadgroup float    *scratch [[threadgroup(0)]],
++        uint2 tgpig [[threadgroup_position_in_grid]],
++        ushort tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]) {
++    constexpr uint VALUES = 4u;
++    constexpr uint D = 128u;
++    constexpr uint HISTORY = 3u;
++    const uint row = 0u;
++    const uint split = tgpig.x;
++    const uint head = tgpig.y;
++    if (row >= args.n_rows || head >= args.n_heads) return;
++
++    threadgroup float *sq = scratch;
++    threadgroup float *sk = sq + D;
++    threadgroup float *sd = sk + D;
++    threadgroup float *sv = sd + D;
++    threadgroup float *so = sv + D;
++    threadgroup float *reduce_q = so + D;
++    threadgroup float *reduce_k = reduce_q + 4u;
++    threadgroup float *reduce_o = reduce_k + 4u;
++    threadgroup float *beta_shared = reduce_o + 4u;
++    threadgroup float *a_decay_shared = beta_shared + 1u;
++
++    const uint projection = args.n_heads * D;
++    const uint channel = head * D + tid;
++    const ulong input_base = (ulong)row * projection + head * D;
++    const ulong conv_row_stride = 3ul * HISTORY * projection;
++
++    if (tid < D) {
++        float q_acc = 0.0f;
++        float k_acc = 0.0f;
++        float v_acc = 0.0f;
++        device float *q_state = conv_state +
++            (ulong)row * conv_row_stride;
++        device float *k_state = q_state + HISTORY * projection;
++        device float *v_state = k_state + HISTORY * projection;
++        for (uint w = 0; w < HISTORY; w++) {
++            q_acc = fma(q_state[(ulong)w * projection + channel],
++                        q_conv[(ulong)channel * 4u + w], q_acc);
++            k_acc = fma(k_state[(ulong)w * projection + channel],
++                        k_conv[(ulong)channel * 4u + w], k_acc);
++            v_acc = fma(v_state[(ulong)w * projection + channel],
++                        v_conv[(ulong)channel * 4u + w], v_acc);
++        }
++        const float q_new = q_in[input_base + tid];
++        const float k_new = k_in[input_base + tid];
++        const float v_new = v_in[input_base + tid];
++        q_acc = fma(q_new, q_conv[(ulong)channel * 4u + 3u], q_acc);
++        k_acc = fma(k_new, k_conv[(ulong)channel * 4u + 3u], k_acc);
++        v_acc = fma(v_new, v_conv[(ulong)channel * 4u + 3u], v_acc);
++
++        sq[tid] = q_acc / (1.0f + exp(-q_acc));
++        sk[tid] = k_acc / (1.0f + exp(-k_acc));
++        sv[tid] = v_acc / (1.0f + exp(-v_acc));
++    }
++    if (tid == 0u) {
++        beta_shared[0] =
++            1.0f / (1.0f + exp(-raw_beta[(ulong)row * args.n_heads + head]));
++        /* head is uniform over the threadgroup, so exp(a_log[head]) is a
++         * single value; every one of the D channels used to recompute it. */
++        a_decay_shared[0] = exp(a_log[head]);
++    }
++    // Convolution history stays read-only until all splits have arrived.
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    float q_sumsq = sq[tid] * sq[tid];
++    float k_sumsq = sk[tid] * sk[tid];
++    q_sumsq = simd_sum(q_sumsq);
++    k_sumsq = simd_sum(k_sumsq);
++    if (lane == 0u) {
++        reduce_q[sg] = q_sumsq;
++        reduce_k[sg] = k_sumsq;
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float q_total = lane < 4u ? reduce_q[lane] : 0.0f;
++    float k_total = lane < 4u ? reduce_k[lane] : 0.0f;
++    q_total = simd_sum(q_total);
++    k_total = simd_sum(k_total);
++    const float q_scale = rsqrt(q_total + 1.0e-6f) * 0x1.6a09e6p-4f;
++    const float k_scale = rsqrt(k_total + 1.0e-6f);
++    if (tid < D) {
++        sq[tid] *= q_scale;
++        sk[tid] *= k_scale;
++        const float gate = raw_gate[input_base + tid] + dt_bias[channel];
++        sd[tid] = exp(args.lower_bound *
++                      (1.0f / (1.0f + exp(-a_decay_shared[0] * gate))));
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    const uint k0 = lane * 4u;
++    const float4 q4 = *((threadgroup float4 *)(sq + k0));
++    const float4 k4 = *((threadgroup float4 *)(sk + k0));
++    const float4 decay4 = *((threadgroup float4 *)(sd + k0));
++    const ulong state_head =
++        ((ulong)row * args.n_heads + head) * D * D;
++
++    /* Interleave independent value rows to hide load/reduction latency.
++     * Every row retains its original SIMDgroup, dot/FMA sequence, and stores;
++     * normalization still uses the same four-SIMDgroup reduction tree. */
++    if (VALUES == 1u) {
++        for (uint value = sg; value < D; value += 4u) {
++            device float4 *hptr =
++                (device float4 *)(state + state_head + (ulong)value * D + k0);
++            float4 h = *hptr * decay4;
++            float hk = dot(h, k4);
++            hk = simd_sum(hk);
++            const float delta_v = (sv[value] - hk) * beta_shared[0];
++            h = fma(k4, float4(delta_v), h);
++            *hptr = h;
++            float hq = simd_sum(dot(h, q4));
++            if (lane == 0u) so[value] = hq;
++        }
++    } else {
++        for (uint value = split * (D / SPLIT) + sg;
++             value < (split + 1u) * (D / SPLIT); value += 4u * VALUES) {
++            device float4 *hptr[VALUES];
++            float4 h[VALUES];
++            float hk[VALUES];
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                hptr[i] = (device float4 *)(state + state_head + (ulong)(value + i * 4u) * D + k0);
++                h[i] = *hptr[i] * decay4;
++            }
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                hk[i] = dot(h[i], k4);
++                hk[i] = simd_sum(hk[i]);
++            }
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                const float delta_v = (sv[value + i * 4u] - hk[i]) * beta_shared[0];
++                h[i] = fma(k4, float4(delta_v), h[i]);
++                *hptr[i] = h[i];
++            }
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                const float hq = simd_sum(dot(h[i], q4));
++                if (lane == 0u) atomic_store_explicit(
++                    partials + head * D + value + i * 4u, as_type<uint>(hq), memory_order_relaxed);
++            }
++        }
++    }
++    // Publish every partial before arrival. Atomic words make the handoff
++    // coherent across both GPU dies; only the final group reads other groups.
++    threadgroup_barrier(mem_flags::mem_device);
++    threadgroup uint *last = (threadgroup uint *)(scratch + 656u);
++    if (tid == 0u) {
++        atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst, thread_scope_device);
++        last[0] = atomic_fetch_add_explicit(arrivals + head, 1u, memory_order_relaxed);
++        atomic_thread_fence(mem_flags::mem_device, memory_order_seq_cst, thread_scope_device);
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (last[0] != SPLIT - 1u) return;
++    so[tid] = as_type<float>(atomic_load_explicit(partials + head * D + tid, memory_order_relaxed));
++    if (tid == 0u) atomic_store_explicit(arrivals + head, 0u, memory_order_relaxed);
++    // All groups have finished reading the old history. Shift it exactly once.
++    {
++        device float *q_state = conv_state + (ulong)row * conv_row_stride;
++        device float *k_state = q_state + HISTORY * projection;
++        device float *v_state = k_state + HISTORY * projection;
++        const float q_new = q_in[input_base + tid];
++        const float k_new = k_in[input_base + tid];
++        const float v_new = v_in[input_base + tid];
++        q_state[channel] = q_state[projection + channel];
++        q_state[projection + channel] = q_state[2ul * projection + channel];
++        q_state[2ul * projection + channel] = q_new;
++        k_state[channel] = k_state[projection + channel];
++        k_state[projection + channel] = k_state[2ul * projection + channel];
++        k_state[2ul * projection + channel] = k_new;
++        v_state[channel] = v_state[projection + channel];
++        v_state[projection + channel] = v_state[2ul * projection + channel];
++        v_state[2ul * projection + channel] = v_new;
++
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    float o_sumsq = so[tid] * so[tid];
++    o_sumsq = simd_sum(o_sumsq);
++    if (lane == 0u) reduce_o[sg] = o_sumsq;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float o_total = lane < 4u ? reduce_o[lane] : 0.0f;
++    o_total = simd_sum(o_total);
++    const float o_scale = rsqrt(o_total / (float)D + args.norm_eps);
++    if (tid < D) {
++        const ulong index = input_base + tid;
++        const float gate =
++            1.0f / (1.0f + exp(-output_gate[index]));
++        out[index] = so[tid] * o_scale * output_norm[tid] * gate;
++    }
++}
++
++template [[host_name("kernel_glm53_kda_decode_split2")]]
++kernel void kernel_glm53_kda_decode_split<2u>(
++        constant glm53_kda_args &,
++        device const float   *q_in,
++        device const float   *k_in,
++        device const float   *v_in,
++        device const float   *raw_gate,
++        device const float   *raw_beta,
++        device const float   *output_gate,
++        device const float   *q_conv,
++        device const float   *k_conv,
++        device const float   *v_conv,
++        device const float   *a_log,
++        device const float   *dt_bias,
++        device const float   *output_norm,
++        device float         *conv_state,
++        device float         *state,
++        device float         *out,
++        device atomic_uint   *partials,
++        device atomic_uint   *arrivals,
++        threadgroup float    *scratch [[threadgroup(0)]],
++        uint2 tgpig [[threadgroup_position_in_grid]],
++        ushort tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]);
++template [[host_name("kernel_glm53_kda_decode_split4")]]
++kernel void kernel_glm53_kda_decode_split<4u>(
++        constant glm53_kda_args &,
++        device const float   *q_in,
++        device const float   *k_in,
++        device const float   *v_in,
++        device const float   *raw_gate,
++        device const float   *raw_beta,
++        device const float   *output_gate,
++        device const float   *q_conv,
++        device const float   *k_conv,
++        device const float   *v_conv,
++        device const float   *a_log,
++        device const float   *dt_bias,
++        device const float   *output_norm,
++        device float         *conv_state,
++        device float         *state,
++        device float         *out,
++        device atomic_uint   *partials,
++        device atomic_uint   *arrivals,
++        threadgroup float    *scratch [[threadgroup(0)]],
++        uint2 tgpig [[threadgroup_position_in_grid]],
++        ushort tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]);
++
+ typedef decltype(kernel_glm53_kda_decode_values<1u>) glm53_kda_decode_values_t;
++
+ template [[host_name("kernel_glm53_kda_decode")]]
+ kernel glm53_kda_decode_values_t kernel_glm53_kda_decode_values<1u>;
+ template [[host_name("kernel_glm53_kda_decode_v4")]]
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -728,6 +728,15 @@
+ static id<MTLBuffer> g_router_weight_sum_buffer;
+ static id<MTLBuffer> g_indexer_head_scores_buffer;
+ static id<MTLBuffer> g_indexer_topk_buffer;
++static id<MTLBuffer> g_glm53_kda_partials, g_glm53_kda_arrivals;
++int ds4_gpu_test_glm53_kda_handoff(void) {
++    if (!g_glm53_kda_arrivals) return 1;
++    const uint32_t *c = g_glm53_kda_arrivals.contents;
++    for (unsigned i = 0; i < 64u; i++) if (c[i]) return 0;
++    uint32_t *p = g_glm53_kda_partials.contents;
++    for (unsigned i = 0; i < 64u * 128u; i++) p[i] = 0x7fc12345u;
++    return 1;
++}
+ static id<MTLBuffer> g_glm53_topk_scratch;
+ enum {
+     DS4_GLM53_TOPK_FAST_HIST_OFFSET = 256u,
+@@ -1478,6 +1487,12 @@
+             *((uint32_t *)((uint8_t *)[fresh contents] + counter.offset)) = 0u;
+         }
+     }
++    if (g_glm53_kda_arrivals) {
++        [g_transient_buffers addObject:g_glm53_kda_arrivals];
++        [g_transient_buffers addObject:g_glm53_kda_partials];
++        g_glm53_kda_arrivals = nil;
++        g_glm53_kda_partials = nil;
++    }
+     if (g_glm53_topk_scratch) {
+         [g_transient_buffers addObject:g_glm53_topk_scratch];
+         g_glm53_topk_scratch = nil;
+@@ -4492,6 +4507,7 @@
+         (uint64_t)g_indexer_head_scores_bytes +
+         (uint64_t)g_indexer_topk_bytes +
+         (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_router_top6_coverage.length +
++        (uint64_t)g_glm53_kda_partials.length + (uint64_t)g_glm53_kda_arrivals.length +
+         (uint64_t)g_indexed_topk_bytes +
+         (uint64_t)g_f16_round_scratch_bytes +
+         (uint64_t)g_q8_prefill_scratch_bytes + (uint64_t)g_qwen4_conv_halo_bytes +
+@@ -4783,6 +4799,7 @@
+             ds4_gpu_mib((uint64_t)g_indexer_head_scores_bytes +
+                           (uint64_t)g_indexer_topk_bytes +
+         (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_router_top6_coverage.length +
++        (uint64_t)g_glm53_kda_partials.length + (uint64_t)g_glm53_kda_arrivals.length +
+                           (uint64_t)g_indexed_topk_bytes),
+             ds4_gpu_mib((uint64_t)g_moe_gate_scratch_bytes +
+                           (uint64_t)g_moe_down_scratch_bytes +
+@@ -12146,6 +12163,8 @@
+         g_glm53_router_shared_calls = g_glm53_q8_inputs_calls = 0;
+         ds4_glm53_topk_report();
+         g_glm53_topk_scratch = nil;
++        g_glm53_kda_partials = nil;
++        g_glm53_kda_arrivals = nil;
+         g_v41_router_top6_coverage = nil;
+         g_indexed_topk_buffer = nil;
+         g_stream_expert_validate_status_buffer = nil;
+@@ -48978,9 +48997,38 @@
+             getenv("DS4_METAL_DISABLE_M3_ULTRA_GLM53_DECODE") == NULL &&
+             getenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_VALUES4") == NULL &&
+             getenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE") == NULL;
++        bool disjoint = values4 && !g_batch_encoder_concurrent;
++        if (disjoint) {
++            const ds4_gpu_tensor *others[] = {q,k,v,raw_gate,raw_beta,output_gate,out,conv_state};
++            for (unsigned i = 0; i < sizeof(others)/sizeof(others[0]); i++)
++                if (ds4_gpu_buffer_ranges_overlap(ds4_gpu_tensor_buffer(recurrent_state),
++                        ds4_gpu_tensor_offset(recurrent_state), state_elements*sizeof(float),
++                        ds4_gpu_tensor_buffer(others[i]), ds4_gpu_tensor_offset(others[i]),
++                        ds4_gpu_tensor_bytes(others[i]))) disjoint = false;
++        }
++        // The delayed history shift also requires disjoint input/output spans.
++        if (disjoint) {
++            const ds4_gpu_tensor *others[] = {q,k,v,raw_gate,raw_beta,output_gate,out};
++            for (unsigned i = 0; i < sizeof(others)/sizeof(others[0]); i++)
++                if (ds4_gpu_buffer_ranges_overlap(ds4_gpu_tensor_buffer(conv_state),
++                        ds4_gpu_tensor_offset(conv_state), conv_elements*sizeof(float),
++                        ds4_gpu_tensor_buffer(others[i]), ds4_gpu_tensor_offset(others[i]),
++                        ds4_gpu_tensor_bytes(others[i]))) disjoint = false;
++        }
++        unsigned split = disjoint && !getenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT") ? 4u : 1u;
++        const char *split_env = getenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT");
++        if (split > 1u && split_env) split = !strcmp(split_env,"2") ? 2u : !strcmp(split_env,"4") ? 4u : 1u;
++        id<MTLComputePipelineState> split_pipeline = split > 1u ? ds4_gpu_get_pipeline(
++            split == 2u ? "kernel_glm53_kda_decode_split2" : "kernel_glm53_kda_decode_split4") : nil;
++        if (split_pipeline && !g_glm53_kda_arrivals) {
++            g_glm53_kda_partials = [g_device newBufferWithLength:64u*128u*sizeof(float) options:MTLResourceStorageModeShared];
++            g_glm53_kda_arrivals = [g_device newBufferWithLength:64u*sizeof(uint32_t) options:MTLResourceStorageModeShared];
++            if (g_glm53_kda_arrivals) memset(g_glm53_kda_arrivals.contents,0,64u*sizeof(uint32_t));
++        }
++        if (!split_pipeline || !g_glm53_kda_arrivals || !g_glm53_kda_partials) split = 1u;
+         /* The reference kernel predates the shared decay term and the narrower
+          * barriers; it is both their rollback and their exactness oracle. */
+-        id<MTLComputePipelineState> pipeline =
++        id<MTLComputePipelineState> pipeline = split > 1u ? split_pipeline :
+             ds4_gpu_get_pipeline(getenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE") ?
+                                      "kernel_glm53_kda_decode_reference" :
+                                  values4 ? "kernel_glm53_kda_decode_v4" :
+@@ -48996,6 +49044,7 @@
+             .lower_bound = gate_lower_bound,
+             .norm_eps = norm_eps,
+         };
++        if (split > 1u) ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_SPLIT);
+         if (values4) ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_VALUES4);
+         int owned = 0;
+         id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+@@ -49027,8 +49076,12 @@
+                 offset:ds4_gpu_tensor_offset(recurrent_state) atIndex:14];
+         [enc setBuffer:ds4_gpu_tensor_buffer(out)
+                 offset:ds4_gpu_tensor_offset(out) atIndex:15];
+-        [enc setThreadgroupMemoryLength:656u * sizeof(float) atIndex:0];
+-        [enc dispatchThreadgroups:MTLSizeMake(n_rows, n_heads, 1)
++        if (split > 1u) {
++            [enc setBuffer:g_glm53_kda_partials offset:0 atIndex:16];
++            [enc setBuffer:g_glm53_kda_arrivals offset:0 atIndex:17];
++        }
++        [enc setThreadgroupMemoryLength:(split > 1u ? 660u : 656u) * sizeof(float) atIndex:0];
++        [enc dispatchThreadgroups:MTLSizeMake(split > 1u ? split : n_rows, n_heads, 1)
+             threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+         ds4_gpu_end_compute_encoder(cb, enc);
+         return ds4_gpu_finish_command_buffer(
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -289,6 +289,7 @@
+     DS4_GPU_GLM53_DSA_SCORE_TILE = 1u << 8,
+     DS4_GPU_GLM53_DECODE_KDA_VALUES4 = 1u << 9,
+     DS4_GPU_GLM53_KDA_INPUTS = 1u << 10,
++    DS4_GPU_GLM53_DECODE_KDA_SPLIT = 1u << 11,
+ };
+ /* Returns and clears GLM tuning coverage recorded only in the test mode. */
+ uint32_t ds4_gpu_test_glm53_prefill_take_dispatches(void);
+@@ -3270,6 +3271,7 @@
+ int ds4_gpu_test_glm53_topk_stats(uint32_t *out, uint32_t count);
+ int ds4_gpu_test_glm53_topk_poison_recovery_state(void);
+ void ds4_gpu_test_invalidate_completion_counters(void);
++int ds4_gpu_test_glm53_kda_handoff(void);
+ 
+ int ds4_gpu_glm53_kda_inputs_q8_bf16(
+         ds4_gpu_tensor *const outputs[6], const uint64_t weight_offsets[6],
+--- a/tests/test_glm53_kda.c
++++ b/tests/test_glm53_kda.c
+@@ -1518,7 +1518,7 @@
+         const uint64_t sizes[] = {n * sizeof(float), (uint64_t)n * 9 * sizeof(float),
+                                   (uint64_t)n * D * sizeof(float)};
+         float *actual = malloc(sizes[2]), *reference = malloc(sizes[2]);
+-        ds4_gpu_tensor *input[6], *out[4][3], *storage[4][3];
++        ds4_gpu_tensor *input[6], *out[6][3], *storage[6][3];
+         require_ok(actual && reference, "KDA decode values host buffers");
+         for (unsigned i = 0; i < 6; i++) {
+             input[i] = ds4_gpu_tensor_alloc(sizes[0]);
+@@ -1527,7 +1527,7 @@
+         for (unsigned b = 0; b < 3; b++) {
+             for (uint64_t j = 0; j < sizes[b] / sizeof(float); j++)
+                 actual[j] = (float)((int)((j * 1664525u + 1013904223u) % 2047u) - 1023) * 0.0005f;
+-            for (unsigned arm = 0; arm < 4; arm++) {
++            for (unsigned arm = 0; arm < 6; arm++) {
+                 storage[arm][b] = ds4_gpu_tensor_alloc_managed(sizes[b]+32u);
+                 require_ok(storage[arm][b] != NULL, "KDA decode guard buffer");
+                 memset(ds4_gpu_tensor_contents(storage[arm][b]),0xa5,sizes[b]+32u);
+@@ -1553,7 +1553,12 @@
+             /* Arm 0 is the kernel as it was before the shared decay term and
+              * the narrower barriers; arms 1-3 are today's one-row, four-row and
+              * untuned dispatches. */
+-            for (unsigned arm = 0; arm < 4; arm++) {
++            for (unsigned arm = 0; arm < 6; arm++) {
++                if (arm >= 4) {
++                    unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT");
++                    setenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT",arm == 4 ? "2" : "4",1);
++                    require_ok(ds4_gpu_test_glm53_kda_handoff(), "KDA split counters reset/poison partials");
++                } else setenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT","1",1);
+                 if (arm == 0) setenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE", "1", 1);
+                 else unsetenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE");
+                 if (arm == 1) setenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_VALUES4", "1", 1);
+@@ -1566,18 +1571,19 @@
+                     input[3], input[4], input[5], model, model_bytes, offset + Q, offset + K,
+                     offset + V, offset + A, offset + DT, offset + NORM,
+                     heads, rows, -5.0f, 1e-6f), "KDA decode values dispatch");
+-                require_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_VALUES4,
+-                    arm == 2 && shape == 0, "KDA decode values coverage");
++                require_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_VALUES4 |
++                    (arm >= 4 ? DS4_GPU_GLM53_DECODE_KDA_SPLIT : 0u),
++                    (arm == 2 || arm >= 4) && shape == 0, "KDA decode values coverage");
+                 unsetenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING");
+             }
+             for (unsigned b = 0; b < 3; b++) {
+-                for (unsigned arm=0;arm<4;arm++) {
++                for (unsigned arm=0;arm<6;arm++) {
+                     const uint8_t *guard=ds4_gpu_tensor_contents(storage[arm][b]);
+                     for(unsigned g=0;g<16;g++) require_ok(guard[g]==0xa5 && guard[16u+sizes[b]+g]==0xa5,"KDA decode guards");
+                 }
+                 require_ok(ds4_gpu_tensor_read(out[0][b], 0, reference, sizes[b]),
+                            "KDA decode values reference read");
+-                for (unsigned arm = 1; arm < 4; arm++) {
++                for (unsigned arm = 1; arm < 6; arm++) {
+                     require_ok(ds4_gpu_tensor_read(out[arm][b], 0, actual, sizes[b]),
+                                "KDA decode values candidate read");
+                     require_ok(memcmp(reference, actual, sizes[b]) == 0,
+@@ -1586,11 +1592,13 @@
+             }
+         }
+         for (unsigned i = 0; i < 6; i++) ds4_gpu_tensor_free(input[i]);
+-        for (unsigned arm = 0; arm < 4; arm++)
++        for (unsigned arm = 0; arm < 6; arm++)
+             for (unsigned b = 0; b < 3; b++) {ds4_gpu_tensor_free(out[arm][b]);ds4_gpu_tensor_free(storage[arm][b]);}
+         free(actual); free(reference);
+     }
+-    puts("KDA values: all output/history/state bits and guards exact");
++    puts("KDA values/split2/split4: all output/history/state bits, guards and arrival counters exact");
++    unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT");
++    unsetenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT");
+ }
+ 
+ static void check_glm53_bf16_short_rows(uint8_t *model, uint64_t model_bytes,

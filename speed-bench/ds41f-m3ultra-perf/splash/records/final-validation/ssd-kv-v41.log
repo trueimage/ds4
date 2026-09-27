@@ -1,0 +1,28 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: metal SSD streaming cache target 16.00 GiB; effective 16.00 GiB = 14.24 GiB prefill headroom + 1.76 GiB dynamic cache (95 experts, 18.98 MiB each)
+ds4: Metal SSD static weights locked 9.37 GiB; pageable 0.00 GiB
+ds4: WARNING: SSD streaming expert cache (95 experts) is under twice the per-token routed working set (40 layers x 6 experts = 240); expect heavy thrashing below 8.90 GiB
+ds4: SSD streaming initial metal model map (569 spans, 9.37 GiB tensor span)
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 9.37 GiB + expert cache 1.76 GiB + prefill expert reserve 14.24 GiB = 33.25 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+{"pos":512,"staged":true,"cached_io":true,"load_ms":2.929000,"resident_fraction":1.000000,"rep":0,"ms":8.499000,"copy_ms":1.961000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.711000,"resident_fraction":1.000000,"rep":1,"ms":2.711000,"copy_ms":0.963000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.107000,"resident_fraction":1.000000,"rep":2,"ms":2.093000,"copy_ms":0.583000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":1.025000,"resident_fraction":1.000000,"rep":3,"ms":4.647000,"copy_ms":0.486000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":1.042000,"resident_fraction":1.000000,"rep":4,"ms":4.072000,"copy_ms":0.516000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.030000,"resident_fraction":1.000000,"rep":5,"ms":1.719000,"copy_ms":0.521000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.025000,"resident_fraction":1.000000,"rep":6,"ms":1.723000,"copy_ms":0.489000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":1.023000,"resident_fraction":1.000000,"rep":7,"ms":4.400000,"copy_ms":0.513000,"bytes":14283479,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":2.670000,"resident_fraction":1.000000,"rep":0,"ms":9.198000,"copy_ms":2.192000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.964000,"resident_fraction":1.000000,"rep":1,"ms":3.201000,"copy_ms":0.892000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.803000,"resident_fraction":1.000000,"rep":2,"ms":3.117000,"copy_ms":0.793000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":1.768000,"resident_fraction":1.000000,"rep":3,"ms":6.736000,"copy_ms":0.799000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":1.767000,"resident_fraction":1.000000,"rep":4,"ms":6.617000,"copy_ms":0.817000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.789000,"resident_fraction":1.000000,"rep":5,"ms":3.003000,"copy_ms":0.810000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.767000,"resident_fraction":1.000000,"rep":6,"ms":3.101000,"copy_ms":0.807000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":1.771000,"resident_fraction":1.000000,"rep":7,"ms":6.634000,"copy_ms":0.805000,"bytes":24124993,"exact":true}

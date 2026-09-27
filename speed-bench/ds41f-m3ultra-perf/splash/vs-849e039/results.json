@@ -1,0 +1,1922 @@
+{
+  "v41": {
+    "performance": [
+      {
+        "frontier": 512,
+        "prefill_tokens": 512,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              285.98,
+              286.27
+            ],
+            "mean": 286.125,
+            "harmonic_mean": 286.1249265181302,
+            "spread_percent": 0.10135430318915287
+          },
+          "splash": {
+            "runs": [
+              286.5,
+              286.9
+            ],
+            "mean": 286.7,
+            "harmonic_mean": 286.6998604813394,
+            "spread_percent": 0.1395186606208501
+          },
+          "change_percent": 0.20093809029697596
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              29.15,
+              29.24
+            ],
+            "mean": 29.195,
+            "harmonic_mean": 29.194930638808014,
+            "spread_percent": 0.3082719643774614
+          },
+          "splash": {
+            "runs": [
+              30.03,
+              30.11
+            ],
+            "mean": 30.07,
+            "harmonic_mean": 30.06994679082142,
+            "spread_percent": 0.2660458929165224
+          },
+          "change_percent": 2.9971509877480873
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              35.576,
+              34.532
+            ],
+            "mean": 35.054,
+            "harmonic_mean": 35.04622673589319,
+            "spread_percent": 2.978262109887613
+          },
+          "splash": {
+            "runs": [
+              34.003,
+              34.673
+            ],
+            "mean": 34.338,
+            "harmonic_mean": 34.3347317549071,
+            "spread_percent": 1.9511911002388074
+          },
+          "change_percent": -2.0425629029497405
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              29.18,
+              29.27
+            ],
+            "mean": 29.225,
+            "harmonic_mean": 29.224930710008554,
+            "spread_percent": 0.30795551753635536
+          },
+          "splash": {
+            "runs": [
+              30.06,
+              30.14
+            ],
+            "mean": 30.1,
+            "harmonic_mean": 30.099946843853818,
+            "spread_percent": 0.2657807308970161
+          },
+          "change_percent": 2.994074280373238
+        }
+      },
+      {
+        "frontier": 1024,
+        "prefill_tokens": 512,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              275.2,
+              275.25
+            ],
+            "mean": 275.225,
+            "harmonic_mean": 275.22499772913073,
+            "spread_percent": 0.018166954310114038
+          },
+          "splash": {
+            "runs": [
+              274.44,
+              275.47
+            ],
+            "mean": 274.95500000000004,
+            "harmonic_mean": 274.9540353876089,
+            "spread_percent": 0.374606753832456
+          },
+          "change_percent": -0.09845121037607152
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              29.37,
+              29.4
+            ],
+            "mean": 29.384999999999998,
+            "harmonic_mean": 29.38499234303216,
+            "spread_percent": 0.10209290454312604
+          },
+          "splash": {
+            "runs": [
+              30.3,
+              30.16
+            ],
+            "mean": 30.23,
+            "harmonic_mean": 30.22983790936156,
+            "spread_percent": 0.4631161098246793
+          },
+          "change_percent": 2.875092007739566
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              35.124,
+              34.886
+            ],
+            "mean": 35.005,
+            "harmonic_mean": 35.004595457791744,
+            "spread_percent": 0.6799028710184246
+          },
+          "splash": {
+            "runs": [
+              33.293,
+              33.943
+            ],
+            "mean": 33.617999999999995,
+            "harmonic_mean": 33.61485808197989,
+            "spread_percent": 1.9334880123743194
+          },
+          "change_percent": -3.9622911012712647
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              29.4,
+              29.43
+            ],
+            "mean": 29.415,
+            "harmonic_mean": 29.414992350841406,
+            "spread_percent": 0.10198878123406813
+          },
+          "splash": {
+            "runs": [
+              30.33,
+              30.19
+            ],
+            "mean": 30.259999999999998,
+            "harmonic_mean": 30.259838070059484,
+            "spread_percent": 0.4626569729015103
+          },
+          "change_percent": 2.8721602546801783
+        }
+      },
+      {
+        "frontier": 2048,
+        "prefill_tokens": 1024,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              336.03,
+              336.06
+            ],
+            "mean": 336.04499999999996,
+            "harmonic_mean": 336.0449993304468,
+            "spread_percent": 0.00892737579789301
+          },
+          "splash": {
+            "runs": [
+              336.68,
+              336.59
+            ],
+            "mean": 336.635,
+            "harmonic_mean": 336.6349939845827,
+            "spread_percent": 0.02673518796323372
+          },
+          "change_percent": 0.17557013355695705
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              29.36,
+              29.24
+            ],
+            "mean": 29.299999999999997,
+            "harmonic_mean": 29.299877133105802,
+            "spread_percent": 0.4095563139931775
+          },
+          "splash": {
+            "runs": [
+              30.1,
+              30.22
+            ],
+            "mean": 30.16,
+            "harmonic_mean": 30.159880636604775,
+            "spread_percent": 0.3978779840848721
+          },
+          "change_percent": 2.935177849354398
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              34.319,
+              33.895
+            ],
+            "mean": 34.107,
+            "harmonic_mean": 34.105682264637764,
+            "spread_percent": 1.2431465681531635
+          },
+          "splash": {
+            "runs": [
+              33.46,
+              33.972
+            ],
+            "mean": 33.716,
+            "harmonic_mean": 33.71405623442876,
+            "spread_percent": 1.5185668525329235
+          },
+          "change_percent": -1.1463922361978462
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              29.38,
+              29.26
+            ],
+            "mean": 29.32,
+            "harmonic_mean": 29.319877216916783,
+            "spread_percent": 0.4092769440654756
+          },
+          "splash": {
+            "runs": [
+              30.13,
+              30.25
+            ],
+            "mean": 30.189999999999998,
+            "harmonic_mean": 30.18988075521696,
+            "spread_percent": 0.3974826101358099
+          },
+          "change_percent": 2.9672823384069513
+        }
+      },
+      {
+        "frontier": 4096,
+        "prefill_tokens": 2048,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              371.67,
+              371.33
+            ],
+            "mean": 371.5,
+            "harmonic_mean": 371.49992220726784,
+            "spread_percent": 0.09152086137282149
+          },
+          "splash": {
+            "runs": [
+              371.54,
+              371.64
+            ],
+            "mean": 371.59000000000003,
+            "harmonic_mean": 371.5899932721548,
+            "spread_percent": 0.026911380822940846
+          },
+          "change_percent": 0.02424524461588362
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              29.32,
+              29.21
+            ],
+            "mean": 29.265,
+            "harmonic_mean": 29.264896634204682,
+            "spread_percent": 0.37587561934050717
+          },
+          "splash": {
+            "runs": [
+              30.01,
+              30.05
+            ],
+            "mean": 30.03,
+            "harmonic_mean": 30.02998667998668,
+            "spread_percent": 0.13320013320013036
+          },
+          "change_percent": 2.6143610050813004
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              33.645,
+              34.44
+            ],
+            "mean": 34.042500000000004,
+            "harmonic_mean": 34.037858559153996,
+            "spread_percent": 2.3353161489314664
+          },
+          "splash": {
+            "runs": [
+              33.393,
+              33.242
+            ],
+            "mean": 33.317499999999995,
+            "harmonic_mean": 33.317328911232835,
+            "spread_percent": 0.45321527725670707
+          },
+          "change_percent": -2.129690827641939
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              29.34,
+              29.23
+            ],
+            "mean": 29.285,
+            "harmonic_mean": 29.284896704797678,
+            "spread_percent": 0.37561891753457205
+          },
+          "splash": {
+            "runs": [
+              30.04,
+              30.08
+            ],
+            "mean": 30.06,
+            "harmonic_mean": 30.059986693280106,
+            "spread_percent": 0.13306719893545957
+          },
+          "change_percent": 2.6467226307663516
+        }
+      },
+      {
+        "frontier": 8192,
+        "prefill_tokens": 4096,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              366.03,
+              366.44
+            ],
+            "mean": 366.235,
+            "harmonic_mean": 366.2348852512731,
+            "spread_percent": 0.11194997747348696
+          },
+          "splash": {
+            "runs": [
+              366.65,
+              366.49
+            ],
+            "mean": 366.57,
+            "harmonic_mean": 366.56998254085164,
+            "spread_percent": 0.043647870802293744
+          },
+          "change_percent": 0.09149791652114381
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              28.98,
+              29.01
+            ],
+            "mean": 28.995,
+            "harmonic_mean": 28.994992240041388,
+            "spread_percent": 0.10346611484739139
+          },
+          "splash": {
+            "runs": [
+              30.03,
+              29.79
+            ],
+            "mean": 29.91,
+            "harmonic_mean": 29.909518555667002,
+            "spread_percent": 0.8024072216650017
+          },
+          "change_percent": 3.1540836709129216
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              35.162,
+              35.151
+            ],
+            "mean": 35.1565,
+            "harmonic_mean": 35.156499139561674,
+            "spread_percent": 0.03128866639169337
+          },
+          "splash": {
+            "runs": [
+              34.021,
+              33.527
+            ],
+            "mean": 33.774,
+            "harmonic_mean": 33.77219361046959,
+            "spread_percent": 1.462663587374903
+          },
+          "change_percent": -3.9324164805939144
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              29.01,
+              29.04
+            ],
+            "mean": 29.025,
+            "harmonic_mean": 29.024992248062016,
+            "spread_percent": 0.10335917312660667
+          },
+          "splash": {
+            "runs": [
+              30.06,
+              29.81
+            ],
+            "mean": 29.935,
+            "harmonic_mean": 29.93447803574411,
+            "spread_percent": 0.835142809420411
+          },
+          "change_percent": 3.133457469718426
+        }
+      },
+      {
+        "frontier": 16384,
+        "prefill_tokens": 8192,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              653.73,
+              654.6
+            ],
+            "mean": 654.165,
+            "harmonic_mean": 654.1647107381166,
+            "spread_percent": 0.13299396941138775
+          },
+          "splash": {
+            "runs": [
+              654.75,
+              654.75
+            ],
+            "mean": 654.75,
+            "harmonic_mean": 654.75,
+            "spread_percent": 0.0
+          },
+          "change_percent": 0.08947123748437313
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              28.8,
+              28.66
+            ],
+            "mean": 28.73,
+            "harmonic_mean": 28.72982944657153,
+            "spread_percent": 0.4872955099199463
+          },
+          "splash": {
+            "runs": [
+              29.82,
+              29.64
+            ],
+            "mean": 29.73,
+            "harmonic_mean": 29.729727547931383,
+            "spread_percent": 0.6054490413723502
+          },
+          "change_percent": 3.4803481977480955
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              34.011,
+              35.031
+            ],
+            "mean": 34.521,
+            "harmonic_mean": 34.51346545580951,
+            "spread_percent": 2.954723211957927
+          },
+          "splash": {
+            "runs": [
+              34.248,
+              34.342
+            ],
+            "mean": 34.295,
+            "harmonic_mean": 34.29493558827817,
+            "spread_percent": 0.27409243329931826
+          },
+          "change_percent": -0.6546739665710732
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              28.82,
+              28.69
+            ],
+            "mean": 28.755000000000003,
+            "harmonic_mean": 28.754853069031473,
+            "spread_percent": 0.45209528777603547
+          },
+          "splash": {
+            "runs": [
+              29.84,
+              29.67
+            ],
+            "mean": 29.755000000000003,
+            "harmonic_mean": 29.754757183666612,
+            "spread_percent": 0.5713325491513969
+          },
+          "change_percent": 3.4773403718484586
+        }
+      },
+      {
+        "frontier": 32639,
+        "prefill_tokens": 16255,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              613.07,
+              613.39
+            ],
+            "mean": 613.23,
+            "harmonic_mean": 613.2299582538362,
+            "spread_percent": 0.05218270469480233
+          },
+          "splash": {
+            "runs": [
+              612.95,
+              613.53
+            ],
+            "mean": 613.24,
+            "harmonic_mean": 613.2398628595656,
+            "spread_percent": 0.09457960994063128
+          },
+          "change_percent": 0.0016151535971342668
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              28.5,
+              28.4
+            ],
+            "mean": 28.45,
+            "harmonic_mean": 28.449912126537786,
+            "spread_percent": 0.35149384885765
+          },
+          "splash": {
+            "runs": [
+              29.17,
+              29.29
+            ],
+            "mean": 29.23,
+            "harmonic_mean": 29.229876838864183,
+            "spread_percent": 0.41053711939787013
+          },
+          "change_percent": 2.741536454866078
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              35.394,
+              35.243
+            ],
+            "mean": 35.3185,
+            "harmonic_mean": 35.318338604414116,
+            "spread_percent": 0.4275379758483408
+          },
+          "splash": {
+            "runs": [
+              34.679,
+              34.823
+            ],
+            "mean": 34.751000000000005,
+            "harmonic_mean": 34.75085082443671,
+            "spread_percent": 0.4143765647031692
+          },
+          "change_percent": -1.6068066310856777
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              28.52,
+              28.42
+            ],
+            "mean": 28.47,
+            "harmonic_mean": 28.469912188268353,
+            "spread_percent": 0.3512469265893849
+          },
+          "splash": {
+            "runs": [
+              29.2,
+              29.32
+            ],
+            "mean": 29.259999999999998,
+            "harmonic_mean": 29.259876965140123,
+            "spread_percent": 0.4101161995898872
+          },
+          "change_percent": 2.774735558184438
+        }
+      }
+    ],
+    "cumulative_prefill_seconds": {
+      "base": {
+        "runs": [
+          62.444019603877244,
+          62.40363393424825
+        ],
+        "mean": 62.42382676906274,
+        "harmonic_mean": 62.42382023709252,
+        "spread_percent": 0.06469592096364639
+      },
+      "splash": {
+        "runs": [
+          62.408713469941645,
+          62.3783834325522
+        ],
+        "mean": 62.39354845124692,
+        "harmonic_mean": 62.39354476532429,
+        "spread_percent": 0.048610855035992336
+      },
+      "change_percent": -0.04850442432475788
+    },
+    "exactness": {
+      "logits": {
+        "exact": true,
+        "rows": 903,
+        "floats": 116739840,
+        "max_position": 32767,
+        "logits_sha256": "da1baae28ee696678126fa7b65caf1aa388a47f2df291d2671a6c7bb2d4d7c64"
+      },
+      "snapshots": [
+        {
+          "frontier": 1024,
+          "bytes": 17560628,
+          "sha256": "e9a5bdd8122953c0a2de6809b486eb26ea57ddc1ca1e2eb4da7fe3fa474359f1",
+          "bit_identical": true
+        },
+        {
+          "frontier": 16384,
+          "bytes": 115926068,
+          "sha256": "cf5e65709dda08bf08c3022bb5d9c1bea4758ebca180b3188630ef3d6d452992",
+          "bit_identical": true
+        },
+        {
+          "frontier": 2048,
+          "bytes": 24118324,
+          "sha256": "92af296c2a2c210ea864f5d8ae7516cabd44b11b58ac977cdc011f0823b31ad7",
+          "bit_identical": true
+        },
+        {
+          "frontier": 32639,
+          "bytes": 220031536,
+          "sha256": "ab665dd215137cdb91044d4076f745e22612518649cb4460db1f2352e5d8fd37",
+          "bit_identical": true
+        },
+        {
+          "frontier": 4096,
+          "bytes": 37233716,
+          "sha256": "50e00ab81fcf55441ee57e2d6d7785b312a1f29eb50a06e4844d89552dfc6efc",
+          "bit_identical": true
+        },
+        {
+          "frontier": 512,
+          "bytes": 14281780,
+          "sha256": "a5fafcb43bf89634543846736cbaacd942103a03b43900cc4c546bb67418d5cb",
+          "bit_identical": true
+        },
+        {
+          "frontier": 8192,
+          "bytes": 63464500,
+          "sha256": "2246a22451eac7e60293f88178890a5d18c556668af11d1785e151ca3da7b79b",
+          "bit_identical": true
+        }
+      ]
+    },
+    "http": [
+      {
+        "name": "http-10240-cold",
+        "usage": {
+          "prompt_tokens": 10166,
+          "completion_tokens": 64,
+          "total_tokens": 10230,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 10166
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              17948.13879102003,
+              17942.504666978493
+            ],
+            "mean": 17945.32172899926,
+            "harmonic_mean": 17945.321286776016,
+            "spread_percent": 0.03139606035834027
+          },
+          "splash": {
+            "runs": [
+              17901.951375009958,
+              17872.225416009314
+            ],
+            "mean": 17887.088395509636,
+            "harmonic_mean": 17887.076045363276,
+            "spread_percent": 0.16618668361982114
+          },
+          "saved_ms": 58.23333348962478,
+          "change_percent": -0.32450426004634325
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              20161.650166031905,
+              20166.713707963936
+            ],
+            "mean": 20164.18193699792,
+            "harmonic_mean": 20164.181619114246,
+            "spread_percent": 0.02511156637969406
+          },
+          "splash": {
+            "runs": [
+              20056.771875009872,
+              20034.576083009597
+            ],
+            "mean": 20045.673979009734,
+            "harmonic_mean": 20045.667834876305,
+            "spread_percent": 0.11072609493458192
+          },
+          "saved_ms": 118.50795798818581,
+          "change_percent": -0.5877151791154112
+        }
+      },
+      {
+        "name": "http-10240-continued",
+        "usage": {
+          "prompt_tokens": 10240,
+          "completion_tokens": 64,
+          "total_tokens": 10304,
+          "prompt_tokens_details": {
+            "cached_tokens": 10230,
+            "cache_write_tokens": 10
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              326.12358301412314,
+              326.57404197379947
+            ],
+            "mean": 326.3488124939613,
+            "harmonic_mean": 326.3486570519415,
+            "spread_percent": 0.13802990617122607
+          },
+          "splash": {
+            "runs": [
+              312.92837497312576,
+              311.92637502681464
+            ],
+            "mean": 312.4273749999702,
+            "harmonic_mean": 312.42657161014847,
+            "spread_percent": 0.32071451687330915
+          },
+          "saved_ms": 13.921437493991107,
+          "change_percent": -4.2658152752581895
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              2546.910792007111,
+              2549.6509579825215
+            ],
+            "mean": 2548.2808749948163,
+            "harmonic_mean": 2548.280138369819,
+            "spread_percent": 0.10752998236177813
+          },
+          "splash": {
+            "runs": [
+              2462.3173750005662,
+              2439.9738329811953
+            ],
+            "mean": 2451.1456039908808,
+            "harmonic_mean": 2451.094685568373,
+            "spread_percent": 0.9115550697189048
+          },
+          "saved_ms": 97.13527100393549,
+          "change_percent": -3.811796099758158
+        }
+      },
+      {
+        "name": "http-32000-cold",
+        "usage": {
+          "prompt_tokens": 31994,
+          "completion_tokens": 64,
+          "total_tokens": 32058,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 31994
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              44463.06912502041,
+              44441.31570798345
+            ],
+            "mean": 44452.19241650193,
+            "harmonic_mean": 44452.189755153144,
+            "spread_percent": 0.04893665723647473
+          },
+          "splash": {
+            "runs": [
+              44317.62012495892,
+              44378.7168340059
+            ],
+            "mean": 44348.16847948241,
+            "harmonic_mean": 44348.147436855485,
+            "spread_percent": 0.137766025388951
+          },
+          "saved_ms": 104.02393701951951,
+          "change_percent": -0.2340130629437831
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              46690.266375022475,
+              46691.9683329761
+            ],
+            "mean": 46691.11735399929,
+            "harmonic_mean": 46691.11733848959,
+            "spread_percent": 0.0036451429095696567
+          },
+          "splash": {
+            "runs": [
+              46483.4966249764,
+              46548.87729202164
+            ],
+            "mean": 46516.18695849902,
+            "harmonic_mean": 46516.16398460593,
+            "spread_percent": 0.1405546570349336
+          },
+          "saved_ms": 174.9303955002688,
+          "change_percent": -0.37465454975942336
+        }
+      },
+      {
+        "name": "http-32000-continued",
+        "usage": {
+          "prompt_tokens": 32068,
+          "completion_tokens": 64,
+          "total_tokens": 32132,
+          "prompt_tokens_details": {
+            "cached_tokens": 32058,
+            "cache_write_tokens": 10
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              313.421708997339,
+              313.6641249875538
+            ],
+            "mean": 313.5429169924464,
+            "harmonic_mean": 313.54287013641084,
+            "spread_percent": 0.07731509055924071
+          },
+          "splash": {
+            "runs": [
+              311.07366702053696,
+              310.6869169860147
+            ],
+            "mean": 310.8802920032758,
+            "harmonic_mean": 310.8801717193651,
+            "spread_percent": 0.12440480933355207
+          },
+          "saved_ms": 2.662624989170581,
+          "change_percent": -0.8492059124508122
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              2562.1453340281732,
+              2562.5985839869827
+            ],
+            "mean": 2562.371959007578,
+            "harmonic_mean": 2562.371938964086,
+            "spread_percent": 0.017688687125073425
+          },
+          "splash": {
+            "runs": [
+              2471.7585000325926,
+              2473.5292500117794
+            ],
+            "mean": 2472.643875022186,
+            "harmonic_mean": 2472.6435579976114,
+            "spread_percent": 0.07161362770734281
+          },
+          "saved_ms": 89.728083985392,
+          "change_percent": -3.5017587384208015
+        }
+      }
+    ],
+    "checkpoint_store_records": [
+      {
+        "run": "http-v41-1-base",
+        "arm": "base",
+        "line": "0926 18:27:19 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=60.55 MiB save=8.9 ms"
+      },
+      {
+        "run": "http-v41-1-base",
+        "arm": "base",
+        "line": "0926 18:27:27 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=73.06 MiB save=11.5 ms"
+      },
+      {
+        "run": "http-v41-1-base",
+        "arm": "base",
+        "line": "0926 18:27:29 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=73.45 MiB save=11.0 ms"
+      },
+      {
+        "run": "http-v41-1-base",
+        "arm": "base",
+        "line": "0926 18:28:09 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=198.20 MiB save=29.8 ms"
+      },
+      {
+        "run": "http-v41-1-base",
+        "arm": "base",
+        "line": "0926 18:28:18 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=206.83 MiB save=31.1 ms"
+      },
+      {
+        "run": "http-v41-2-splash",
+        "arm": "splash",
+        "line": "0926 18:28:35 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=60.55 MiB save=11.6 ms"
+      },
+      {
+        "run": "http-v41-2-splash",
+        "arm": "splash",
+        "line": "0926 18:28:43 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=73.06 MiB save=9.4 ms"
+      },
+      {
+        "run": "http-v41-2-splash",
+        "arm": "splash",
+        "line": "0926 18:28:45 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=73.45 MiB save=8.7 ms"
+      },
+      {
+        "run": "http-v41-2-splash",
+        "arm": "splash",
+        "line": "0926 18:29:26 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=198.20 MiB save=33.3 ms"
+      },
+      {
+        "run": "http-v41-2-splash",
+        "arm": "splash",
+        "line": "0926 18:29:34 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=206.83 MiB save=24.0 ms"
+      },
+      {
+        "run": "http-v41-3-splash",
+        "arm": "splash",
+        "line": "0926 18:29:51 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=60.55 MiB save=11.2 ms"
+      },
+      {
+        "run": "http-v41-3-splash",
+        "arm": "splash",
+        "line": "0926 18:29:59 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=73.06 MiB save=10.5 ms"
+      },
+      {
+        "run": "http-v41-3-splash",
+        "arm": "splash",
+        "line": "0926 18:30:01 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=73.45 MiB save=9.0 ms"
+      },
+      {
+        "run": "http-v41-3-splash",
+        "arm": "splash",
+        "line": "0926 18:30:42 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=198.20 MiB save=31.9 ms"
+      },
+      {
+        "run": "http-v41-3-splash",
+        "arm": "splash",
+        "line": "0926 18:30:50 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=206.83 MiB save=24.5 ms"
+      },
+      {
+        "run": "http-v41-4-base",
+        "arm": "base",
+        "line": "0926 18:31:07 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=60.55 MiB save=9.2 ms"
+      },
+      {
+        "run": "http-v41-4-base",
+        "arm": "base",
+        "line": "0926 18:31:15 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=73.06 MiB save=11.1 ms"
+      },
+      {
+        "run": "http-v41-4-base",
+        "arm": "base",
+        "line": "0926 18:31:18 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=73.45 MiB save=12.1 ms"
+      },
+      {
+        "run": "http-v41-4-base",
+        "arm": "base",
+        "line": "0926 18:31:58 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=198.20 MiB save=30.5 ms"
+      },
+      {
+        "run": "http-v41-4-base",
+        "arm": "base",
+        "line": "0926 18:32:07 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=206.83 MiB save=31.7 ms"
+      }
+    ],
+    "http_exactness": {
+      "requests": 16,
+      "output_usage_finish_identical": true,
+      "checkpoint_images_identical_except_header_timestamps": true,
+      "images_per_round": [
+        {
+          "name": "04ada007dc0577b4e2d5dee269b04d8dd66494a6.kv",
+          "bytes": 76612944,
+          "masked_sha256": "948eec6e47427b3f15bd83145784c35732ab10ee45538129963171ee5f539947"
+        },
+        {
+          "name": "43043e3a41c0d0559950468c68eeab5bd5bea735.kv",
+          "bytes": 77023081,
+          "masked_sha256": "fa8e1221795460da0083e25b61e02ff56498aed8679a31c3ef788973b5f1f6fb"
+        },
+        {
+          "name": "785dcdced9b106cac1aae0d2c65f631e14c4d5a1.kv",
+          "bytes": 63490674,
+          "masked_sha256": "0f4b7d3f4ccb6fbb8d9a6a015d1d7cb79de4bfb397aabace7a981f203c9da30f"
+        },
+        {
+          "name": "8a5c7eb9b554df6e89eda1589d56e5c154ef2b01.kv",
+          "bytes": 216877358,
+          "masked_sha256": "dad43d60962c78bb98c669c7042da9b0ffd55f1aa3d72803b8214e750f9dff8f"
+        },
+        {
+          "name": "c6063413ab686a9b116e883a5bdc398c0e523937.kv",
+          "bytes": 207830192,
+          "masked_sha256": "462413cbccb336e7e4bdd059dfb18119c57faeba782ff811ee32029a74a35360"
+        }
+      ]
+    }
+  },
+  "glm": {
+    "performance": [
+      {
+        "frontier": 2048,
+        "prefill_tokens": 2048,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              512.14,
+              511.3
+            ],
+            "mean": 511.72,
+            "harmonic_mean": 511.71965528023134,
+            "spread_percent": 0.16415227077307412
+          },
+          "splash": {
+            "runs": [
+              511.97,
+              512.2
+            ],
+            "mean": 512.085,
+            "harmonic_mean": 512.0849741742094,
+            "spread_percent": 0.04491441850474397
+          },
+          "change_percent": 0.07139043619068808
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              26.92,
+              26.97
+            ],
+            "mean": 26.945,
+            "harmonic_mean": 26.944976804601964,
+            "spread_percent": 0.18556318426423143
+          },
+          "splash": {
+            "runs": [
+              26.96,
+              26.92
+            ],
+            "mean": 26.94,
+            "harmonic_mean": 26.939985152190054,
+            "spread_percent": 0.14847809948032348
+          },
+          "change_percent": -0.01852535427329105
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              37.78,
+              37.308
+            ],
+            "mean": 37.544,
+            "harmonic_mean": 37.542516513956954,
+            "spread_percent": 1.2571915619007068
+          },
+          "splash": {
+            "runs": [
+              37.466,
+              37.635
+            ],
+            "mean": 37.5505,
+            "harmonic_mean": 37.5503098494028,
+            "spread_percent": 0.4500605850787524
+          },
+          "change_percent": 0.017313019390585715
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              26.94,
+              26.99
+            ],
+            "mean": 26.965,
+            "harmonic_mean": 26.964976821806044,
+            "spread_percent": 0.1854255516410056
+          },
+          "splash": {
+            "runs": [
+              26.99,
+              26.95
+            ],
+            "mean": 26.97,
+            "harmonic_mean": 26.969985168705968,
+            "spread_percent": 0.14831294030403838
+          },
+          "change_percent": 0.018573525699738802
+        }
+      },
+      {
+        "frontier": 4096,
+        "prefill_tokens": 2048,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              436.97,
+              437.0
+            ],
+            "mean": 436.985,
+            "harmonic_mean": 436.98499948510823,
+            "spread_percent": 0.006865224206774309
+          },
+          "splash": {
+            "runs": [
+              435.34,
+              437.17
+            ],
+            "mean": 436.255,
+            "harmonic_mean": 436.2530808815944,
+            "spread_percent": 0.4194794329004919
+          },
+          "change_percent": -0.16749284400522368
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              26.8,
+              26.81
+            ],
+            "mean": 26.805,
+            "harmonic_mean": 26.804999067338183,
+            "spread_percent": 0.03730647267300134
+          },
+          "splash": {
+            "runs": [
+              26.8,
+              26.81
+            ],
+            "mean": 26.805,
+            "harmonic_mean": 26.804999067338183,
+            "spread_percent": 0.03730647267300134
+          },
+          "change_percent": 0.0
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              37.478,
+              38.276
+            ],
+            "mean": 37.877,
+            "harmonic_mean": 37.872796895213455,
+            "spread_percent": 2.1068194418776613
+          },
+          "splash": {
+            "runs": [
+              38.075,
+              37.993
+            ],
+            "mean": 38.034000000000006,
+            "harmonic_mean": 38.03395580270285,
+            "spread_percent": 0.21559657148866995
+          },
+          "change_percent": 0.4144995643794447
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              26.82,
+              26.84
+            ],
+            "mean": 26.83,
+            "harmonic_mean": 26.829996272828925,
+            "spread_percent": 0.07454342154304724
+          },
+          "splash": {
+            "runs": [
+              26.82,
+              26.84
+            ],
+            "mean": 26.83,
+            "harmonic_mean": 26.829996272828925,
+            "spread_percent": 0.07454342154304724
+          },
+          "change_percent": 0.0
+        }
+      },
+      {
+        "frontier": 8192,
+        "prefill_tokens": 4096,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              436.82,
+              437.02
+            ],
+            "mean": 436.91999999999996,
+            "harmonic_mean": 436.91997711251486,
+            "spread_percent": 0.04577497024626674
+          },
+          "splash": {
+            "runs": [
+              436.72,
+              436.87
+            ],
+            "mean": 436.795,
+            "harmonic_mean": 436.79498712210534,
+            "spread_percent": 0.03434105243878187
+          },
+          "change_percent": -0.028607066958930005
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              26.68,
+              26.69
+            ],
+            "mean": 26.685000000000002,
+            "harmonic_mean": 26.684999063144087,
+            "spread_percent": 0.03747423646243793
+          },
+          "splash": {
+            "runs": [
+              26.71,
+              26.69
+            ],
+            "mean": 26.700000000000003,
+            "harmonic_mean": 26.699996254681647,
+            "spread_percent": 0.0749063670411969
+          },
+          "change_percent": 0.05620083216819616
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              37.717,
+              38.268
+            ],
+            "mean": 37.9925,
+            "harmonic_mean": 37.99050223070343,
+            "spread_percent": 1.4502862407054076
+          },
+          "splash": {
+            "runs": [
+              37.894,
+              38.252
+            ],
+            "mean": 38.073,
+            "harmonic_mean": 38.07215843248496,
+            "spread_percent": 0.9402988994825837
+          },
+          "change_percent": 0.2118839244587667
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              26.7,
+              26.72
+            ],
+            "mean": 26.71,
+            "harmonic_mean": 26.709996256083862,
+            "spread_percent": 0.07487832272556935
+          },
+          "splash": {
+            "runs": [
+              26.73,
+              26.72
+            ],
+            "mean": 26.725,
+            "harmonic_mean": 26.724999064546306,
+            "spread_percent": 0.037418147801689665
+          },
+          "change_percent": 0.056169264565242294
+        }
+      },
+      {
+        "frontier": 16384,
+        "prefill_tokens": 8192,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              433.63,
+              433.66
+            ],
+            "mean": 433.645,
+            "harmonic_mean": 433.6449994811424,
+            "spread_percent": 0.006918101211827545
+          },
+          "splash": {
+            "runs": [
+              433.5,
+              433.75
+            ],
+            "mean": 433.625,
+            "harmonic_mean": 433.6249639665609,
+            "spread_percent": 0.057653502450273855
+          },
+          "change_percent": -0.004620257262377692
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              26.56,
+              26.58
+            ],
+            "mean": 26.57,
+            "harmonic_mean": 26.56999623635679,
+            "spread_percent": 0.07527286413247863
+          },
+          "splash": {
+            "runs": [
+              26.54,
+              26.57
+            ],
+            "mean": 26.555,
+            "harmonic_mean": 26.554991527019393,
+            "spread_percent": 0.11297307475052208
+          },
+          "change_percent": -0.056472380364380736
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              38.178,
+              37.983
+            ],
+            "mean": 38.0805,
+            "harmonic_mean": 38.080250364359706,
+            "spread_percent": 0.5120731082837681
+          },
+          "splash": {
+            "runs": [
+              38.534,
+              38.51
+            ],
+            "mean": 38.522,
+            "harmonic_mean": 38.521996261876325,
+            "spread_percent": 0.06230206115985907
+          },
+          "change_percent": 1.1593860374732312
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              26.59,
+              26.6
+            ],
+            "mean": 26.595,
+            "harmonic_mean": 26.59499905997368,
+            "spread_percent": 0.0376010528294851
+          },
+          "splash": {
+            "runs": [
+              26.57,
+              26.59
+            ],
+            "mean": 26.58,
+            "harmonic_mean": 26.57999623777276,
+            "spread_percent": 0.07524454477050253
+          },
+          "change_percent": -0.0564121930107464
+        }
+      },
+      {
+        "frontier": 32639,
+        "prefill_tokens": 16255,
+        "prefill_tps": {
+          "base": {
+            "runs": [
+              426.65,
+              426.89
+            ],
+            "mean": 426.77,
+            "harmonic_mean": 426.7699662581718,
+            "spread_percent": 0.05623638025165994
+          },
+          "splash": {
+            "runs": [
+              426.77,
+              426.91
+            ],
+            "mean": 426.84000000000003,
+            "harmonic_mean": 426.8399885202886,
+            "spread_percent": 0.03279917533503027
+          },
+          "change_percent": 0.01640749529090435
+        },
+        "gen_tps": {
+          "base": {
+            "runs": [
+              26.4,
+              26.41
+            ],
+            "mean": 26.405,
+            "harmonic_mean": 26.404999053209618,
+            "spread_percent": 0.037871615224395236
+          },
+          "splash": {
+            "runs": [
+              26.37,
+              26.39
+            ],
+            "mean": 26.380000000000003,
+            "harmonic_mean": 26.37999620924943,
+            "spread_percent": 0.07581501137225008
+          },
+          "change_percent": -0.09468981199280968
+        },
+        "gen_first_ms": {
+          "base": {
+            "runs": [
+              38.084,
+              38.102
+            ],
+            "mean": 38.093,
+            "harmonic_mean": 38.09299787362507,
+            "spread_percent": 0.04725277610057904
+          },
+          "splash": {
+            "runs": [
+              38.664,
+              38.147
+            ],
+            "mean": 38.4055,
+            "harmonic_mean": 38.40376008644595,
+            "spread_percent": 1.3461613570972986
+          },
+          "change_percent": 0.8203606961908916
+        },
+        "gen_steady_tps": {
+          "base": {
+            "runs": [
+              26.42,
+              26.43
+            ],
+            "mean": 26.425,
+            "harmonic_mean": 26.424999053926207,
+            "spread_percent": 0.03784295175022899
+          },
+          "splash": {
+            "runs": [
+              26.4,
+              26.41
+            ],
+            "mean": 26.405,
+            "harmonic_mean": 26.404999053209618,
+            "spread_percent": 0.037871615224395236
+          },
+          "change_percent": -0.07568590892198523
+        }
+      }
+    ],
+    "cumulative_prefill_seconds": {
+      "base": {
+        "runs": [
+          75.05341353481785,
+          75.03264374300048
+        ],
+        "mean": 75.04302863890916,
+        "harmonic_mean": 75.04302720178616,
+        "spread_percent": 0.027677176939795302
+      },
+      "splash": {
+        "runs": [
+          75.06938941395218,
+          75.02129779539153
+        ],
+        "mean": 75.04534360467186,
+        "harmonic_mean": 75.04533589998405,
+        "spread_percent": 0.06408341444072432
+      },
+      "change_percent": 0.003084851190959803
+    },
+    "exactness": {
+      "logits": {
+        "exact": true,
+        "rows": 645,
+        "floats": 99897600,
+        "max_position": 32767,
+        "logits_sha256": "6b8700c52a925bcfc4d393416b56be9a49c58ee2d363b23844cafdf406f6933c"
+      },
+      "snapshots": [
+        {
+          "frontier": 16384,
+          "bytes": 545531292,
+          "sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+          "bit_identical": true
+        },
+        {
+          "frontier": 2048,
+          "bytes": 202327452,
+          "sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+          "bit_identical": true
+        },
+        {
+          "frontier": 32639,
+          "bytes": 934671768,
+          "sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+          "bit_identical": true
+        },
+        {
+          "frontier": 4096,
+          "bytes": 251356572,
+          "sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+          "bit_identical": true
+        },
+        {
+          "frontier": 8192,
+          "bytes": 349414812,
+          "sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+          "bit_identical": true
+        }
+      ]
+    },
+    "http": [
+      {
+        "name": "http-10240-cold",
+        "usage": {
+          "prompt_tokens": 10166,
+          "completion_tokens": 64,
+          "total_tokens": 10230,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 10166
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              22733.942833030596,
+              22713.008207967505
+            ],
+            "mean": 22723.47552049905,
+            "harmonic_mean": 22723.470698849673,
+            "spread_percent": 0.09212774271350438
+          },
+          "splash": {
+            "runs": [
+              22678.88150003273,
+              22675.557832990307
+            ],
+            "mean": 22677.21966651152,
+            "harmonic_mean": 22677.219544728923,
+            "spread_percent": 0.014656413313891605
+          },
+          "saved_ms": 46.25585398753174,
+          "change_percent": -0.20355976772040707
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              25135.411000053864,
+              25114.528083009645
+            ],
+            "mean": 25124.969541531755,
+            "harmonic_mean": 25124.96520226058,
+            "spread_percent": 0.08311618849805576
+          },
+          "splash": {
+            "runs": [
+              25079.057416005526,
+              25078.036541992333
+            ],
+            "mean": 25078.54697899893,
+            "harmonic_mean": 25078.54696860973,
+            "spread_percent": 0.004070706385213799
+          },
+          "saved_ms": 46.422562532825395,
+          "change_percent": -0.1847666420295102
+        }
+      },
+      {
+        "name": "http-10240-continued",
+        "usage": {
+          "prompt_tokens": 10240,
+          "completion_tokens": 64,
+          "total_tokens": 10304,
+          "prompt_tokens_details": {
+            "cached_tokens": 10230,
+            "cache_write_tokens": 10
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              385.78358298400417,
+              389.4789170008153
+            ],
+            "mean": 387.6312499924097,
+            "harmonic_mean": 387.62244297962627,
+            "spread_percent": 0.953311689107486
+          },
+          "splash": {
+            "runs": [
+              327.5314589845948,
+              326.41141599742696
+            ],
+            "mean": 326.9714374910109,
+            "harmonic_mean": 326.9704783122041,
+            "spread_percent": 0.3425507120017563
+          },
+          "saved_ms": 60.65981250139885,
+          "change_percent": -15.648844746801672
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              2782.9235829995014,
+              2787.347542005591
+            ],
+            "mean": 2785.1355625025462,
+            "harmonic_mean": 2785.1338057286976,
+            "spread_percent": 0.15884178370530116
+          },
+          "splash": {
+            "runs": [
+              2726.3969170162454,
+              2726.7003749730065
+            ],
+            "mean": 2726.548645994626,
+            "harmonic_mean": 2726.5486375511005,
+            "spread_percent": 0.011129746656341883
+          },
+          "saved_ms": 58.58691650792025,
+          "change_percent": -2.103557087012231
+        }
+      },
+      {
+        "name": "http-32000-cold",
+        "usage": {
+          "prompt_tokens": 31994,
+          "completion_tokens": 64,
+          "total_tokens": 32058,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 31994
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              73909.4435829902,
+              73771.13150001969
+            ],
+            "mean": 73840.28754150495,
+            "harmonic_mean": 73840.22277255249,
+            "spread_percent": 0.18731249237453326
+          },
+          "splash": {
+            "runs": [
+              73716.50466701249,
+              73711.4848329802
+            ],
+            "mean": 73713.99474999635,
+            "harmonic_mean": 73713.99466453519,
+            "spread_percent": 0.006809879249262206
+          },
+          "saved_ms": 126.29279150860384,
+          "change_percent": -0.17103507544931063
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              76327.84266700037,
+              76196.55699998839
+            ],
+            "mean": 76262.19983349438,
+            "harmonic_mean": 76262.14333130063,
+            "spread_percent": 0.17215038026521662
+          },
+          "splash": {
+            "runs": [
+              76130.89308398776,
+              76137.05762499012
+            ],
+            "mean": 76133.97535448894,
+            "harmonic_mean": 76133.97522970376,
+            "spread_percent": 0.008096964559725304
+          },
+          "saved_ms": 128.2244790054392,
+          "change_percent": -0.16813634970588298
+        }
+      },
+      {
+        "name": "http-32000-continued",
+        "usage": {
+          "prompt_tokens": 32068,
+          "completion_tokens": 64,
+          "total_tokens": 32132,
+          "prompt_tokens_details": {
+            "cached_tokens": 32058,
+            "cache_write_tokens": 10
+          }
+        },
+        "ttft_ms": {
+          "base": {
+            "runs": [
+              282.8654170152731,
+              282.2101669735275
+            ],
+            "mean": 282.5377919944003,
+            "harmonic_mean": 282.53741208715485,
+            "spread_percent": 0.2319158924263801
+          },
+          "splash": {
+            "runs": [
+              282.22566697513685,
+              281.1838339548558
+            ],
+            "mean": 281.7047504649963,
+            "harmonic_mean": 281.7037872082174,
+            "spread_percent": 0.36983154120097145
+          },
+          "saved_ms": 0.8330415294039994,
+          "change_percent": -0.29484251417258855
+        },
+        "e2e_ms": {
+          "base": {
+            "runs": [
+              2695.7674169680104,
+              2709.3864579801448
+            ],
+            "mean": 2702.5769374740776,
+            "harmonic_mean": 2702.5597799349603,
+            "spread_percent": 0.5039279667968762
+          },
+          "splash": {
+            "runs": [
+              2696.9461669796146,
+              2694.449624978006
+            ],
+            "mean": 2695.6978959788103,
+            "harmonic_mean": 2695.697317953916,
+            "spread_percent": 0.09261208406672226
+          },
+          "saved_ms": 6.879041495267302,
+          "change_percent": -0.2545363797005096
+        }
+      }
+    ],
+    "checkpoint_store_records": [
+      {
+        "run": "http-glm-1-base",
+        "arm": "base",
+        "line": "0926 18:43:49 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=333.25 MiB save=52.0 ms"
+      },
+      {
+        "run": "http-glm-1-base",
+        "arm": "base",
+        "line": "0926 18:43:57 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=380.02 MiB save=53.6 ms"
+      },
+      {
+        "run": "http-glm-1-base",
+        "arm": "base",
+        "line": "0926 18:43:59 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=381.48 MiB save=58.8 ms"
+      },
+      {
+        "run": "http-glm-1-base",
+        "arm": "base",
+        "line": "0926 18:45:10 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=847.66 MiB save=122.9 ms"
+      },
+      {
+        "run": "http-glm-1-base",
+        "arm": "base",
+        "line": "0926 18:45:19 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=879.90 MiB save=124.8 ms"
+      },
+      {
+        "run": "http-glm-2-splash",
+        "arm": "splash",
+        "line": "0926 18:45:40 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=333.25 MiB save=53.5 ms"
+      },
+      {
+        "run": "http-glm-2-splash",
+        "arm": "splash",
+        "line": "0926 18:45:48 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=380.02 MiB save=56.8 ms"
+      },
+      {
+        "run": "http-glm-2-splash",
+        "arm": "splash",
+        "line": "0926 18:45:50 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=381.48 MiB save=54.8 ms"
+      },
+      {
+        "run": "http-glm-2-splash",
+        "arm": "splash",
+        "line": "0926 18:47:01 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=847.66 MiB save=146.6 ms"
+      },
+      {
+        "run": "http-glm-2-splash",
+        "arm": "splash",
+        "line": "0926 18:47:09 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=879.90 MiB save=138.1 ms"
+      },
+      {
+        "run": "http-glm-3-splash",
+        "arm": "splash",
+        "line": "0926 18:47:31 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=333.25 MiB save=54.0 ms"
+      },
+      {
+        "run": "http-glm-3-splash",
+        "arm": "splash",
+        "line": "0926 18:47:38 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=380.02 MiB save=55.9 ms"
+      },
+      {
+        "run": "http-glm-3-splash",
+        "arm": "splash",
+        "line": "0926 18:47:41 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=381.48 MiB save=54.3 ms"
+      },
+      {
+        "run": "http-glm-3-splash",
+        "arm": "splash",
+        "line": "0926 18:48:51 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=847.66 MiB save=142.8 ms"
+      },
+      {
+        "run": "http-glm-3-splash",
+        "arm": "splash",
+        "line": "0926 18:49:00 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=879.90 MiB save=137.2 ms"
+      },
+      {
+        "run": "http-glm-4-base",
+        "arm": "base",
+        "line": "0926 18:49:22 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=333.25 MiB save=48.5 ms"
+      },
+      {
+        "run": "http-glm-4-base",
+        "arm": "base",
+        "line": "0926 18:49:29 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=380.02 MiB save=56.7 ms"
+      },
+      {
+        "run": "http-glm-4-base",
+        "arm": "base",
+        "line": "0926 18:49:32 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=evict key=token-text size=381.48 MiB save=53.6 ms"
+      },
+      {
+        "run": "http-glm-4-base",
+        "arm": "base",
+        "line": "0926 18:50:42 ds4-server: kv cache stored tokens=30720 trimmed=1274 reason=cold key=token-text size=847.66 MiB save=117.3 ms"
+      },
+      {
+        "run": "http-glm-4-base",
+        "arm": "base",
+        "line": "0926 18:50:51 ds4-server: kv cache stored tokens=32132 trimmed=0 reason=shutdown key=token-text size=879.90 MiB save=120.9 ms"
+      }
+    ],
+    "http_exactness": {
+      "requests": 16,
+      "output_usage_finish_identical": true,
+      "checkpoint_images_identical_except_header_timestamps": true,
+      "images_per_round": [
+        {
+          "name": "31ac67944c242f06354cf17954618b614594a5cf.kv",
+          "bytes": 400009592,
+          "masked_sha256": "d4c4cda76ab9769df43ed569bab64191b624e0ebf0a4f09bb473c0179bba6f94"
+        },
+        {
+          "name": "3f5bf94818e06ba920489bddec3e0547e3ede93c.kv",
+          "bytes": 398477156,
+          "masked_sha256": "d019f60a728dd232e5492dbc929f3400244f8be882e26de6dfd03568fa6cd46a"
+        },
+        {
+          "name": "a6bf52d81c9298aa8fdaa8600ba25a4422b212db.kv",
+          "bytes": 349441129,
+          "masked_sha256": "a735ffc4b460f0c116b6eee4659a5c599e384e8fb67ae3260761c6e7c778dea1"
+        },
+        {
+          "name": "aa11a5550c60aca1f92808d7fb73fc89994336ea.kv",
+          "bytes": 922641037,
+          "masked_sha256": "2877cf2156c603a087dc9620bb79776f14c201ec1640a7e0ffdf8d554c796e49"
+        },
+        {
+          "name": "c93793eeff8407b63ed477d0696844c49e895580.kv",
+          "bytes": 888833090,
+          "masked_sha256": "6c26ad7eab0f668f1ea6d8c16c100ec828b889363570fb2f6763e2d41fc06aef"
+        }
+      ]
+    }
+  }
+}

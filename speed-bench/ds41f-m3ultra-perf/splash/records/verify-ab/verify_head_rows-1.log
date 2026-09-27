@@ -1,0 +1,14 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 6.127 ms, residency requested in 2963.325 ms, warmup 7.058 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.03 GiB (raw 0.01 + compressed 0.02) + buffers 1.76 GiB + resident model 294.14 GiB = 295.93 GiB planned
+ds4: memory detail: ctx=4096 prefill_cap=2048 raw_kv_rows=128 compressed_kv_rows=4097 backend=metal
+ds4: V4.1 static context buffers 1832.24 MiB (ctx=4096), Engram disk-only
+one-token decode: 33.09 ms
+verify_ab env=DS4_METAL_DISABLE_V41_VERIFY_HEAD_ROWS rows=2 control_ms=51.426500 rollback_ms=51.895625 saved_percent=0.903978 exact_floats=5171200
+verify_ab env=DS4_METAL_DISABLE_V41_VERIFY_HEAD_ROWS rows=4 control_ms=78.936750 rollback_ms=81.620625 saved_percent=3.288231 exact_floats=10342400
+verify_ab env=DS4_METAL_DISABLE_V41_VERIFY_HEAD_ROWS rows=6 control_ms=111.801750 rollback_ms=115.848250 saved_percent=3.492931 exact_floats=15513600
+verify_ab env=DS4_METAL_DISABLE_V41_VERIFY_HEAD_ROWS rows=8 control_ms=154.105500 rollback_ms=158.709375 saved_percent=2.900821 exact_floats=20684800

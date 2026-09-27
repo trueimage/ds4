@@ -1,0 +1,42 @@
+[
+  {
+    "ctx_tokens": 512,
+    "prefill_tokens": 512,
+    "original_prefill_tps": 246.54914175623605,
+    "final_prefill_tps": 276.95920241190066,
+    "prefill_tps_change_percent": 12.334279664916114,
+    "original_gen_tps": 18.899470899470902,
+    "final_gen_tps": 24.267424804285127,
+    "gen_tps_change_percent": 28.402667637454893
+  },
+  {
+    "ctx_tokens": 2048,
+    "prefill_tokens": 1536,
+    "original_prefill_tps": 318.0987915749765,
+    "final_prefill_tps": 335.98996398702343,
+    "prefill_tps_change_percent": 5.624407538131115,
+    "original_gen_tps": 18.93974128827878,
+    "final_gen_tps": 24.01989592006661,
+    "gen_tps_change_percent": 26.822724526505446
+  },
+  {
+    "ctx_tokens": 8192,
+    "prefill_tokens": 6144,
+    "original_prefill_tps": 339.5449940361366,
+    "final_prefill_tps": 355.169918630515,
+    "prefill_tps_change_percent": 4.601724327797174,
+    "original_gen_tps": 18.68935259497057,
+    "final_gen_tps": 23.799983193277313,
+    "gen_tps_change_percent": 27.345145169351937
+  },
+  {
+    "ctx_tokens": 32703,
+    "prefill_tokens": 24511,
+    "original_prefill_tps": 648.4799777942264,
+    "final_prefill_tps": 662.11999939588,
+    "prefill_tps_change_percent": 2.1033836153352636,
+    "original_gen_tps": 18.309077007099948,
+    "final_gen_tps": 23.419846285226303,
+    "gen_tps_change_percent": 27.91385538519766
+  }
+]

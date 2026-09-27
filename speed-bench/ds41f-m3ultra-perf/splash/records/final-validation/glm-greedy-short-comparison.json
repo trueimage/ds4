@@ -1,0 +1,18 @@
+{
+  "exact": true,
+  "sha256": "058835483cfbefaef8bd5a329a894e8d050cecf7582f2e4e2ead1612c0602f67",
+  "argv": [
+    "./ds4",
+    "-m",
+    "/Users/jw/ds4/gguf/GLM-5.3-Flash-Q4_K.gguf",
+    "--prompt-file",
+    "/tmp/ds4-splash-20260926/prompts-glm/short.txt",
+    "--temp",
+    "0",
+    "-n",
+    "128",
+    "-c",
+    "32768",
+    "--raw-prompt"
+  ]
+}

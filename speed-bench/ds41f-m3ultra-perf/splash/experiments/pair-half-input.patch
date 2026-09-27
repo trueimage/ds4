@@ -1,0 +1,205 @@
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -783,6 +783,8 @@
+ static NSUInteger    g_kda_conv_halo_capacity;
+ static id<MTLBuffer> g_moe_down_scratch_buffer;
+ static id<MTLBuffer> g_moe_id_map_buffer;
++static id<MTLBuffer> g_moe_half_input_buffer;
++static NSUInteger g_moe_half_input_bytes;
+ static id<MTLBuffer> g_moe_packed_rhs_buffer;
+ static NSUInteger g_moe_packed_rhs_bytes;
+ static id<MTLBuffer> g_moe_q4_gate_slots_buffer;
+@@ -4508,7 +4510,7 @@
+         (uint64_t)g_raw_store_round_bytes +
+         (uint64_t)g_moe_gate_scratch_bytes +
+         (uint64_t)g_moe_down_scratch_bytes +
+-        (uint64_t)g_moe_id_map_bytes + (uint64_t)g_moe_packed_rhs_bytes +
++        (uint64_t)g_moe_id_map_bytes + (uint64_t)g_moe_half_input_bytes + (uint64_t)g_moe_packed_rhs_bytes +
+         (uint64_t)g_moe_q4_gate_slots_bytes +
+         (uint64_t)g_moe_q4_up_slots_bytes +
+         (uint64_t)g_moe_q4_down_slots_bytes;
+@@ -4796,7 +4798,7 @@
+                           (uint64_t)g_indexed_topk_bytes),
+             ds4_gpu_mib((uint64_t)g_moe_gate_scratch_bytes +
+                           (uint64_t)g_moe_down_scratch_bytes +
+-                          (uint64_t)g_moe_id_map_bytes + (uint64_t)g_moe_packed_rhs_bytes +
++                          (uint64_t)g_moe_id_map_bytes + (uint64_t)g_moe_half_input_bytes + (uint64_t)g_moe_packed_rhs_bytes +
+                           (uint64_t)g_moe_q4_gate_slots_bytes +
+                           (uint64_t)g_moe_q4_up_slots_bytes +
+                           (uint64_t)g_moe_q4_down_slots_bytes),
+@@ -12170,6 +12172,8 @@
+         g_moe_gate_scratch_buffer = nil;
+         g_moe_down_scratch_buffer = nil;
+         g_moe_id_map_buffer = nil;
++        g_moe_half_input_buffer = nil;
++        g_moe_half_input_bytes = 0;
+         g_moe_packed_rhs_buffer = nil;
+         g_moe_packed_rhs_bytes = 0;
+         g_moe_q4_gate_slots_buffer = nil;
+@@ -44579,6 +44583,12 @@
+              (g_test_flags & DS4_GPU_TEST_V41_Q4_TAIL_CULL)) &&
+             ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_Q4_TAIL_CULL,
+                                          "DS4_METAL_DISABLE_V41_Q4_TAIL_CULL");
++        bool pair_half_input = use_mm_id_pair_swiglu &&
++            gate_type == DS4_METAL_TENSOR_Q4_K &&
++            ((n_total_expert == 384u && expert_in_dim == 5120u && expert_mid_dim == 2304u) ||
++             (g_test_flags & DS4_GPU_TEST_V41_PAIR_HALF)) &&
++            ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_PAIR_HALF,
++                "DS4_METAL_DISABLE_V41_PAIR_HALF_INPUT");
+         if (use_v41_q4_tail_cull && (g_test_flags & DS4_GPU_TEST_V41_Q4_TAIL_CULL))
+             g_test_v41_q4_tail_dispatches++;
+         /*
+@@ -44801,7 +44811,10 @@
+                 pair_swiglu_mm_pipeline =
+                     ds4_gpu_get_pipeline(
+                         gate_type == DS4_METAL_TENSOR_Q4_K ?
+-                            (use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
++                            (pair_half_input ? (use_v41_q4_tail_cull ?
++                                "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull_h" :
++                                "kernel_mul_mm_id_q4_K_pair_swiglu_f16_h") :
++                             use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
+                              "kernel_mul_mm_id_q4_K_pair_swiglu_f16") :
+                         gate_type == DS4_METAL_TENSOR_MXFP4 ?
+                             (use_mxfp4_mm_id_pair_swiglu_compact_tile ?
+@@ -44816,6 +44829,12 @@
+                                     "kernel_mul_mm_id_mxfp4_pair_swiglu_f16_half_scale" :
+                                     "kernel_mul_mm_id_mxfp4_pair_swiglu_f16")) :
+                             "kernel_mul_mm_id_iq2_xxs_pair_swiglu_f16");
++                if (pair_half_input && !pair_swiglu_mm_pipeline) {
++                    pair_half_input = false;
++                    pair_swiglu_mm_pipeline = ds4_gpu_get_pipeline(use_v41_q4_tail_cull ?
++                        "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
++                        "kernel_mul_mm_id_q4_K_pair_swiglu_f16");
++                }
+             }
+             if (!map_pipeline || !gate_mm_pipeline || !up_mm_pipeline || !down_mm_pipeline ||
+                 (use_mm_id_pair_swiglu && !pair_swiglu_mm_pipeline)) {
+@@ -45198,17 +45217,33 @@
+                     .write_clamped = 0,
+                     .clamp_value = clamp,
+                 };
++                ds4_gpu_mul_mm_id_args pair_args = gate_mm_args;
++                id<MTLBuffer> pair_x = xbuf;
++                NSUInteger pair_offset = ds4_gpu_tensor_offset(x);
++                if (pair_half_input) {
++                    const uint64_t elements = (uint64_t)n_tokens * expert_in_dim;
++                    ok = elements <= UINT32_MAX &&
++                        ds4_gpu_ensure_scratch_buffer(&g_moe_half_input_buffer,
++                            &g_moe_half_input_bytes, elements*sizeof(uint16_t), "ds4_moe_half_input") &&
++                        ds4_gpu_encode_cpy_f32_f16_1d(cb,xbuf,pair_offset,
++                            g_moe_half_input_buffer,0,(uint32_t)elements);
++                    pair_args.nb10 /= 2u; pair_args.nb11 /= 2u;
++                    pair_args.nb12 /= 2u; pair_args.nb13 /= 2u;
++                    pair_x = g_moe_half_input_buffer; pair_offset = 0;
++                    if (ok && (g_test_flags & DS4_GPU_TEST_V41_PAIR_HALF))
++                        g_test_v41_q4_tail_dispatches |= 4u;
++                }
+                 ok = ok && ds4_gpu_encode_mul_mm_id_iq2_pair_swiglu_f16(cb,
+                                                                    pair_swiglu_mm_pipeline,
+                                                                    use_mxfp4_mm_id_pair_swiglu_compact_tile,
+-                                                                   &gate_mm_args,
++                                                                   &pair_args,
+                                                                    &act_args,
+                                                                    gate_buf,
+                                                                    (NSUInteger)gate_inner,
+                                                                    up_buf,
+                                                                    (NSUInteger)up_inner,
+-                                                                   xbuf,
+-                                                                   ds4_gpu_tensor_offset(x),
++                                                                   pair_x,
++                                                                   pair_offset,
+                                                                    midbuf,
+                                                                    ds4_gpu_tensor_offset(mid),
+                                                                    weightsbuf,
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -269,6 +269,7 @@
+     DS4_GPU_TEST_V41_FUSIONS = 1u << 10,
+     /* One weight read for all rows of a small V4.1 batch. */
+     DS4_GPU_TEST_V41_SHARED_ROWS = 1u << 11,
++    DS4_GPU_TEST_V41_PAIR_HALF = 1u << 12,
+ };
+ void ds4_gpu_test_set_flags(uint32_t flags);
+ /* Count V4.1 Q4 tail-cull calls only while its test flag is enabled. */
+--- a/metal/moe.metal
++++ b/metal/moe.metal
+@@ -8374,7 +8374,7 @@
+ // each output keeps the exact MMA accumulation order of the separate GEMMs,
+ // and the epilogue matches kernel_dsv4_moe_swiglu_weight_f16, so the fused
+ // result is bit-identical to the unfused path.
+-template<typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread half4x4 &), bool CULL_TAIL_SIMDGROUPS = false>
++template<typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread half4x4 &), bool CULL_TAIL_SIMDGROUPS = false, typename TY = float>
+ kernel void kernel_mul_mm_id_pair_swiglu_f16_impl(
+         constant ds4_metal_args_mul_mm_id & args,
+         constant ds4_metal_dsv4_moe_swiglu_weight_args & act,
+@@ -8451,7 +8451,7 @@
+ 
+     const short iy = 8*(tiitg % NL1);
+ 
+-    device const float * y = (device const float *)(src1
++    device const TY * y = (device const TY *)(src1
+         + args.nb13*i13
+         + args.nb12*i12
+         + args.nb11*i11
+@@ -8484,8 +8484,11 @@
+             const short sy_b = (tiitg/NL1)/8;
+             const short ly_b = (tiitg/NL1)%8;
+             const short ib_b = 4*sx_b + sy_b;
+-            *(threadgroup half2x4 *)(sb + 64*ib_b + 8*ly_b) =
+-                (half2x4)(*((device float2x4 *) y));
++            if (sizeof(TY) == sizeof(half))
++                *(threadgroup half2x4 *)(sb + 64*ib_b + 8*ly_b) = *((device half2x4 *) y);
++            else
++                *(threadgroup half2x4 *)(sb + 64*ib_b + 8*ly_b) =
++                    (half2x4)(*((device float2x4 *) y));
+         }
+ 
+         FOR_UNROLL (short i = 0; i < 16; i++) {
+@@ -8817,6 +8820,8 @@
+ template [[host_name("kernel_mul_mm_id_iq2_xxs_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_iq2 kernel_mul_mm_id_pair_swiglu_f16_impl<block_iq2_xxs, QK_NL, dequantize_iq2_xxs>;
+ template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_q4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K>;
+ template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull")]] kernel mul_mm_id_pair_swiglu_f16_q4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true>;
++template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_h")]] kernel mul_mm_id_pair_swiglu_f16_q4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, false, half>;
++template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull_h")]] kernel mul_mm_id_pair_swiglu_f16_q4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true, half>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16_half_scale")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4_half_scale>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16_tail_cull_half_scale")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4_half_scale, true>;
+--- a/tests/test_deepseek41_q4_tail.c
++++ b/tests/test_deepseek41_q4_tail.c
+@@ -34,7 +34,7 @@
+         }
+     }
+     CHECK(ds4_gpu_init() && ds4_gpu_set_model_map(model, bytes));
+-    ds4_gpu_test_set_flags(DS4_GPU_TEST_V41_Q4_TAIL_CULL);
++    ds4_gpu_test_set_flags(DS4_GPU_TEST_V41_Q4_TAIL_CULL|DS4_GPU_TEST_V41_PAIR_HALF);
+     ds4_gpu_set_quality(false);
+     ds4_gpu_set_ssd_streaming(false);
+     ds4_gpu_tensor *x = ds4_gpu_tensor_alloc_managed(N * D * 4ull);
+@@ -51,7 +51,7 @@
+     CHECK(input && route_weights && route_ids);
+     for (unsigned i = 0; i < N * D; i++) input[i] = ((int)(random_u32() % 101) - 50) / 256.0f;
+     const unsigned sizes[] = {32, 33, 47, 48, 49, 63, 64, 65, 127, 128, 129, 511, 512, 513};
+-    const unsigned order[] = {0, 1, 1, 0};
++    const unsigned order[] = {0, 1, 5, 4, 5, 0};
+     void *ref_mid = malloc(N * K * H * 2ull), *ref_out = malloc(N * D * 4ull);
+     CHECK(ref_mid && ref_out);
+     for (unsigned pattern = 0; pattern < 4; pattern++) {
+@@ -70,7 +70,9 @@
+         for (unsigned shape = 0; shape < sizeof(sizes) / sizeof(*sizes); shape++) {
+             const uint32_t n = sizes[shape];
+             const size_t mid_bytes = n * K * H * 2ull, out_bytes = n * D * 4ull;
+-            for (unsigned pass = 0; pass < 4; pass++) {
++            for (unsigned pass = 0; pass < 6; pass++) {
++                if (order[pass]&4) unsetenv("DS4_METAL_DISABLE_V41_PAIR_HALF_INPUT");
++                else setenv("DS4_METAL_DISABLE_V41_PAIR_HALF_INPUT","1",1);
+                 if (order[pass]&1) CHECK(unsetenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL") == 0);
+                 else CHECK(setenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL", "1", 1) == 0);
+                 CHECK(ds4_gpu_test_v41_q4_tail_take_dispatches() == 0);
+@@ -100,6 +102,7 @@
+     ds4_gpu_test_set_flags(0);
+     ds4_gpu_set_ssd_streaming(false);
+     unsetenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL");
++    unsetenv("DS4_METAL_DISABLE_V41_PAIR_HALF_INPUT");
+     ds4_gpu_cleanup(); free(ref_mid); free(ref_out); free(model);
+     return 0;
+ }

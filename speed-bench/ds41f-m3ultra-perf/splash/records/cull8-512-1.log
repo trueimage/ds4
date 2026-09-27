@@ -1,0 +1,48 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: warming mapped tensor pages: 294.14 GiB
+ds4: warmed tensor pages in 18.941s (checksum=2250200447)
+ds4: Metal model views created in 5.933 ms, residency requested in 2401.070 ms, warmup 7.532 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 294.14 GiB = 302.03 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+metal-prefill-variant-bench: model=/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf prompt=speed-bench/promessi_sposi.txt prefix=512 initial=0 warmup=32 ctx=32768 repeats=4 candidate_env=DS4_METAL_DISABLE_V41_TAIL_CULL8 candidate_value=1 control_value=<unset> prefill_chunk=512
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=1 repeat=1 pattern=ABBA slot=1 variant=control tokens=512 seconds=1.829998 tokens_per_second=279.7817 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=2 repeat=1 pattern=ABBA slot=2 variant=candidate tokens=512 seconds=1.763800 tokens_per_second=290.2823 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=3 repeat=1 pattern=ABBA slot=3 variant=candidate tokens=512 seconds=1.766871 tokens_per_second=289.7778 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=4 repeat=1 pattern=ABBA slot=4 variant=control tokens=512 seconds=1.826582 tokens_per_second=280.3050 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=5 repeat=2 pattern=BAAB slot=1 variant=candidate tokens=512 seconds=1.767140 tokens_per_second=289.7337 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=6 repeat=2 pattern=BAAB slot=2 variant=control tokens=512 seconds=1.822487 tokens_per_second=280.9348 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=7 repeat=2 pattern=BAAB slot=3 variant=control tokens=512 seconds=1.829412 tokens_per_second=279.8713 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=8 repeat=2 pattern=BAAB slot=4 variant=candidate tokens=512 seconds=1.763512 tokens_per_second=290.3298 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=9 repeat=3 pattern=ABBA slot=1 variant=control tokens=512 seconds=1.828318 tokens_per_second=280.0388 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=10 repeat=3 pattern=ABBA slot=2 variant=candidate tokens=512 seconds=1.766841 tokens_per_second=289.7827 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=11 repeat=3 pattern=ABBA slot=3 variant=candidate tokens=512 seconds=1.761050 tokens_per_second=290.7356 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=12 repeat=3 pattern=ABBA slot=4 variant=control tokens=512 seconds=1.825524 tokens_per_second=280.4674 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=13 repeat=4 pattern=BAAB slot=1 variant=candidate tokens=512 seconds=1.765185 tokens_per_second=290.0546 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=14 repeat=4 pattern=BAAB slot=2 variant=control tokens=512 seconds=1.833306 tokens_per_second=279.2769 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=15 repeat=4 pattern=BAAB slot=3 variant=control tokens=512 seconds=1.828260 tokens_per_second=280.0477 exact=yes
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+run=16 repeat=4 pattern=BAAB slot=4 variant=candidate tokens=512 seconds=1.767591 tokens_per_second=289.6598 exact=yes
+aggregate variant=control runs=8 tokens=4096 seconds=14.623887 tokens_per_second=280.0897
+aggregate variant=candidate runs=8 tokens=4096 seconds=14.121990 tokens_per_second=290.0441
+candidate_delta_percent=3.5540 exact_runs=16 exact_floats=2068480 vocab=129280

@@ -1,0 +1,57 @@
+{
+ "frontiers": [
+  2044,
+  4088,
+  8176,
+  16352,
+  32704,
+  65408,
+  130816
+ ],
+ "gen_tokens_per_frontier": 64,
+ "ctx_alloc": 131072,
+ "rows": 455,
+ "floats": 58822400,
+ "max_position": 130880,
+ "nonfinite_logits": 0,
+ "arms": {
+  "main": "origin/main 8db1d1d",
+  "branch": "1d60922",
+  "rollback": "1d60922 with all eleven V4.1 rollback controls set",
+  "branch2": "1d60922 repeated",
+  "final": "this commit"
+ },
+ "all_logit_files_identical": true,
+ "all_snapshots_identical": true,
+ "logits_file_sha256": "42f780d6e874a528953fda9d40d2906afcad856431d3b82489e0e4ecceee11eb",
+ "snapshots": {
+  "130816.bin": {
+   "bytes": 848748596,
+   "sha256": "f062a0d6796ce6c858122686dcc965930e9132849c7afb6a3afc4153aa980e56"
+  },
+  "16352.bin": {
+   "bytes": 115721140,
+   "sha256": "356b74de6891e9c421a2c56d267294188bb745950b70b7458733c019dd65effb"
+  },
+  "2044.bin": {
+   "bytes": 24092708,
+   "sha256": "bda63b7edc338cfbad8ef23e01e306c61dfc13525928ad09d498db6974242f6f"
+  },
+  "32704.bin": {
+   "bytes": 220439348,
+   "sha256": "30f88388197c2a227055d2d5b6683e7b8c0d683c621eeb796e5d308316ae1093"
+  },
+  "4088.bin": {
+   "bytes": 37182484,
+   "sha256": "cfc627b4d196bec9cf0364e12c433888c1cd933a2adcaac25a447bea19df351a"
+  },
+  "65408.bin": {
+   "bytes": 429875764,
+   "sha256": "6c4dac32936a666371872c10a344ac92c5b54cac41c317621cbf7becd0b31bce"
+  },
+  "8176.bin": {
+   "bytes": 63362036,
+   "sha256": "9c9915d24adcbe578b4105d9bdef3f6a030a0f92fb36e82810278c8862c8a23d"
+  }
+ }
+}

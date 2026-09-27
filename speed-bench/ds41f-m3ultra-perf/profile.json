@@ -1,0 +1,14 @@
+{
+  "diagnostic_only": true,
+  "synchronization_after_each_stage": true,
+  "prefix": 8192,
+  "stage_milliseconds": {
+    "hc/engram": 466.52299999999997,
+    "attention projections": 918.6449999999998,
+    "attention core/index": 3917.299,
+    "attention output": 1306.998,
+    "hc/ffn norm": 327.2910000000001,
+    "shared/routed ffn": 5452.806,
+    "hc expand": 184.00400000000002
+  }
+}

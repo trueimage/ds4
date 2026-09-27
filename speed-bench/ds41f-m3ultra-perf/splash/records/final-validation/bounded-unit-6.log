@@ -1,0 +1,13 @@
+ok parse 40,12 returns 0
+ok parse 40 → 1 device
+ok parse 0 → skip_cuda=true
+ok parse auto rejects on CPU/Metal build
+ok parse 40,12,40 with devs 0,2 errors on count
+ok parse abc errors
+ok parse 40,12 + devices 0,2
+ok parse 0 + devices errors
+ok parse 40, (trailing comma) errors
+ok parse huge vram rejected (overflow guard)
+ok parse huge device index rejected
+ok format_gpu_layout_line
+test_gpu_args: all tests passed

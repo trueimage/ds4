@@ -1,0 +1,63 @@
+{
+ "harness": "speed-bench/metal_decode_schedule_bench --prefix-tokens 8192 --ctx 32768 --warmup 16 --tokens 256 --include-selection --candidate-env NAME",
+ "note": "control is the optimized default; candidate sets the rollback. Each run compared 273 full vocabulary rows (35,293,440 floats) and 272 greedy selections, all exact.",
+ "trials": [
+  {
+   "id": "E",
+   "rollback": "DS4_DISABLE_V41_ENGRAM_STEP_READERS",
+   "engram_tables": "cold",
+   "original_tps": 22.756,
+   "new_tps": 25.7025
+  },
+  {
+   "id": "E",
+   "rollback": "DS4_DISABLE_V41_ENGRAM_STEP_READERS",
+   "engram_tables": "warm",
+   "original_tps": 25.6687,
+   "new_tps": 25.8332
+  },
+  {
+   "id": "P",
+   "rollback": "DS4_METAL_DISABLE_V41_DECODE_PIPELINE",
+   "engram_tables": "warm",
+   "original_tps": 25.83,
+   "new_tps": 27.5617
+  },
+  {
+   "id": "O",
+   "rollback": "DS4_DISABLE_V41_ENGRAM_STEP_OVERLAP",
+   "engram_tables": "warm",
+   "original_tps": 27.5548,
+   "new_tps": 27.7264
+  },
+  {
+   "id": "O",
+   "rollback": "DS4_DISABLE_V41_ENGRAM_STEP_OVERLAP",
+   "engram_tables": "warm",
+   "original_tps": 27.4996,
+   "new_tps": 27.7022
+  },
+  {
+   "id": "C",
+   "rollback": "DS4_METAL_DISABLE_V41_COMPUTE_COPY",
+   "engram_tables": "warm",
+   "original_tps": 27.6742,
+   "new_tps": 28.459,
+   "note": "measured before the 64 KiB cap; decode has no larger copy"
+  },
+  {
+   "id": "B",
+   "rollback": "DS4_METAL_DISABLE_V41_MATVEC_BF16",
+   "engram_tables": "warm",
+   "original_tps": 28.4562,
+   "new_tps": 28.6892
+  },
+  {
+   "id": "B",
+   "rollback": "DS4_METAL_DISABLE_V41_MATVEC_BF16",
+   "engram_tables": "warm",
+   "original_tps": 28.3771,
+   "new_tps": 28.5901
+  }
+ ]
+}

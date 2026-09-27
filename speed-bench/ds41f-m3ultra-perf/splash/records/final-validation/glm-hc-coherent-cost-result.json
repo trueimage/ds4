@@ -1,0 +1,12 @@
+{
+  "baseline_tps": 26.860000000000003,
+  "candidate_tps": 26.84,
+  "cost_percent": 0.07451564828615531,
+  "runs": [
+    26.86,
+    26.84,
+    26.84,
+    26.86
+  ],
+  "passes_cost_budget": true
+}

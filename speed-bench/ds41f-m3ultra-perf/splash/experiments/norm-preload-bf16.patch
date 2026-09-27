@@ -1,0 +1,327 @@
+--- a/metal/norm.metal
++++ b/metal/norm.metal
+@@ -83,6 +83,74 @@
+ // Host-visible RMSNorm variants: plain norm and norm multiplied by weight.
+ template [[host_name("kernel_rms_norm_f32_4")]]     kernel kernel_rms_norm_fuse_t kernel_rms_norm_fuse_impl<float4, 1>;
+ template [[host_name("kernel_rms_norm_mul_f32_4")]] kernel kernel_rms_norm_fuse_t kernel_rms_norm_fuse_impl<float4, 2>;
++
++// Preserve the reference reduction and runtime division; only issue weight
++// loads earlier and optionally materialize its BF16 boundary at the store.
++template <bool PRELOAD, bool BF16>
++kernel void kernel_dsv41_rms_norm_impl(
++        constant ds4_metal_args_norm & args,
++        device const char * src0,
++        device const char * src1_0,
++        device const char * src1_1,
++        device       char * dst,
++        threadgroup float * shmem_f32 [[threadgroup(0)]],
++        uint3   tgpig[[threadgroup_position_in_grid]],
++        ushort3 tpitg[[thread_position_in_threadgroup]],
++        ushort  sgitg[[simdgroup_index_in_threadgroup]],
++        ushort  tiisg[[thread_index_in_simdgroup]],
++        ushort3   ntg[[threads_per_threadgroup]]) {
++    if (sgitg == 0) {
++        shmem_f32[tiisg] = 0.0f;
++    }
++
++    const int i01 = tgpig.x;
++    const int i02 = tgpig.y;
++    const int i03 = tgpig.z;
++
++    device const float4 * x = (device const float4 *) (src0 + i03*args.nbf3[0] + i02*args.nbf2[0] + i01*args.nbf1[0]);
++
++    device const float4 * f0 = (device const float4 *) (src1_0 + (i03%args.nef3[1])*args.nbf3[1] + (i02%args.nef2[1])*args.nbf2[1] + (i01%args.nef1[1])*args.nbf1[1]);
++
++    float4 wv[2];
++    if (PRELOAD) for (uint k = 0; k < 2u; k++) {
++        const uint i = tpitg.x + k * ntg.x;
++        if (i < uint(args.ne00_t)) wv[k] = f0[i];
++    }
++    float sumf = 0.0f;
++
++    // parallel sum
++    for (int i00 = tpitg.x; i00 < args.ne00_t; i00 += ntg.x) {
++        sumf += dot(x[i00], x[i00]);
++    }
++    sumf = simd_sum(sumf);
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    if (tiisg == 0) {
++        shmem_f32[sgitg] = sumf;
++    }
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    sumf = shmem_f32[tiisg];
++    sumf = simd_sum(sumf);
++
++    const float mean  = sumf/args.ne00;
++    const float scale = 1.0f/sqrt(mean + args.eps);
++
++    device float4 * y = (device float4 *) (dst + i03*args.nb3 + i02*args.nb2 + i01*args.nb1);
++    for (int i00 = tpitg.x; i00 < args.ne00_t; i00 += ntg.x) {
++        const float4 w = PRELOAD ? wv[(i00 - tpitg.x) / ntg.x] : f0[i00];
++        volatile float4 value = (x[i00] * scale) * w;
++        y[i00] = BF16 ? float4(dsv41_bf16(value.x), dsv41_bf16(value.y),
++                                dsv41_bf16(value.z), dsv41_bf16(value.w)) : float4(value);
++    }
++}
++
++typedef decltype(kernel_dsv41_rms_norm_impl<true, false>) kernel_dsv41_rms_norm_t;
++template [[host_name("kernel_rms_norm_mul_f32_4_wpre")]] kernel kernel_dsv41_rms_norm_t kernel_dsv41_rms_norm_impl<true, false>;
++template [[host_name("kernel_dsv41_rms_norm_mul_bf16")]] kernel kernel_dsv41_rms_norm_t kernel_dsv41_rms_norm_impl<false, true>;
++template [[host_name("kernel_dsv41_rms_norm_mul_bf16_wpre")]] kernel kernel_dsv41_rms_norm_t kernel_dsv41_rms_norm_impl<true, true>;
+ 
+ kernel void kernel_add_rms_norm_mul_f32_4(
+         constant ds4_metal_args_norm & args,
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -426,3 +426,42 @@
+                                dsv41_bf16(v.z), dsv41_bf16(v.w));
+     }
+ }
++
++// Weight prefetch twin; the original remains the executable rollback.
++kernel void kernel_dsv41_hc_norm_wpre(
++        constant float &eps, device const float *residual,
++        device const float *pre, device const float4 *weight,
++        device float4 *collapsed, device float4 *normalized,
++        constant int32_t &width,
++        uint tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]) {
++    threadgroup float4 values[1280];
++    threadgroup float sums[32];
++    const float4 w0 = weight[tid];
++    const float4 w1 = tid < 256u ? weight[tid + 1024u] : float4(0.0f);
++    float sum = 0.0f;
++    for (uint i = tid; i < 1280u; i += 1024u) {
++        float4 v;
++        for (uint c = 0; c < 4; c++) {
++            volatile float acc = 0.0f;
++            for (uint h = 0; h < 4; h++) acc += residual[h * 5120u + i * 4u + c] * pre[h];
++            v[c] = dsv41_bf16(acc);
++        }
++        values[i] = v;
++        collapsed[i] = v;
++        sum += dot(v, v);
++    }
++    sum = simd_sum(sum);
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (lane == 0) sums[sg] = sum;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    sum = simd_sum(sums[lane]);
++    const float mean = sum / width;
++    const float scale = 1.0f / sqrt(mean + eps);
++    for (uint i = tid; i < 1280u; i += 1024u) {
++        volatile float4 v = (values[i] * scale) * (i == tid ? w0 : w1);
++        normalized[i] = float4(dsv41_bf16(v.x), dsv41_bf16(v.y),
++                               dsv41_bf16(v.z), dsv41_bf16(v.w));
++    }
++}
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -22778,7 +22778,7 @@
+     return ds4_gpu_rms_norm_weight_rows_tensor(out, x, model_map, model_size, weight_offset, n, 1, eps);
+ }
+ 
+-int ds4_gpu_rms_norm_weight_rows_tensor(
++static int ds4_gpu_rms_norm_weight_rows_impl(
+         ds4_gpu_tensor       *out,
+         const ds4_gpu_tensor *x,
+         const void             *model_map,
+@@ -22786,7 +22786,7 @@
+         uint64_t                weight_offset,
+         uint32_t                n,
+         uint32_t                rows,
+-        float                   eps) {
++        float                   eps, bool bf16) {
+     if (!g_initialized && !ds4_gpu_init()) return 0;
+     if (n == 0 || rows == 0 || (n & 3u) != 0) return 0;
+ 
+@@ -22815,12 +22815,26 @@
+         if (!wbuf) return 0;
+ 
+         ds4_gpu_rms_norm_args args = ds4_gpu_make_rms_norm_args(n, rows, eps);
++        const uint32_t nth = ds4_gpu_rms_norm_threads(n);
++        const bool preload = (n / 4u + nth - 1u) / nth <= 2u &&
++            ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                "DS4_METAL_DISABLE_V41_NORM_PRELOAD");
++        id<MTLComputePipelineState> pipeline = g_rms_norm_pipeline;
++        if (bf16 || preload) {
++            pipeline = ds4_gpu_get_pipeline(bf16 ? (preload ?
++                "kernel_dsv41_rms_norm_mul_bf16_wpre" : "kernel_dsv41_rms_norm_mul_bf16") :
++                "kernel_rms_norm_mul_f32_4_wpre");
++            if (!pipeline || pipeline.maxTotalThreadsPerThreadgroup < nth) {
++                if (bf16) return -1; /* Optional pipeline unsupported. */
++                pipeline = g_rms_norm_pipeline;
++            }
++        }
+         int owned = 0;
+         id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+         if (!cb) return 0;
+ 
+         id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
+-        [enc setComputePipelineState:g_rms_norm_pipeline];
++        [enc setComputePipelineState:pipeline];
+         [enc setBytes:&args length:sizeof(args) atIndex:0];
+         [enc setBuffer:xbuf offset:ds4_gpu_tensor_offset(x) atIndex:1];
+         [enc setBuffer:wbuf offset:(NSUInteger)inner_offset atIndex:2];
+@@ -22831,10 +22845,36 @@
+              threadsPerThreadgroup:MTLSizeMake(ds4_gpu_rms_norm_threads(n), 1, 1)];
+         ds4_gpu_end_compute_encoder(cb, enc);
+ 
++        if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) {
++            if (bf16) g_test_v41_fusions_dispatches |= 64u;
++            else if (pipeline != g_rms_norm_pipeline) g_test_v41_fusions_dispatches |= 32u;
++        }
+         if (!ds4_gpu_finish_command_buffer(cb, owned, "weighted RMS norm")) return 0;
+     }
+ 
+     return 1;
++}
++
++int ds4_gpu_rms_norm_weight_rows_tensor(ds4_gpu_tensor *out, const ds4_gpu_tensor *x,
++        const void *model_map, uint64_t model_size, uint64_t weight_offset,
++        uint32_t n, uint32_t rows, float eps) {
++    return ds4_gpu_rms_norm_weight_rows_impl(out, x, model_map, model_size,
++                                            weight_offset, n, rows, eps, false);
++}
++
++int ds4_gpu_dsv41_norm_bf16(ds4_gpu_tensor *out, const ds4_gpu_tensor *x,
++        const void *model_map, uint64_t model_size, uint64_t weight_offset,
++        uint32_t n, float eps) {
++    if (!g_initialized && !ds4_gpu_init()) return -1;
++    if (!ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                      "DS4_METAL_DISABLE_V41_NORM_BF16")) return 0;
++    /* More than two float4 values per thread changes compiler scheduling;
++     * the 16384-wide oracle differs after BF16 rounding. Keep that shape on
++     * the original two-dispatch chain. V4.1 weighted norms are <=5120. */
++    if (!n || (n & 3u) || n > 8192u) return 0;
++    const int rc = ds4_gpu_rms_norm_weight_rows_impl(out, x, model_map, model_size,
++                                            weight_offset, n, 1, eps, true);
++    return rc < 0 ? 0 : rc ? 1 : -1;
+ }
+ 
+ int ds4_gpu_add_rms_norm_weight_tensor(
+@@ -52121,7 +52161,9 @@
+     @autoreleasepool {
+     uint64_t inner = 0;
+     id<MTLBuffer> wb = ds4_gpu_wrap_model_range(model_map, model_size, weight_offset, bytes, &inner);
+-    id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline("kernel_dsv41_hc_norm");
++    id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline(
++        getenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD") ?
++        "kernel_dsv41_hc_norm" : "kernel_dsv41_hc_norm_wpre");
+     if (!wb) return -1;
+     /* Unavailable or narrower: the caller's original chain is the same arithmetic. */
+     if (!pipeline || pipeline.maxTotalThreadsPerThreadgroup < 1024u) return 0;
+--- a/ds4.c
++++ b/ds4.c
+@@ -40653,6 +40653,11 @@
+ 
+ static bool ds41_norm(ds4_gpu_tensor *out, const ds4_gpu_tensor *in,
+                       const ds4_model *m, const ds4_tensor *weight) {
++#ifdef __APPLE__
++    const int rc = ds4_gpu_dsv41_norm_bf16(out, in, m->map, m->size,
++        weight->abs_offset, (uint32_t)weight->dim[0], DS4_RMS_EPS);
++    if (rc) return rc > 0;
++#endif
+     return ds4_gpu_rms_norm_weight_tensor(out, in, m->map, m->size,
+         weight->abs_offset, (uint32_t)weight->dim[0], DS4_RMS_EPS) &&
+         ds41_bf16(out, (uint32_t)weight->dim[0]);
+--- a/ds4_deepseek41_gpu.h
++++ b/ds4_deepseek41_gpu.h
+@@ -110,7 +110,9 @@
+ int ds4_gpu_dsv41_f32_rows(ds4_gpu_tensor *out, const void *model_map,
+         uint64_t model_size, uint64_t weight_offset, uint64_t in_dim,
+         uint64_t out_dim, const ds4_gpu_tensor *x, uint32_t rows);
+-
++int ds4_gpu_dsv41_norm_bf16(ds4_gpu_tensor *out, const ds4_gpu_tensor *x,
++        const void *model_map, uint64_t model_size, uint64_t weight_offset,
++        uint32_t n, float eps);
+ int ds4_gpu_dsv41_qb_bf16_admitted(void);
+ int ds4_gpu_dsv41_gather_reuse_admitted(void);
+ /* The M3 Ultra exact paths (router, HC, shared, histogram top-k, Q4 tail cull)
+--- a/tests/test_deepseek41_fusions.c
++++ b/tests/test_deepseek41_fusions.c
+@@ -73,6 +73,7 @@
+     CHECK(!ds4_gpu_dsv41_gather_reuse_admitted());
+     unsetenv("DS4_METAL_DISABLE_V41_GATHER_REUSE");
+ 
++    setenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD","1",1);
+     enum {D=5120};
+     ds4_gpu_tensor *res=ds4_gpu_tensor_alloc_managed(4u*D*4u), *pre=ds4_gpu_tensor_alloc_managed(24u*4u);
+     ds4_gpu_tensor *collapsed=ds4_gpu_tensor_alloc_managed(D*4u), *norm=ds4_gpu_tensor_alloc_managed(D*4u);
+@@ -96,7 +97,9 @@
+         CHECK(ds4_gpu_synchronize());
+         memcpy(ref_x,ds4_gpu_tensor_contents(collapsed),D*4u);memcpy(ref_n,ds4_gpu_tensor_contents(norm),D*4u);
+         memset(ds4_gpu_tensor_contents(collapsed),0xa5,D*4u);memset(ds4_gpu_tensor_contents(norm),0xa5,D*4u);
++        if (draw & 1u) unsetenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD");
+         CHECK(ds4_gpu_dsv41_hc_norm(collapsed,norm,res,pre,model,bytes,0,1e-20f)==1);
++        setenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD","1",1);
+         CHECK(ds4_gpu_synchronize() && ds4_gpu_test_v41_fusions_take_dispatches()==2);
+         equal(ref_x,ds4_gpu_tensor_contents(collapsed),D*4u,"HC collapse",draw);
+         equal(ref_n,ds4_gpu_tensor_contents(norm),D*4u,"HC norm",draw);
+@@ -217,6 +220,61 @@
+                raw_nonfinite_out,rounding_sensitive_out);
+     }
+ 
++    /* Weighted norm reduction and BF16 store, including overlap and guards. */
++    {
++        const unsigned widths[] = {128,512,1280,5120,8192,16384};
++        const unsigned rows[] = {1,2,7};
++        unsigned cases=0;
++        for(unsigned d=0;d<12;d++) for(unsigned wi=0;wi<6;wi++)
++        for(unsigned ri=0;ri<3;ri++) {
++            const unsigned n=widths[wi],r=rows[ri];
++            const size_t used=(size_t)n*r*4;
++            ds4_gpu_tensor *x=ds4_gpu_tensor_alloc_managed(used),*storage=ds4_gpu_tensor_alloc_managed(used+2*G);
++            ds4_gpu_tensor *y=ds4_gpu_tensor_view(storage,G,used);
++            unsigned char *ref=malloc(used); CHECK(x&&storage&&y&&ref);
++            float *v=ds4_gpu_tensor_contents(x),*w=model;
++            for(unsigned i=0;i<n*r;i++) v[i]=d==0?0:d==1?1e18f:sample();
++            for(unsigned i=0;i<n;i++) w[i]=sample();
++            if(d>=2&&d<8) {memcpy(v+(d*17)%(n*r),&exceptional[d-2],4);memcpy(w+(d*37)%n,&exceptional[d-2],4);}
++            const float eps=(d&1)?1e-20f:1e-6f;
++            for(unsigned arm=0;arm<4;arm++) {
++                const bool bf16=arm>=2;
++                if(arm&1) unsetenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD");
++                else setenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD","1",1);
++                memset(ds4_gpu_tensor_contents(storage),0xa5,used+2*G);
++                CHECK(ds4_gpu_begin_commands());
++                if(arm==3) {
++                    for(unsigned row=0;row<r;row++) {
++                        ds4_gpu_tensor *xr=ds4_gpu_tensor_view(x,(size_t)row*n*4,n*4);
++                        ds4_gpu_tensor *yr=ds4_gpu_tensor_view(y,(size_t)row*n*4,n*4);
++                        const int rc=ds4_gpu_dsv41_norm_bf16(yr,xr,model,bytes,0,n,eps);
++                        CHECK(rc==(n<=8192?1:0));
++                        if(!rc) {
++                            CHECK(ds4_gpu_rms_norm_weight_tensor(yr,xr,model,bytes,0,n,eps));
++                            CHECK(ds4_gpu_dsv41_quantize(yr,n,1,DS4_V41_BF16));
++                        }
++                        ds4_gpu_tensor_free(xr);ds4_gpu_tensor_free(yr);
++                    }
++                } else {
++                    CHECK(ds4_gpu_rms_norm_weight_rows_tensor(y,x,model,bytes,0,n,r,eps));
++                    if(bf16) CHECK(ds4_gpu_dsv41_quantize(y,n,r,DS4_V41_BF16));
++                }
++                CHECK(ds4_gpu_end_commands());
++                CHECK(ds4_gpu_test_v41_fusions_take_dispatches()==(arm==3&&n<=8192?64u:arm==1&&n<=8192?32u:0u));
++                unsigned char *p=ds4_gpu_tensor_contents(storage);
++                for(unsigned i=0;i<G;i++){CHECK(p[i]==0xa5);CHECK(p[G+used+i]==0xa5);}
++                if(arm&1) equal(ref,p+G,used,bf16?"norm BF16":"norm preload",cases);
++                else memcpy(ref,p+G,used);
++            }
++            ds4_gpu_set_quality(true);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);ds4_gpu_set_quality(false);
++            ds4_gpu_set_ssd_streaming(true);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);ds4_gpu_set_ssd_streaming(false);
++            setenv("DS4_METAL_DISABLE_V41_NORM_BF16","1",1);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);unsetenv("DS4_METAL_DISABLE_V41_NORM_BF16");
++            ds4_gpu_tensor_free(y);ds4_gpu_tensor_free(storage);ds4_gpu_tensor_free(x);free(ref);cases++;
++        }
++        unsetenv("DS4_METAL_DISABLE_V41_NORM_PRELOAD");
++        printf("norm: %u cases, preloaded weights and BF16 stores exact\n",cases);
++    }
++
+     {
+         const unsigned in=5120, od=384;
+         const unsigned counts[]={2,3,4,5,6,7,8};

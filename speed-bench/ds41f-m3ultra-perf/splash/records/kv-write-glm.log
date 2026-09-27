@@ -1,0 +1,44 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 4.062 ms, residency requested in 51574.780 ms, warmup 6.986 ms (mapped 182024.03 MiB from offset 9.07 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.37 GiB (raw 0.00 + compressed 0.37) + buffers 2.98 GiB + resident model 177.76 GiB = 181.10 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=2048 raw_kv_rows=0 compressed_kv_rows=32768 backend=metal
+ds4: GLM session ctx=32768 (model max=1048576); prefill/work cap=4096; dense attention limit=2051
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=32768 logical_ctx=32768 kv_layers=45 indexer_layers=11 f16 0.37 GiB
+ds4: GLM compact indexed prefill chunk=2048 score_rows=2048 score_scratch=64.00 MiB
+{"pos":512,"staged":true,"rep":0,"ms":40.275000,"copy_ms":12.844000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"rep":1,"ms":17.377000,"copy_ms":5.732000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"rep":2,"ms":17.351000,"copy_ms":5.797000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"rep":3,"ms":41.323000,"copy_ms":5.842000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"rep":4,"ms":42.076000,"copy_ms":5.823000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"rep":5,"ms":17.416000,"copy_ms":5.821000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"rep":6,"ms":17.461000,"copy_ms":5.881000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"rep":7,"ms":44.725000,"copy_ms":5.729000,"bytes":165557300,"exact":true}
+{"pos":2048,"staged":true,"rep":0,"ms":51.128000,"copy_ms":17.475000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"rep":1,"ms":22.991000,"copy_ms":9.024000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"rep":2,"ms":23.059000,"copy_ms":9.034000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"rep":3,"ms":56.846000,"copy_ms":9.048000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"rep":4,"ms":50.652000,"copy_ms":9.015000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"rep":5,"ms":23.206000,"copy_ms":9.091000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"rep":6,"ms":22.976000,"copy_ms":9.164000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"rep":7,"ms":50.976000,"copy_ms":9.092000,"bytes":202334117,"exact":true}
+{"pos":8193,"staged":true,"rep":0,"ms":93.491000,"copy_ms":36.233000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"rep":1,"ms":46.439000,"copy_ms":22.101000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"rep":2,"ms":46.053000,"copy_ms":22.164000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":true,"rep":3,"ms":92.026000,"copy_ms":22.065000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":true,"rep":4,"ms":91.949000,"copy_ms":22.203000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"rep":5,"ms":46.389000,"copy_ms":22.082000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":false,"rep":6,"ms":45.513000,"copy_ms":22.058000,"bytes":349463633,"exact":true}
+{"pos":8193,"staged":true,"rep":7,"ms":93.864000,"copy_ms":22.592000,"bytes":349463633,"exact":true}
+{"pos":32703,"staged":true,"rep":0,"ms":267.801000,"copy_ms":112.908000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"rep":1,"ms":135.528000,"copy_ms":74.286000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"rep":2,"ms":149.744000,"copy_ms":74.288000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":true,"rep":3,"ms":263.859000,"copy_ms":74.501000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":true,"rep":4,"ms":264.717000,"copy_ms":74.587000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"rep":5,"ms":137.869000,"copy_ms":74.515000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":false,"rep":6,"ms":138.418000,"copy_ms":74.431000,"bytes":936308225,"exact":true}
+{"pos":32703,"staged":true,"rep":7,"ms":261.480000,"copy_ms":74.346000,"bytes":936308225,"exact":true}

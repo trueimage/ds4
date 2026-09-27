@@ -1,0 +1,5 @@
+2026-09-18 22:23:26.200 test_deepseek41_topk[40169:506650140] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+V4.1 DSA top-k exact PASS: 600 poisoned draws, recovery, accepted=80 fallback=280 host-skipped=240

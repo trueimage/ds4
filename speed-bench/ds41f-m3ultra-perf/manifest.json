@@ -1,0 +1,24 @@
+{
+  "base": "76f3609347a7a613e76a0611ff95a7a26efe00c2",
+  "branch": "ds41f-m3ultra-perf",
+  "model": "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+  "model_bytes": 518596067328,
+  "model_mtime_ns": 1789369383140108929,
+  "model_prefix_8MiB_sha256": "036e61b1fc6b10fbb271d7613bfe34810689cbd0f1cc7862673104aaabf78545",
+  "hardware": {
+    "soc": "Apple M3 Ultra",
+    "gpu_cores": 80,
+    "memory_bytes": 549755813888
+  },
+  "context_limit": 32768,
+  "baseline_frontiers": [
+    512,
+    2048,
+    8192,
+    32703
+  ],
+  "decode_tokens": 64,
+  "evidence_dir": "/tmp/ds41f-m3ultra-perf-20260918",
+  "prompt_sha256": "f53e0d80cb2d4492d24ebd63c7000c397b16ae70f9bf09b3763e5d8323ec209f",
+  "env_policy": "Remove DS4_, MTL_, ASTRA_ inherited overrides; add only documented controls."
+}

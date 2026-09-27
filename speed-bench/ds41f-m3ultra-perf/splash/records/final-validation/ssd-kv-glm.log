@@ -1,0 +1,34 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: GLM SSD streaming full resident layers: 0 (auto selected 0 layers)
+ds4: metal SSD streaming cache target 16.00 GiB; effective 15.99 GiB = 7.59 GiB prefill headroom + 8.40 GiB dynamic cache (637 experts, 13.50 MiB each)
+ds4: GLM SSD streaming decode map: global 14.49 GiB (10.41 GiB beyond the active layer window)
+ds4: Metal SSD static weights locked 14.49 GiB; pageable 0.00 GiB
+ds4: WARNING: SSD streaming expert cache (637 experts) is under twice the per-token routed working set (43 layers x 8 experts = 344); expect heavy thrashing below 9.07 GiB
+ds4: SSD streaming initial metal model map (1 spans, 1.18 GiB tensor span)
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.37 GiB (raw 0.00 + compressed 0.37) + buffers 2.98 GiB + resident model 14.49 GiB + expert cache 8.40 GiB + prefill expert reserve 7.59 GiB = 33.83 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=2048 raw_kv_rows=0 compressed_kv_rows=32768 backend=metal
+ds4: GLM SSD streaming decode map: global 14.49 GiB (0.22 GiB beyond the active layer window)
+ds4: GLM session ctx=32768 (model max=1048576); prefill/work cap=8192; dense attention limit=2051
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=32768 logical_ctx=32768 kv_layers=45 indexer_layers=11 f16 0.37 GiB
+ds4: GLM compact indexed prefill chunk=2048 score_rows=2048 score_scratch=64.00 MiB
+{"pos":512,"staged":true,"cached_io":true,"load_ms":14.088000,"resident_fraction":1.000000,"rep":0,"ms":45.515000,"copy_ms":13.031000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.349000,"resident_fraction":1.000000,"rep":1,"ms":17.463000,"copy_ms":5.709000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.371000,"resident_fraction":1.000000,"rep":2,"ms":17.663000,"copy_ms":5.751000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":13.598000,"resident_fraction":1.000000,"rep":3,"ms":44.886000,"copy_ms":5.716000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":13.253000,"resident_fraction":1.000000,"rep":4,"ms":44.205000,"copy_ms":5.738000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.194000,"resident_fraction":1.000000,"rep":5,"ms":17.814000,"copy_ms":5.652000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":13.358000,"resident_fraction":1.000000,"rep":6,"ms":17.787000,"copy_ms":5.666000,"bytes":165557300,"exact":true}
+{"pos":512,"staged":true,"cached_io":true,"load_ms":13.241000,"resident_fraction":1.000000,"rep":7,"ms":44.115000,"copy_ms":5.632000,"bytes":165557300,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":20.657000,"resident_fraction":1.000000,"rep":0,"ms":54.467000,"copy_ms":17.815000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":18.696000,"resident_fraction":1.000000,"rep":1,"ms":23.277000,"copy_ms":8.996000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":18.772000,"resident_fraction":1.000000,"rep":2,"ms":23.283000,"copy_ms":8.996000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":18.105000,"resident_fraction":1.000000,"rep":3,"ms":52.486000,"copy_ms":8.986000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":18.584000,"resident_fraction":1.000000,"rep":4,"ms":51.474000,"copy_ms":9.023000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":18.129000,"resident_fraction":1.000000,"rep":5,"ms":23.446000,"copy_ms":9.032000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":18.295000,"resident_fraction":1.000000,"rep":6,"ms":23.485000,"copy_ms":9.031000,"bytes":202334117,"exact":true}
+{"pos":2048,"staged":true,"cached_io":true,"load_ms":18.505000,"resident_fraction":1.000000,"rep":7,"ms":52.405000,"copy_ms":9.018000,"bytes":202334117,"exact":true}

@@ -1,0 +1,350 @@
+--- a/metal/dense.metal
++++ b/metal/dense.metal
+@@ -297,6 +297,28 @@
+     kernel_mul_mv_q8_0_f32_impl<N_R0_Q8_0, constant ds4_metal_args_mul_mv &, true>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
+ }
+ 
++// Each NR0 shares inputs only; per-row arithmetic and reduction are unchanged.
++template<short NR0, bool BF16>
++kernel void kernel_dsv41_q8_nr(
++        constant ds4_metal_args_mul_mv & args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem [[threadgroup(0)]],
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q8_0_f32_impl<NR0, constant ds4_metal_args_mul_mv &, BF16>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
++typedef decltype(kernel_dsv41_q8_nr<1, false>) dsv41_q8_nr_t;
++template [[host_name("kernel_mul_mv_q8_0_f32_nr1")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<1, false>;
++template [[host_name("kernel_dsv41_mul_mv_q8_0_f32_bf16_nr1")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<1, true>;
++template [[host_name("kernel_mul_mv_q8_0_f32_nr4")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<4, false>;
++template [[host_name("kernel_dsv41_mul_mv_q8_0_f32_bf16_nr4")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<4, true>;
++template [[host_name("kernel_mul_mv_q8_0_f32_nr8")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<8, false>;
++template [[host_name("kernel_dsv41_mul_mv_q8_0_f32_bf16_nr8")]] kernel dsv41_q8_nr_t kernel_dsv41_q8_nr<8, true>;
++
+ // Q8_0 matvec whose output is this rank's TP partial in its slab slot: same
+ // K walk and reduction tree as kernel_mul_mv_q8_0_f32_impl, plus the checked
+ // poll-gate flag published by the last-arriving threadgroup (see
+@@ -744,6 +766,30 @@
+             args, src0_gate, src0_up, src1, dst_gate, dst_up, dst_mid,
+             clamp_value, shmem, tgpig, tiisg, sgitg);
+ }
++
++template<short NR0>
++kernel void kernel_dsv41_shared_gate_up_nr(
++        constant ds4_metal_args_mul_mv & args,
++        device const char * src0_gate,
++        device const char * src0_up,
++        device const char * src1,
++        device       char * dst_gate,
++        device       char * dst_up,
++        device       char * dst_mid,
++        constant     float &clamp_value,
++        threadgroup  char * shmem [[threadgroup(0)]],
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_dsv4_shared_gate_up_swiglu_q8_0_impl<NR0, true, 0, true>(
++            args, src0_gate, src0_up, src1, dst_gate, dst_up, dst_mid,
++            clamp_value, shmem, tgpig, tiisg, sgitg);
++}
++
++typedef decltype(kernel_dsv41_shared_gate_up_nr<1>) dsv41_shared_nr_t;
++template [[host_name("kernel_dsv41_shared_gate_up_nr1")]] kernel dsv41_shared_nr_t kernel_dsv41_shared_gate_up_nr<1>;
++template [[host_name("kernel_dsv41_shared_gate_up_nr4")]] kernel dsv41_shared_nr_t kernel_dsv41_shared_gate_up_nr<4>;
++template [[host_name("kernel_dsv41_shared_gate_up_nr8")]] kernel dsv41_shared_nr_t kernel_dsv41_shared_gate_up_nr<8>;
+ 
+ // Same body as kernel_dsv4_shared_gate_up_swiglu_q8_0_impl with the row
+ // bound taken from a thread value instead of args.ne01 (GPU-decided lane
+--- a/metal/moe.metal
++++ b/metal/moe.metal
+@@ -3444,6 +3444,67 @@
+         sgitg);
+ }
+ 
++template<short NR0>
++kernel void kernel_dsv41_attn_out_low_q8_nr(
++        constant ds4_metal_args_mul_mv_id & args,
++        device const char * src0s,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem [[threadgroup(0)]],
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiitg[[thread_index_in_threadgroup]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    const int iid1 = tgpig.z/args.nei0;
++    const int idx  = tgpig.z%args.nei0;
++
++    tgpig.z = 0;
++
++    const int64_t i11 = idx % args.ne11;
++    const int64_t i12 = iid1;
++
++    device const char * src0_cur = src0s + idx*args.nb02;
++    device const char * src1_cur = src1  + i11*args.nb11 + i12*args.nb12;
++    device       char * dst_cur  = dst   + (idx*args.ne0 + i12*args.ne1*args.ne0)*sizeof(float);
++
++    ds4_metal_args_mul_mv args0 = {
++        /*.ne00 =*/ args.ne00,
++        /*.ne01 =*/ args.ne01,
++        /*.ne02 =*/ 1,
++        /*.nb00 =*/ args.nb00,
++        /*.nb01 =*/ args.nb01,
++        /*.nb02 =*/ args.nb02,
++        /*.nb03 =*/ args.nb02,
++        /*.ne10 =*/ args.ne10,
++        /*.ne11 =*/ 1,
++        /*.ne12 =*/ 1,
++        /*.nb10 =*/ args.nb10,
++        /*.nb11 =*/ args.nb11,
++        /*.nb12 =*/ args.nb12,
++        /*.nb13 =*/ args.nb12,
++        /*.ne0  =*/ args.ne0,
++        /*.ne1  =*/ 1,
++        /*.nr0  =*/ args.nr0,
++        /*.r2   =*/ 1,
++        /*.r3   =*/ 1,
++    };
++
++    kernel_mul_mv_q8_0_f32_impl<NR0, thread ds4_metal_args_mul_mv &>(
++        args0,
++        src0_cur,
++        src1_cur,
++        dst_cur,
++        shmem,
++        tgpig,
++        tiisg,
++        sgitg);
++}
++
++typedef decltype(kernel_dsv41_attn_out_low_q8_nr<1>) dsv41_low_nr_t;
++template [[host_name("kernel_dsv41_attn_out_low_q8_nr1")]] kernel dsv41_low_nr_t kernel_dsv41_attn_out_low_q8_nr<1>;
++template [[host_name("kernel_dsv41_attn_out_low_q8_nr4")]] kernel dsv41_low_nr_t kernel_dsv41_attn_out_low_q8_nr<4>;
++template [[host_name("kernel_dsv41_attn_out_low_q8_nr8")]] kernel dsv41_low_nr_t kernel_dsv41_attn_out_low_q8_nr<8>;
++
+ kernel void kernel_dsv4_attn_out_low_q4_K_f32(
+         constant ds4_metal_args_mul_mv_id & args,
+         device const char * src0s,
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -10469,6 +10469,40 @@
+                                        "DS4_METAL_DISABLE_V41_GATHER_REUSE");
+ }
+ 
++/* Sweep override changes output-row grouping, never the SIMD reduction width.
++ * The release table stays at NR0=2 until a shape clears the exactness/speed gate. */
++static ds4_gpu_mv_dispatch ds4_gpu_dsv41_q8_dispatch(
++        ds4_gpu_mv_dispatch dispatch, uint64_t in, uint64_t out, unsigned kind) {
++    if (!ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                     "DS4_METAL_DISABLE_V41_Q8_NR0")) return dispatch;
++    unsigned nr = 2;
++    const char *entry = getenv("DS4_METAL_V41_Q8_NR0");
++    for (const char *p = entry; p && *p; p = strchr(p, ',') ? strchr(p, ',') + 1 : NULL) {
++        unsigned value = 0; int end = 0;
++        unsigned long long k = 0, n = 0;
++        if ((sscanf(p, "all:%u%n", &value, &end) == 1 &&
++             (p[end] == ',' || p[end] == '\0')) ||
++            (sscanf(p, "%llux%llu:%u%n", &k, &n, &value, &end) == 3 &&
++             k == in && n == out && (p[end] == ',' || p[end] == '\0'))) nr = value;
++    }
++    if ((nr != 1 && nr != 4 && nr != 8) || out % nr) return dispatch;
++    static const char *names[4][3] = {
++        {"kernel_mul_mv_q8_0_f32_nr1", "kernel_mul_mv_q8_0_f32_nr4", "kernel_mul_mv_q8_0_f32_nr8"},
++        {"kernel_dsv41_mul_mv_q8_0_f32_bf16_nr1", "kernel_dsv41_mul_mv_q8_0_f32_bf16_nr4", "kernel_dsv41_mul_mv_q8_0_f32_bf16_nr8"},
++        {"kernel_dsv41_shared_gate_up_nr1", "kernel_dsv41_shared_gate_up_nr4", "kernel_dsv41_shared_gate_up_nr8"},
++        {"kernel_dsv41_attn_out_low_q8_nr1", "kernel_dsv41_attn_out_low_q8_nr4", "kernel_dsv41_attn_out_low_q8_nr8"},
++    };
++    dispatch.function_name = names[kind][nr == 1 ? 0 : nr == 4 ? 1 : 2];
++    dispatch.nr0 = nr;
++    dispatch.smem = 32u * nr * sizeof(float);
++    return dispatch;
++}
++
++static void ds4_gpu_dsv41_q8_nr_dispatched(ds4_gpu_mv_dispatch dispatch) {
++    if (dispatch.nr0 != 2 && (g_test_flags & DS4_GPU_TEST_V41_FUSIONS))
++        g_test_v41_fusions_dispatches |= 32u;
++}
++
+ static int32_t g_tp_session_batch_mode;
+ 
+ static int ds4_gpu_tp_world_is_two(void) {
+@@ -19711,6 +19745,7 @@
+             ds4_gpu_q8_0_matvec_args mv_args = ds4_gpu_make_q8_0_mv_args(in_dim, out_dim);
+             ds4_gpu_mv_dispatch mv_dispatch = ds4_gpu_make_q8_0_mv_dispatch();
+             if (out_dim > 65536u) mv_dispatch.nsg = 8;
++            mv_dispatch = ds4_gpu_dsv41_q8_dispatch(mv_dispatch, in_dim, out_dim, 0);
+             mv_args.nr0 = mv_dispatch.nr0;
+             id<MTLComputePipelineState> pipeline =
+                 ds4_gpu_get_mul_mv_pipeline(mv_dispatch.function_name, mv_dispatch.nsg);
+@@ -19729,6 +19764,7 @@
+                  threadsPerThreadgroup:MTLSizeMake(32, (NSUInteger)mv_dispatch.nsg, 1)];
+             ds4_gpu_end_compute_encoder(cb, enc);
+ 
++            ds4_gpu_dsv41_q8_nr_dispatched(mv_dispatch);
+             if (!ds4_gpu_finish_command_buffer(cb, owned, "Q8_0 tensor matvec")) {
+                 return 0;
+             }
+@@ -20761,8 +20797,9 @@
+ 
+         ds4_gpu_q8_0_matvec_args args = ds4_gpu_make_q8_0_mv_args(in_dim, out_dim);
+         ds4_gpu_mv_dispatch mv_dispatch = ds4_gpu_make_q8_0_mv_dispatch();
++        if (bf16) mv_dispatch = ds4_gpu_dsv41_q8_dispatch(mv_dispatch, in_dim, out_dim, 2);
+         args.nr0 = mv_dispatch.nr0;
+-        const char *fn_name = bf16 ? "kernel_dsv41_shared_gate_up" : store_gate_up ?
++        const char *fn_name = bf16 ? (mv_dispatch.nr0 == 2 ? "kernel_dsv41_shared_gate_up" : mv_dispatch.function_name) : store_gate_up ?
+             "kernel_dsv4_shared_gate_up_swiglu_q8_0" :
+             "kernel_dsv4_shared_mid_swiglu_q8_0";
+         id<MTLComputePipelineState> pipeline =
+@@ -20794,6 +20831,7 @@
+                                               1)
+              threadsPerThreadgroup:MTLSizeMake(32, (NSUInteger)mv_dispatch.nsg, 1)];
+         ds4_gpu_end_compute_encoder(cb, enc);
++        if (bf16) ds4_gpu_dsv41_q8_nr_dispatched(mv_dispatch);
+         if (bf16 && (g_test_flags & DS4_GPU_TEST_V41_FUSIONS)) g_test_v41_fusions_dispatches |= 4u;
+ 
+         if (!ds4_gpu_finish_command_buffer(cb,
+@@ -27303,6 +27341,9 @@
+         }
+ 
+         if (ok) {
++            ds4_gpu_mv_dispatch dispatch = {.function_name = "kernel_dsv4_attn_out_low_q8_0_f32",
++                .nr0 = 2, .nsg = 4, .smem = 32u * 2u * sizeof(float)};
++            dispatch = ds4_gpu_dsv41_q8_dispatch(dispatch, group_dim, rank, 3);
+             ds4_gpu_mul_mv_id_args args = {
+                 .nei0 = (int32_t)n_groups,
+                 .nei1 = 1,
+@@ -27323,10 +27364,10 @@
+                 .ne0 = (int32_t)rank,
+                 .ne1 = (int32_t)n_groups,
+                 .nb1 = (uint64_t)rank * sizeof(float),
+-                .nr0 = 2,
++                .nr0 = dispatch.nr0,
+             };
+             id<MTLComputePipelineState> pipeline =
+-                ds4_gpu_get_mul_mv_pipeline("kernel_dsv4_attn_out_low_q8_0_f32", 4);
++                ds4_gpu_get_mul_mv_pipeline(dispatch.function_name, 4);
+             ok = ds4_gpu_encode_attn_out_low_q8_direct(cb,
+                                                          pipeline,
+                                                          &args,
+@@ -27336,9 +27377,10 @@
+                                                          ds4_gpu_tensor_offset(heads),
+                                                          ds4_gpu_tensor_buffer(low),
+                                                          ds4_gpu_tensor_offset(low),
+-                                                         32u * 2u * sizeof(float),
++                                                         dispatch.smem,
+                                                          4,
+                                                          true) != 0;
++            if (ok) ds4_gpu_dsv41_q8_nr_dispatched(dispatch);
+         }
+ 
+         if (!had_batch) {
+@@ -52029,8 +52071,10 @@
+         if (weight_offset > model_size || weight_bytes > model_size - weight_offset) return -1;
+         ds4_gpu_mv_dispatch dispatch = ds4_gpu_make_q8_0_mv_dispatch();
+         if (strcmp(dispatch.function_name, "kernel_mul_mv_q8_0_f32") != 0) return 0;
++        dispatch.function_name = "kernel_dsv41_mul_mv_q8_0_f32_bf16";
++        dispatch = ds4_gpu_dsv41_q8_dispatch(dispatch, in_dim, out_dim, 1);
+         id<MTLComputePipelineState> pipeline =
+-            ds4_gpu_get_mul_mv_pipeline("kernel_dsv41_mul_mv_q8_0_f32_bf16", dispatch.nsg);
++            ds4_gpu_get_mul_mv_pipeline(dispatch.function_name, dispatch.nsg);
+         if (!pipeline) return 0;
+         uint64_t inner = 0;
+         id<MTLBuffer> wbuf = ds4_gpu_wrap_model_range(model_map, model_size, weight_offset,
+@@ -52052,6 +52096,7 @@
+                                                   (NSUInteger)dispatch.nr0, 1, 1)
+              threadsPerThreadgroup:MTLSizeMake(32, (NSUInteger)dispatch.nsg, 1)];
+         ds4_gpu_end_compute_encoder(cb, enc);
++        ds4_gpu_dsv41_q8_nr_dispatched(dispatch);
+         if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) g_test_v41_fusions_dispatches |= 16u;
+         return ds4_gpu_finish_command_buffer(cb, owned, "V4.1 Q8_0 BF16 matvec") ? 1 : -1;
+     }
+--- a/tests/test_deepseek41_dspark.c
++++ b/tests/test_deepseek41_dspark.c
+@@ -239,7 +239,7 @@
+ 
+ /* Measurement: where one decoded token's GPU time goes, from 40 encodes of
+  * one layer's own kernels on its real weights. */
+-static int time_stages(const char *model, const char *prompt_path) {
++static int time_stages(const char *model, const char *prompt_path, bool nr_sweep) {
+     ds4_engine *engine = NULL;
+     ds4_session *session = NULL;
+     ds4_tokens prompt = {0}, prefix = {0};
+@@ -259,6 +259,45 @@
+     const ds4_model *m = &engine->model;
+     const ds4_weights *w = &engine->weights;
+     (void)ds41_publish_measured_config(g, w);
++    if (nr_sweep) {
++        const char *sites[] = {"q_a", "kv", "q_b", "o_a", "o_b", "gate_up", "down", "head"};
++        const unsigned shapes[][2] = {{5120,1280},{5120,512},{1280,32768},{4096,1024},
++                                     {8192,5120},{5120,2304},{2304,5120},{5120,129280}};
++        for (unsigned site=0;site<8;site++) for (unsigned ni=0;ni<4;ni++) {
++            const unsigned nr = (unsigned[]){2,1,4,8}[ni];
++            char value[16];snprintf(value,sizeof(value),"all:%u",nr);
++            setenv("DS4_METAL_V41_Q8_NR0",value,1);
++            double best=1e30;
++            for (unsigned rep=0;rep<5;rep++) {
++                const unsigned loops=site==7?8:40;
++                REQUIRE(ds4_gpu_begin_commands());
++                for (unsigned il=0;il<loops;il++) {
++                    const ds4_layer_weights *l=&w->layer[il%40];
++                    bool ok=false;
++                    switch(site) {
++                    case 0:ok=ds41_matmul(g->qr,m,l->attn_q_a,g->norm,true);break;
++                    case 1:ok=ds41_matmul(g->kv,m,l->attn_kv,g->norm,true);break;
++                    case 2:ok=ds41_matmul_rows(g->q,m,l->attn_q_b,g->qr,0,DS4_N_HEAD*DS4_N_HEAD_DIM);break;
++                    case 3:ok=ds41_attention_low(g,m,l);break;
++                    case 4:ok=ds41_matmul(g->block,m,l->attn_output_b,g->low,true);break;
++                    case 5:ok=ds41_shared_mid(g,m,l);break;
++                    case 6:ok=ds41_matmul(g->shared,m,l->ffn_down_shexp,g->shared_mid,true);break;
++                    case 7:ok=ds41_graph_logits_encode(g,m,w);break;
++                    }
++                    REQUIRE(ok);
++                }
++                const double t=now_sec();REQUIRE(ds4_gpu_end_commands());
++                const double ms=(now_sec()-t)*1000.0/(site==7?8.0:1.0);
++                if(rep && ms<best)best=ms;
++            }
++            double weights=(double)shapes[site][0]*shapes[site][1]*34.0/32.0*(site==7?1:40);
++            if(site==3)weights*=8;if(site==5)weights*=2;
++            printf("NR0 site=%s in=%u out=%u nr=%u ms=%.6f GBps=%.3f\n",
++                   sites[site],shapes[site][0],shapes[site][1],nr,best,weights/(best*1e6));
++            fflush(stdout);
++        }
++        unsetenv("DS4_METAL_V41_Q8_NR0");rc=0;goto done;
++    }
+     const char *names[] = {"attention projections (q_a, q_b, kv)", "attention core, index and window",
+         "attention output (o_a, o_b)", "shared expert", "router and routed experts",
+         "hyper-connection mixes and norms", "output head (once per token)"};
+@@ -337,8 +376,10 @@
+ }
+ 
+ int main(int argc, char **argv) {
++    if (argc == 4 && !strcmp(argv[2], "--q8-nr0-sweep"))
++        return time_stages(argv[1], argv[3], true);
+     if (argc == 4 && !strcmp(argv[2], "--stage-timing"))
+-        return time_stages(argv[1], argv[3]);
++        return time_stages(argv[1], argv[3], false);
+     if (argc == 4 && !strcmp(argv[2], "--verify-timing"))
+         return time_verify(argv[1], argv[3]);
+     if (argc == 4 && !strcmp(argv[2], "--short-prefill"))
+--- a/Makefile
++++ b/Makefile
+@@ -672,6 +672,13 @@
+ ifeq ($(UNAME_S),Darwin)
+ tests/test_metal_coherence: tests/test_metal_coherence.m tests/metal_coherence.metal
+ 	$(CC) $(OBJCFLAGS) $< -o $@ $(METAL_LDLIBS)
++
++tests/test_deepseek41_q8_nr: tests/test_deepseek41_q8_nr.c ds4_metal.o ds4_image.o ds4_gpu.h
++	$(CC) $(filter-out -ffast-math,$(CFLAGS)) -I. $< ds4_metal.o ds4_image.o -o $@ $(METAL_LDLIBS)
++
++.PHONY: test-deepseek41-q8-nr
++test-deepseek41-q8-nr: tests/test_deepseek41_q8_nr
++	MTL_DEBUG_LAYER=1 ./tests/test_deepseek41_q8_nr
+ 
+ speed-bench/kvstore_write_bench: speed-bench/kvstore_write_bench.c ds4_kvstore.o $(CORE_OBJS)
+ 	$(CC) $(CFLAGS) -I. $^ -o $@ $(METAL_LDLIBS)

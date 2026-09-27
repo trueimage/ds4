@@ -1,0 +1,83 @@
+{
+ "command": "ds4 -m MODEL -c CTX -n N --temp 0 --nothink --prompt-file FILE, each build run from its own checkout",
+ "v41": "DeepSeek-V4.1-Flash-Q4.gguf: main 8db1d1d vs this commit",
+ "glm": "GLM-5.3-Flash-Q4_K.gguf: main 8db1d1d, c1c5a4a and this commit",
+ "outputs": {
+  "glm-branch-mid": {
+   "bytes": 1603,
+   "sha256": "a9b6fafd6fc3f7917f3bfafd8ea54f0a88777b28b138e3d2830d17aac917f2d1"
+  },
+  "glm-branch-p1": {
+   "bytes": 1130,
+   "sha256": "f3245395c06cbda193b539d026182d732ec463bbcb99a217d7720440c2aeac0c"
+  },
+  "glm-branch-p2": {
+   "bytes": 966,
+   "sha256": "def55b7059d01dbc5f06df93697d4f47bc666187c2909716761d9c2d3d853732"
+  },
+  "glm-main-mid": {
+   "bytes": 1603,
+   "sha256": "a9b6fafd6fc3f7917f3bfafd8ea54f0a88777b28b138e3d2830d17aac917f2d1"
+  },
+  "glm-main-p1": {
+   "bytes": 1130,
+   "sha256": "f3245395c06cbda193b539d026182d732ec463bbcb99a217d7720440c2aeac0c"
+  },
+  "glm-main-p2": {
+   "bytes": 966,
+   "sha256": "def55b7059d01dbc5f06df93697d4f47bc666187c2909716761d9c2d3d853732"
+  },
+  "glm-tip-mid": {
+   "bytes": 1603,
+   "sha256": "a9b6fafd6fc3f7917f3bfafd8ea54f0a88777b28b138e3d2830d17aac917f2d1"
+  },
+  "glm-tip-p1": {
+   "bytes": 1130,
+   "sha256": "f3245395c06cbda193b539d026182d732ec463bbcb99a217d7720440c2aeac0c"
+  },
+  "glm-tip-p2": {
+   "bytes": 966,
+   "sha256": "def55b7059d01dbc5f06df93697d4f47bc666187c2909716761d9c2d3d853732"
+  },
+  "v41-branch-long": {
+   "bytes": 1392,
+   "sha256": "86d97fab2d99041b87555bb2b16829bbb00ed31dbc5a6cd1f6dd471827891370"
+  },
+  "v41-branch-mid": {
+   "bytes": 1080,
+   "sha256": "449f6c4ac48051fe7764f1785118bbe24ab7d0470b58461b0be4cc9931b0d1ac"
+  },
+  "v41-branch-p1": {
+   "bytes": 1398,
+   "sha256": "25e32eee2fa09f8adbc3c2af229caf3cd499d5d496b9ce67241428c6018247c1"
+  },
+  "v41-branch-p2": {
+   "bytes": 1503,
+   "sha256": "14c61a0d9aa23966bcba40b773d8170b0cd73f19d74fd31530199aa4d981f6c1"
+  },
+  "v41-branch-p3": {
+   "bytes": 458,
+   "sha256": "d5c8b5e7005aaae9a834529ea835ae6c5dca1b006c1caa1385574972ef92428f"
+  },
+  "v41-main-long": {
+   "bytes": 1392,
+   "sha256": "86d97fab2d99041b87555bb2b16829bbb00ed31dbc5a6cd1f6dd471827891370"
+  },
+  "v41-main-mid": {
+   "bytes": 1080,
+   "sha256": "449f6c4ac48051fe7764f1785118bbe24ab7d0470b58461b0be4cc9931b0d1ac"
+  },
+  "v41-main-p1": {
+   "bytes": 1398,
+   "sha256": "25e32eee2fa09f8adbc3c2af229caf3cd499d5d496b9ce67241428c6018247c1"
+  },
+  "v41-main-p2": {
+   "bytes": 1503,
+   "sha256": "14c61a0d9aa23966bcba40b773d8170b0cd73f19d74fd31530199aa4d981f6c1"
+  },
+  "v41-main-p3": {
+   "bytes": 458,
+   "sha256": "d5c8b5e7005aaae9a834529ea835ae6c5dca1b006c1caa1385574972ef92428f"
+  }
+ }
+}

@@ -1,0 +1,4 @@
+server:
+ds4-server: thinking not closed, ignoring incomplete Qwen tool calls in reasoning
+server: OK
+ds4 tests: ok

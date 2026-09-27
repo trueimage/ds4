@@ -1,0 +1,73 @@
+diff --git a/ds4.c b/ds4.c
+index 9ba3eca..fe77c87 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -41333,2 +41333,7 @@ static DS4_MAYBE_UNUSED bool ds41_graph_step(ds41_gpu_graph *g, const ds4_model
+-    const bool queue_layers = g->tp_world == 2 && !g->imatrix &&
+-        !getenv("DS4_METAL_DISABLE_V41_TP_DECODE_QUEUE");
++    const bool queue_layers =
++#ifdef __APPLE__
++        (g->tp_world == 1 && !g->streaming && !g->imatrix &&
++         getenv("DS4_METAL_V41_RESIDENT_DECODE_QUEUE")) ||
++#endif
++        (g->tp_world == 2 && !g->imatrix &&
++         !getenv("DS4_METAL_DISABLE_V41_TP_DECODE_QUEUE"));
+@@ -41836,2 +41841,6 @@ static bool ds41_graph_prefill_sweep(ds41_gpu_graph *g, const ds4_model *m,
+-#ifndef __APPLE__
+-                if (ok && !g->image_count) {
++                if (ok && !g->image_count
++#ifdef __APPLE__
++                    && !g->streaming && g->tp_world == 1 &&
++                    getenv("DS4_METAL_V41_BATCH_EMBED")
++#endif
++                    ) {
+@@ -41850 +41858,0 @@ static bool ds41_graph_prefill_sweep(ds41_gpu_graph *g, const ds4_model *m,
+-#endif
+diff --git a/ds4_metal.m b/ds4_metal.m
+index d425f26..d1cd282 100644
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -44177,0 +44178,6 @@ int ds4_gpu_routed_moe_batch_tensor(
++        const bool use_v41_q4_tail_cull = use_mm_id_pair_swiglu &&
++            !g_ssd_streaming_mode && g_tp_split_world == 1 &&
++            ds4_gpu_device_is_pre_m5_apple_silicon() &&
++            gate_type == DS4_METAL_TENSOR_Q4_K && down_type == DS4_METAL_TENSOR_Q4_K &&
++            n_total_expert == 384u && expert_in_dim == 5120u && expert_mid_dim == 2304u &&
++            out_dim == 5120u && getenv("DS4_METAL_V41_Q4_TAIL_CULL");
+@@ -44290 +44296,3 @@ int ds4_gpu_routed_moe_batch_tensor(
+-            down_mm_pipeline = use_mxfp4_mm_id_down_half_lut ?
++            down_mm_pipeline = use_v41_q4_tail_cull ?
++                ds4_gpu_get_mul_mm_id_pipeline("kernel_mul_mm_id_q4_K_f16_tail_cull", false) :
++                use_mxfp4_mm_id_down_half_lut ?
+@@ -44396 +44404,2 @@ int ds4_gpu_routed_moe_batch_tensor(
+-                            "kernel_mul_mm_id_q4_K_pair_swiglu_f16" :
++                            (use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
++                             "kernel_mul_mm_id_q4_K_pair_swiglu_f16") :
+@@ -49120,2 +49129,5 @@ int ds4_gpu_dsv41_quantize(ds4_gpu_tensor *x, uint32_t width, uint32_t rows,
+-            [enc dispatchThreadgroups:MTLSizeMake(((uint64_t)width + block - 1u) / block, rows, 1)
+-                 threadsPerThreadgroup:MTLSizeMake(32, 1, 1)];
++            const char *group_env = getenv("DS4_METAL_V41_QUANT_GROUPS");
++            const uint32_t groups = group_env && !strcmp(group_env, "4") ? 4u :
++                group_env && !strcmp(group_env, "8") ? 8u : 1u;
++            [enc dispatchThreadgroups:MTLSizeMake(((uint64_t)width + block * groups - 1u) / (block * groups), rows, 1)
++                 threadsPerThreadgroup:MTLSizeMake(32u * groups, 1, 1)];
+diff --git a/metal/dsv41.metal b/metal/dsv41.metal
+index 03afd31..bece01f 100644
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -66 +66,3 @@ kernel void kernel_dsv41_quantize(
+-        uint lane [[thread_index_in_simdgroup]]) {
++        uint lane [[thread_index_in_simdgroup]],
++        uint simdgroup [[simdgroup_index_in_threadgroup]],
++        uint simdgroups [[simdgroups_per_threadgroup]]) {
+@@ -68 +70 @@ kernel void kernel_dsv41_quantize(
+-    const uint column = group.x * block + lane;
++    const uint column = (group.x * simdgroups + simdgroup) * block + lane;
+diff --git a/metal/moe.metal b/metal/moe.metal
+index 7e2c5e1..b47e08e 100644
+--- a/metal/moe.metal
++++ b/metal/moe.metal
+@@ -8810,0 +8811 @@ typedef decltype(kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequan
++typedef decltype(kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true>) mul_mm_id_pair_swiglu_f16_q4_tail_cull;
+@@ -8817,0 +8819 @@ template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16")]] kernel mul_mm_id
++template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull")]] kernel mul_mm_id_pair_swiglu_f16_q4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true>;

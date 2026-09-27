@@ -1,0 +1,10 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 5.330 ms, residency requested in 1997.553 ms, warmup 6.729 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 294.14 GiB = 302.03 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+ds4-bench: context buffers 8073.52 MiB (ctx=32768, backend=metal, prefill_chunk=8192, raw_kv_rows=128, compressed_kv_rows=32769)
+ds4: V4.1 static context buffers 8073.52 MiB (ctx=32768), Engram disk-only

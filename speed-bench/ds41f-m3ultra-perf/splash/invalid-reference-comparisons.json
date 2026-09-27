@@ -1,0 +1,10 @@
+{
+  "records": [
+    "glm-hc-4096-soak",
+    "glm-hc-separate-2k-1",
+    "glm-hc-separate-2k-2"
+  ],
+  "valid_for": "Repeatability of the atomic producer only",
+  "invalid_for": "Fused-versus-separate comparison: glm53_flash_feature_enabled caches the environment switch on its first call. The normal schedule harness cannot toggle it per step.",
+  "replacement": "Private comparison object uncaches only this HC feature and reports actual fused and separate executions."
+}

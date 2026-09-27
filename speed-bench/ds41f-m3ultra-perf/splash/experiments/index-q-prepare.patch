@@ -1,0 +1,152 @@
+--- a/ds4.c
++++ b/ds4.c
+@@ -40772,6 +40772,15 @@
+     return ds4_gpu_indexer_topk_tensor(g->selected_comp, g->index_scores, n_comp, 1, top);
+ }
+ 
++static bool ds41_index_q_prepare(ds4_gpu_tensor *x, uint32_t il, uint32_t pos) {
++#ifdef __APPLE__
++    const int fused = ds4_gpu_dsv41_index_q_prepare(x,pos,ds4_layer_compress_ratio(il) != 0);
++    if (fused) return fused > 0;
++#endif
++    return ds41_rope(x,DS4_N_INDEXER_HEAD,128,il,pos,false) &&
++        ds4_gpu_dsv41_quantize(x,128,DS4_N_INDEXER_HEAD,DS4_V41_FP4_E8M0);
++}
++
+ static bool ds41_attention_select_published(ds41_gpu_graph *g, const ds4_model *m,
+                                             const ds4_layer_weights *l, uint32_t il) {
+     const uint32_t pos = g->pos, ratio = ds4_layer_compress_ratio(il);
+@@ -40779,8 +40788,7 @@
+     const uint32_t n_comp = ratio ? (pos + 1u) / ratio : 0u;
+     if (n_comp && ds41_index_source(il)) {
+         if (!ds41_matmul(g->index_q, m, l->indexer_attn_q_b, g->qr, true) ||
+-            !ds41_rope(g->index_q, DS4_N_INDEXER_HEAD, 128, il, pos, false) ||
+-            !ds4_gpu_dsv41_quantize(g->index_q, 128, DS4_N_INDEXER_HEAD, DS4_V41_FP4_E8M0) ||
++            !ds41_index_q_prepare(g->index_q, il, pos) ||
+             !ds41_matmul(g->index_weights, m, l->indexer_proj, g->norm, true) ||
+ #ifdef __APPLE__
+             !ds4_gpu_glm_indexer_score_one_tensor(g->index_scores, g->index_q, g->index_weights,
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -49507,6 +49507,30 @@
+     return frequencies[compressed ? 1 : 0];
+ }
+ 
++int ds4_gpu_dsv41_index_q_prepare(ds4_gpu_tensor *x, uint32_t pos, bool compressed) {
++    if (!ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                      "DS4_METAL_DISABLE_V41_INDEX_Q_PREPARE")) return 0;
++    if (pos >= 1048576u || !dsv41_tensor_has_floats(x,128u*32u)) return -1;
++    id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline("kernel_dsv41_index_q_prepare");
++    if (!pipeline || pipeline.maxTotalThreadsPerThreadgroup < 128u) return 0;
++    struct { uint32_t width, heads, rows, start, inverse, stride; float frequencies[32]; }
++        rope = {128,32,1,pos,0,1,{0}};
++    memcpy(rope.frequencies,ds4_gpu_dsv41_rope_frequencies(compressed),sizeof(rope.frequencies));
++    const uint32_t quant[3] = {128,32,DS4_V41_FP4_E8M0};
++    int owned = 0;
++    id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
++    id<MTLComputeCommandEncoder> enc = cb ? ds4_gpu_compute_encoder(cb) : nil;
++    if (!enc) return -1;
++    [enc setComputePipelineState:pipeline];
++    [enc setBytes:&rope length:sizeof(rope) atIndex:0];
++    [enc setBuffer:ds4_gpu_tensor_buffer(x) offset:ds4_gpu_tensor_offset(x) atIndex:1];
++    [enc setBytes:quant length:sizeof(quant) atIndex:2];
++    [enc dispatchThreadgroups:MTLSizeMake(32u,1u,1u) threadsPerThreadgroup:MTLSizeMake(128u,1u,1u)];
++    ds4_gpu_end_compute_encoder(cb,enc);
++    if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) g_test_v41_fusions_dispatches |= 64u;
++    return ds4_gpu_finish_command_buffer(cb,owned,"V4.1 index Q prepare") ? 1 : -1;
++}
++
+ int ds4_gpu_dsv41_rope_stride(ds4_gpu_tensor *x, uint32_t width, uint32_t heads,
+                              uint32_t rows, uint32_t start, uint32_t stride,
+                              bool compressed, bool inverse) {
+--- a/ds4_deepseek41_gpu.h
++++ b/ds4_deepseek41_gpu.h
+@@ -103,6 +103,7 @@
+                                       uint32_t packed_rows, uint32_t offset);
+ #ifdef __APPLE__
+ /* Only the one-token graph sweep may reuse a previous layer's gathered KV. */
++int ds4_gpu_dsv41_index_q_prepare(ds4_gpu_tensor *x, uint32_t pos, bool compressed);
+ int ds4_gpu_test_dsv41_attention_counters(bool poison);
+ void ds4_gpu_dsv41_arm_attention_epilogue(uint32_t pos, bool compressed, bool enable);
+ int ds4_gpu_dsv41_attention_epilogue_used(void);
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -601,6 +601,48 @@
+     if (valid) x[index] = dsv41_bf16(result);
+ }
+ 
++// Keep both operations' runtime parameters and their device-memory boundary.
++kernel void kernel_dsv41_index_q_prepare(
++        constant ds4_metal_args_dsv41_rope &rope_args,
++        device float *x,
++        constant ds4_metal_args_dsv41_quantize &quant_args,
++        uint head [[threadgroup_position_in_grid]],
++        uint lane [[thread_index_in_simdgroup]],
++        uint sg [[simdgroup_index_in_threadgroup]]) {
++    if (sg == 0u) {
++        constant ds4_metal_args_dsv41_rope &args = rope_args;
++        const uint2 group = uint2(head,0);
++    const float theta = float(args.start + group.y * args.stride) * args.frequencies[lane];
++    const float c = precise::cos(theta);
++    const float s = args.inverse ? -precise::sin(theta) : precise::sin(theta);
++    const ulong i = ((ulong)group.y * args.heads + group.x) * args.width +
++                    args.width - 64u + 2u * lane;
++    const float re = x[i], im = x[i + 1u];
++    x[i] = dsv41_bf16(re * c - im * s);
++    x[i + 1u] = dsv41_bf16(re * s + im * c);
++    }
++    threadgroup_barrier(mem_flags::mem_device);
++    constant ds4_metal_args_dsv41_quantize &args = quant_args;
++    const uint2 group = uint2(sg,head);
++    const uint block = args.mode == 3u ? 16u : 32u;
++    const uint column = group.x * block + lane;
++    const bool valid = lane < block && column < args.width;
++    const ulong index = (ulong)group.y * args.width + column;
++    const float value = valid ? dsv41_bf16(x[index]) : 0.0f;
++    const float amax = simd_max(abs(value));
++    float result = value;
++    if (args.mode == 1u) {
++        const float scale = dsv41_pow2_ceil(max(amax, 1.0e-4f) * (1.0f / 448.0f));
++        result = copysign(dsv4_e4m3fn_dequant(abs(value) / scale), value) * scale;
++    } else if (args.mode == 2u || args.mode == 3u) {
++        const float scale = args.mode == 3u
++            ? dsv4_e4m3fn_dequant(max(amax, 0.01171875f) / 6.0f)
++            : dsv41_pow2_ceil(max(amax, 7.052966104933725e-38f) * (1.0f / 6.0f));
++        result = copysign(dsv4_e2m1fn_dequant(abs(value) / scale), value) * scale;
++    }
++    if (valid) x[index] = dsv41_bf16(result);
++}
++
+ struct ds4_metal_args_dsv41_engram {
+     uint width;
+     uint rows;
+--- a/tests/test_deepseek41_attention.c
++++ b/tests/test_deepseek41_attention.c
+@@ -62,6 +62,27 @@
+    if(arm==1)reduced++;
+   }
+  }
++ ds4_gpu_tensor *index_store=ds4_gpu_tensor_alloc_managed(128u*32u*4u+2*G);
++ ds4_gpu_tensor *index=ds4_gpu_tensor_view(index_store,G,128u*32u*4u);CHECK(index_store&&index);
++ float original[128u*32u];
++ for(unsigned draw=0;draw<240;draw++) {
++  for(unsigned i=0;i<128u*32u;i++) original[i]=sample()*(draw%10==0?1e30f:1.0f);
++  if(draw%10>=2)for(unsigned i=0;i<8;i++)memcpy(original+(draw*17+i*193)%(128u*32u),&exceptional[(draw+i)%8],4);
++  for(unsigned arm=0;arm<2;arm++) {
++   memset(ds4_gpu_tensor_contents(index_store),0xa5,128u*32u*4u+2*G);
++   CHECK(ds4_gpu_tensor_write(index,0,original,sizeof(original)));
++   if(!arm){CHECK(ds4_gpu_dsv41_rope(index,128,32,1,positions[draw%6],draw&1,false));CHECK(ds4_gpu_dsv41_quantize(index,128,32,DS4_V41_FP4_E8M0));}
++   else CHECK(ds4_gpu_dsv41_index_q_prepare(index,positions[draw%6],draw&1)==1);
++   CHECK(ds4_gpu_synchronize());CHECK(ds4_gpu_test_v41_fusions_take_dispatches()==(arm?64u:0u));
++   unsigned char *p=ds4_gpu_tensor_contents(index_store);for(unsigned i=0;i<G;i++){CHECK(p[i]==0xa5);CHECK(p[G+sizeof(original)+i]==0xa5);}
++   if(!arm)memcpy(ref,p+G,sizeof(original));else same(ref,p+G,sizeof(original),draw,3);
++  }
++ }
++ ds4_gpu_set_quality(true);CHECK(ds4_gpu_dsv41_index_q_prepare(index,1,false)==0);ds4_gpu_set_quality(false);
++ ds4_gpu_set_ssd_streaming(true);CHECK(ds4_gpu_dsv41_index_q_prepare(index,1,false)==0);ds4_gpu_set_ssd_streaming(false);
++ setenv("DS4_METAL_DISABLE_V41_INDEX_Q_PREPARE","1",1);CHECK(ds4_gpu_dsv41_index_q_prepare(index,1,false)==0);unsetenv("DS4_METAL_DISABLE_V41_INDEX_Q_PREPARE");
++ ds4_gpu_tensor_free(index);ds4_gpu_tensor_free(index_store);
++ puts("index Q prepare: 240 cases, exact bits and guards");
+  ds4_gpu_set_quality(true);ds4_gpu_dsv41_arm_attention_epilogue(1,false,true);CHECK(!ds4_gpu_dsv41_attention_epilogue_used());ds4_gpu_set_quality(false);
+  ds4_gpu_set_ssd_streaming(true);ds4_gpu_dsv41_arm_attention_epilogue(1,false,true);CHECK(!ds4_gpu_dsv41_attention_epilogue_used());ds4_gpu_set_ssd_streaming(false);
+  printf("attention: %u reduce cases, every head bit and guard exact\n",reduced);

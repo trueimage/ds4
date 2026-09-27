@@ -1,0 +1,25 @@
+{
+  "cwd": "/tmp/ds4-splash-20260926/final",
+  "argv": [
+    "./ds4-server",
+    "-m",
+    "/Users/jw/ds4/gguf/GLM-5.3-Flash-Q4_K.gguf",
+    "--ctx",
+    "32768",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "59844",
+    "--kv-disk-dir",
+    "/tmp/ds4-splash-20260926/final-validation/http-glm-3/kv",
+    "--kv-disk-space-mb",
+    "4096",
+    "--kv-cache-min-tokens",
+    "16",
+    "--kv-cache-cold-max-tokens",
+    "32768",
+    "--trace",
+    "/tmp/ds4-splash-20260926/final-validation/http-glm-3/trace.log"
+  ],
+  "staged": false
+}

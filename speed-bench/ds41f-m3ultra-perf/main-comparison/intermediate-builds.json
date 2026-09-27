@@ -1,0 +1,60 @@
+[
+  {
+    "commit": "830a33c2b6800520c2ddd13740d562468718d036",
+    "command": [
+      "make",
+      "-j8",
+      "all",
+      "ds4_test",
+      "ds4_cpu.o",
+      "ds4_server_cpu.o"
+    ],
+    "cwd": "/tmp/ds4-pr1090-commit-check-20260926",
+    "exit_code": 0,
+    "seconds": 11.139643249975052,
+    "log": "build-commit-1.log"
+  },
+  {
+    "commit": "e15b46f134d3fed2093cf5c4290afd1f06d0dea8",
+    "command": [
+      "make",
+      "-j8",
+      "all",
+      "ds4_test",
+      "ds4_cpu.o",
+      "ds4_server_cpu.o"
+    ],
+    "cwd": "/tmp/ds4-pr1090-commit-check-20260926",
+    "exit_code": 0,
+    "seconds": 4.426425416953862,
+    "log": "build-commit-2.log"
+  },
+  {
+    "commit": "9cdca3211f7504c1c8992a1f0d0f12e975173075",
+    "command": [
+      "make",
+      "-j8",
+      "all",
+      "ds4_test",
+      "ds4_cpu.o",
+      "ds4_server_cpu.o"
+    ],
+    "cwd": "/tmp/ds4-pr1090-commit-check-20260926",
+    "exit_code": 0,
+    "seconds": 5.291354165994562,
+    "log": "build-commit-3.log"
+  },
+  {
+    "commit": "60bf722465ec124788b7c719f205cdd6dc7e21e1",
+    "command": [
+      "make",
+      "-C",
+      "gguf-tools",
+      "glm53-requant-bf16"
+    ],
+    "cwd": "/tmp/ds4-pr1090-commit-check-20260926",
+    "exit_code": 0,
+    "seconds": 0.39788029197370633,
+    "log": "build-commit-4.log"
+  }
+]

@@ -1,0 +1,460 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 7.467 ms, residency requested in 2927.129 ms, warmup 7.700 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 294.14 GiB = 302.03 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+SEED pos=32703 ctx=32768 vocab=129280 snapshot_bytes=220441392 resident=1 mmap=1
+BRANCH case=natural arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+BRANCH case=natural arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=natural step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=natural arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+EXACT case=natural step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=natural arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=natural matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=router-ties arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=router-ties arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=router-ties step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=router-ties arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=router-ties step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=router-ties arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=router-ties matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=router-zero arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=router-zero arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=router-zero step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=router-zero arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=router-zero step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=router-zero arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=router-zero matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=hc-zero arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=hc-zero arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=hc-zero step=0 token=7117 next=81 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=hc-zero arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=hc-zero step=1 token=81 next=312 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=hc-zero arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=hc-zero matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=hc-cancellation arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=hc-cancellation arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=hc-cancellation step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=hc-cancellation arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=hc-cancellation step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=hc-cancellation arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=hc-cancellation matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=shared-zero arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=shared-zero arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=shared-zero step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=shared-zero arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=shared-zero step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=shared-zero arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=shared-zero matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=quality-refusal arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+BRANCH case=quality-refusal arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=quality-refusal step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=quality-refusal arm=1 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+EXACT case=quality-refusal step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=quality-refusal arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=quality-refusal matched_boundaries=46 compared_boundary_bytes=1743528
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+BRANCH case=ownership-refusal arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+BRANCH case=ownership-refusal arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+EXACT case=ownership-refusal step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=ownership-refusal arm=1 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=0
+EXACT case=ownership-refusal step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=ownership-refusal arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=ownership-refusal matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-accept arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-accept arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-accept step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-accept arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=topk-accept step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-accept arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-accept matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-winner-tie arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-winner-tie arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-winner-tie step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-winner-tie arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=0 overflow=0 ties=1 max_width=32704 injections=1
+EXACT case=topk-winner-tie step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-winner-tie arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-winner-tie matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-cut-tie arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-cut-tie arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-cut-tie step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-cut-tie arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=0 overflow=0 ties=1 max_width=32704 injections=1
+EXACT case=topk-cut-tie step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-cut-tie arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-cut-tie matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-nan arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-nan arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-nan step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-nan arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=1 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=topk-nan step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-nan arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-nan matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-inf arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-inf arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-inf step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-inf arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=1 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=topk-inf step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-inf arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-inf matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-overflow arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-overflow arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-overflow step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-overflow arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=0 overflow=1 ties=0 max_width=32704 injections=1
+EXACT case=topk-overflow step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-overflow arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-overflow matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-signed-zero arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-signed-zero arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-signed-zero step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-signed-zero arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=3 gpu_fallback=1 host_skip=0 nonfinite=0 overflow=1 ties=1 max_width=32704 injections=1
+EXACT case=topk-signed-zero step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-signed-zero arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-signed-zero matched_boundaries=46 compared_boundary_bytes=1743528
+BRANCH case=topk-recovery arm=0 step=0 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+BRANCH case=topk-recovery arm=0 step=1 R=0/40 H=0/80 S=0/40 hist=0 accepted=0 gpu_fallback=0 host_skip=4 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+EXACT case=topk-recovery step=0 token=7117 next=13386 logits=129280 snapshot_bytes=220439348 pos=32704
+BRANCH case=topk-recovery arm=1 step=0 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32704 injections=1
+EXACT case=topk-recovery step=1 token=13386 next=81 logits=129280 snapshot_bytes=220454200 pos=32705
+BRANCH case=topk-recovery arm=1 step=1 R=40/0 H=80/0 S=40/0 hist=4 accepted=4 gpu_fallback=0 host_skip=0 nonfinite=0 overflow=0 ties=0 max_width=32705 injections=0
+PASS case=topk-recovery matched_boundaries=46 compared_boundary_bytes=1743528
+ds4: V4.1 layer 0 failed at position 32703
+PASS hc-error-recovery: graph error, invalid snapshot rejection, restore, exact logits/state
+SCHEDULE arm=0 original_stages=1 original_schedule=1 steps=16 command_buffers=656 blit_copies=1424 histogram_accepted=0 snapshot_bytes=220543856
+SCHEDULE arm=1 original_stages=0 original_schedule=1 steps=16 command_buffers=656 blit_copies=0 histogram_accepted=62 snapshot_bytes=220543856
+SCHEDULE arm=2 original_stages=1 original_schedule=0 steps=16 command_buffers=48 blit_copies=1424 histogram_accepted=0 snapshot_bytes=220543856
+SCHEDULE arm=3 original_stages=0 original_schedule=0 steps=16 command_buffers=48 blit_copies=0 histogram_accepted=62 snapshot_bytes=220543856
+PASS queued-schedule: 4 arms x 16 uninterposed steps, full logits/tokens/state exact
+PASS gather-reuse: start=0 steps=4 exact logits/tokens/state; 15/30 dispatches removed
+PASS gather-reuse: start=32703 steps=16 exact logits/tokens/state; 15/30 dispatches removed
+PASS live edges: 16 matched cases, full logits/tokens/snapshots, error recovery, queued schedule; max_ctx=32768 max_pos=32719

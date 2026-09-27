@@ -1,0 +1,118 @@
+{
+  "v41": {
+    "512": {
+      "True": {
+        "ms": 1.8965,
+        "load_ms": 1.143,
+        "copy_ms": 0.522,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 5.4515,
+        "load_ms": 1.3014999999999999,
+        "copy_ms": 0.5195000000000001,
+        "resident_fraction": 0.0
+      }
+    },
+    "2048": {
+      "True": {
+        "ms": 3.0415,
+        "load_ms": 1.9165,
+        "copy_ms": 0.8105,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 11.421,
+        "load_ms": 2.3105,
+        "copy_ms": 0.8025,
+        "resident_fraction": 0.0
+      }
+    },
+    "8193": {
+      "True": {
+        "ms": 7.7905,
+        "load_ms": 5.906000000000001,
+        "copy_ms": 2.3025,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 12.4255,
+        "load_ms": 6.402,
+        "copy_ms": 2.318,
+        "resident_fraction": 0.0
+      }
+    },
+    "32703": {
+      "True": {
+        "ms": 25.725,
+        "load_ms": 20.424,
+        "copy_ms": 7.3525,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 41.5745,
+        "load_ms": 19.701500000000003,
+        "copy_ms": 7.3285,
+        "resident_fraction": 0.0
+      }
+    }
+  },
+  "glm": {
+    "512": {
+      "True": {
+        "ms": 17.479,
+        "load_ms": 13.109,
+        "copy_ms": 5.9055,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 30.210500000000003,
+        "load_ms": 14.5305,
+        "copy_ms": 5.7325,
+        "resident_fraction": 0.0
+      }
+    },
+    "2048": {
+      "True": {
+        "ms": 23.123,
+        "load_ms": 17.704,
+        "copy_ms": 9.022,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 38.574,
+        "load_ms": 19.816000000000003,
+        "copy_ms": 9.029,
+        "resident_fraction": 0.0
+      }
+    },
+    "8193": {
+      "True": {
+        "ms": 45.4955,
+        "load_ms": 39.033500000000004,
+        "copy_ms": 22.692999999999998,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 74.1045,
+        "load_ms": 40.662,
+        "copy_ms": 22.269,
+        "resident_fraction": 0.0
+      }
+    },
+    "32703": {
+      "True": {
+        "ms": 138.723,
+        "load_ms": 114.838,
+        "copy_ms": 74.848,
+        "resident_fraction": 1.0
+      },
+      "False": {
+        "ms": 214.3945,
+        "load_ms": 122.0745,
+        "copy_ms": 74.59299999999999,
+        "resident_fraction": 0.0
+      }
+    }
+  }
+}

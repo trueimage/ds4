@@ -1,0 +1,6 @@
+2026-09-26 13:06:06.487 test_deepseek41_q8_nr[68618:115591583] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.050 ms, residency requested in 0.503 ms, warmup 6.737 ms (mapped 64.00 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+Q8 NR PASS: 840 dispatches, original versus NR0=1/4/8, all outputs and guards exact

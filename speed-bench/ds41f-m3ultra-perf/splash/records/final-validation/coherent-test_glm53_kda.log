@@ -1,0 +1,49 @@
+2026-09-26 15:52:01.098 test_glm53_kda[85867:115771825] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.039 ms, residency requested in 4.193 ms, warmup 7.127 ms (mapped 209.22 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+split attention 8 rows x 32/block: ref_scale 7.79, generic 1.66e-05, split 1.01e-05, split-vs-generic 1.72e-05 (tol 0.000779), exact == generic
+split attention 513 rows x 32/block: ref_scale 5.92, generic 2.86e-05, split 1.12e-05, split-vs-generic 3.05e-05 (tol 0.000592), exact == generic
+split attention 1024 rows x 32/block: ref_scale 4.4, generic 3.8e-05, split 1.44e-05, split-vs-generic 3.19e-05 (tol 0.00044), exact == generic
+split attention 2048 rows x 128/block: ref_scale 4.17, generic 3.31e-05, split 1.35e-05, split-vs-generic 3.24e-05 (tol 0.000417), exact == generic
+split attention 2051 rows x 128/block: ref_scale 4.17, generic 3.11e-05, split 1.18e-05, split-vs-generic 2.86e-05 (tol 0.000417), exact == generic
+split attention 2051 rows x 64/block: ref_scale 4.17, generic 3.11e-05, split 1.04e-05, split-vs-generic 2.86e-05 (tol 0.000417), exact == generic
+split attention 4096 rows x 128/block: ref_scale 4.43, generic 6.46e-05, split 1.16e-05, split-vs-generic 6.06e-05 (tol 0.000443), exact == generic
+ds4: kda stage prepare=1.838 ms
+ds4: kda stage recurrence=3.595 ms
+ds4: kda stage prepare=2.116 ms
+ds4: kda stage recurrence=4.254 ms
+ds4: kda stage prepare=1.688 ms
+ds4: kda stage recurrence=3.570 ms
+ds4: kda stage prepare=1.689 ms
+ds4: kda stage recurrence=2.982 ms
+ds4: kda stage prepare=0.894 ms
+ds4: kda stage recurrence=1.027 ms
+ds4: kda stage prepare=1.032 ms
+ds4: kda stage recurrence=0.404 ms
+ds4: kda stage prepare=0.316 ms
+ds4: kda stage recurrence=0.310 ms
+ds4: kda stage prepare=0.346 ms
+ds4: kda stage recurrence=0.324 ms
+ds4: kda stage prepare=0.265 ms
+ds4: kda stage recurrence=0.303 ms
+ds4: kda stage prepare=0.264 ms
+ds4: kda stage recurrence=0.298 ms
+ds4: kda stage prepare=0.242 ms
+ds4: kda stage recurrence=0.264 ms
+ds4: kda stage prepare=0.238 ms
+ds4: kda stage recurrence=0.444 ms
+ds4: kda stage prepare=0.242 ms
+ds4: kda stage recurrence=0.256 ms
+ds4: kda stage prepare=0.249 ms
+ds4: kda stage recurrence=0.263 ms
+ds4: kda stage prepare=0.226 ms
+ds4: kda stage recurrence=0.255 ms
+ds4: kda stage prepare=0.219 ms
+ds4: kda stage recurrence=0.258 ms
+KDA values: all output/history/state bits and guards exact
+GLM indexed prefill checked wrapper: optimized two-head dispatch is byte-exact vs one-head at 2051/512/33/16/1 rows with UINT32_MAX/out-of-range IDs and exact rollbacks: PASS
+GLM indexed prefill padded IDs: checked wrapper skipped UINT32_MAX/out-of-range rows, retained optimized 64-head/no-RoPE dispatch, and matched compact valid-row bytes: PASS
+GLM-5.3 KDA GPU tests: PASS

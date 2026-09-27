@@ -1,0 +1,9 @@
+2026-09-18 22:14:28.175 test_deepseek41_fusions[39772:506643573] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.033 ms, residency requested in 0.077 ms, warmup 7.766 ms (mapped 0.05 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+HC collapse draw=60 word=0 old=00000000 new=80000000
+router: 240 scalar/batch cases, ids/weights/probabilities/guards exact

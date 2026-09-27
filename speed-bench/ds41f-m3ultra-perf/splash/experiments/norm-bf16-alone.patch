@@ -1,0 +1,225 @@
+--- a/metal/norm.metal
++++ b/metal/norm.metal
+@@ -387,3 +387,59 @@
+         }
+     }
+ }
++
++// Preserve the weighted norm reduction and materialize its BF16 store.
++kernel void kernel_dsv41_rms_norm_mul_bf16(
++        constant ds4_metal_args_norm & args,
++        device const char * src0,
++        device const char * src1_0,
++        device const char * src1_1,
++        device       char * dst,
++        threadgroup float * shmem_f32 [[threadgroup(0)]],
++        uint3   tgpig[[threadgroup_position_in_grid]],
++        ushort3 tpitg[[thread_position_in_threadgroup]],
++        ushort  sgitg[[simdgroup_index_in_threadgroup]],
++        ushort  tiisg[[thread_index_in_simdgroup]],
++        ushort3   ntg[[threads_per_threadgroup]]) {
++    if (sgitg == 0) {
++        shmem_f32[tiisg] = 0.0f;
++    }
++
++    const int i01 = tgpig.x;
++    const int i02 = tgpig.y;
++    const int i03 = tgpig.z;
++
++    device const float4 * x = (device const float4 *) (src0 + i03*args.nbf3[0] + i02*args.nbf2[0] + i01*args.nbf1[0]);
++
++    device const float4 * f0 = (device const float4 *) (src1_0 + (i03%args.nef3[1])*args.nbf3[1] + (i02%args.nef2[1])*args.nbf2[1] + (i01%args.nef1[1])*args.nbf1[1]);
++
++    float sumf = 0.0f;
++
++    // parallel sum
++    for (int i00 = tpitg.x; i00 < args.ne00_t; i00 += ntg.x) {
++        sumf += dot(x[i00], x[i00]);
++    }
++    sumf = simd_sum(sumf);
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    if (tiisg == 0) {
++        shmem_f32[sgitg] = sumf;
++    }
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    sumf = shmem_f32[tiisg];
++    sumf = simd_sum(sumf);
++
++    volatile float mean  = sumf/args.ne00;
++    volatile float scale = 1.0f/sqrt(mean + args.eps);
++
++    device float4 * y = (device float4 *) (dst + i03*args.nb3 + i02*args.nb2 + i01*args.nb1);
++    for (int i00 = tpitg.x; i00 < args.ne00_t; i00 += ntg.x) {
++        const float4 w = f0[i00];
++        volatile float4 value = (x[i00] * scale) * w;
++        y[i00] = float4(dsv41_bf16(value.x), dsv41_bf16(value.y),
++                                dsv41_bf16(value.z), dsv41_bf16(value.w));
++    }
++}
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -22838,6 +22838,71 @@
+     return 1;
+ }
+ 
++int ds4_gpu_dsv41_norm_bf16(
++        ds4_gpu_tensor       *out,
++        const ds4_gpu_tensor *x,
++        const void             *model_map,
++        uint64_t                model_size,
++        uint64_t                weight_offset,
++        uint32_t                n,
++        float                   eps) {
++    if (!g_initialized && !ds4_gpu_init()) return -1;
++    if (!ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                    "DS4_METAL_DISABLE_V41_NORM_BF16")) return 0;
++    /* Wider norms failed the oracle; retain the reference two-dispatch chain. */
++    if (!n || (n & 3u) || n > 8192u) return 0;
++    const uint32_t rows = 1;
++    if (n == 0 || rows == 0 || (n & 3u) != 0) return -1;
++
++    @autoreleasepool {
++        id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline("kernel_dsv41_rms_norm_mul_bf16");
++        if (!pipeline || pipeline.maxTotalThreadsPerThreadgroup < ds4_gpu_rms_norm_threads(n)) return 0;
++        id<MTLBuffer> xbuf = ds4_gpu_tensor_buffer(x);
++        id<MTLBuffer> outbuf = ds4_gpu_tensor_buffer(out);
++        const uint64_t row_bytes = (uint64_t)n * sizeof(float);
++        const uint64_t bytes = row_bytes * rows;
++        if (!xbuf || !outbuf ||
++            ds4_gpu_tensor_bytes(x) < bytes ||
++            ds4_gpu_tensor_bytes(out) < bytes) {
++            fprintf(stderr, "ds4: Metal weighted RMS norm received undersized activation buffers\n");
++            return -1;
++        }
++        if (weight_offset > model_size || row_bytes > model_size - weight_offset) {
++            fprintf(stderr, "ds4: Metal weighted RMS norm range is outside the mapped model\n");
++            return -1;
++        }
++
++        uint64_t inner_offset = 0;
++        id<MTLBuffer> wbuf = ds4_gpu_wrap_model_range(model_map,
++                                                       model_size,
++                                                       weight_offset,
++                                                       row_bytes,
++                                                       &inner_offset);
++        if (!wbuf) return -1;
++
++        ds4_gpu_rms_norm_args args = ds4_gpu_make_rms_norm_args(n, rows, eps);
++        int owned = 0;
++        id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
++        if (!cb) return -1;
++
++        id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
++        [enc setComputePipelineState:pipeline];
++        [enc setBytes:&args length:sizeof(args) atIndex:0];
++        [enc setBuffer:xbuf offset:ds4_gpu_tensor_offset(x) atIndex:1];
++        [enc setBuffer:wbuf offset:(NSUInteger)inner_offset atIndex:2];
++        [enc setBuffer:xbuf offset:ds4_gpu_tensor_offset(x) atIndex:3];
++        [enc setBuffer:outbuf offset:ds4_gpu_tensor_offset(out) atIndex:4];
++        [enc setThreadgroupMemoryLength:32u * sizeof(float) atIndex:0];
++        [enc dispatchThreadgroups:MTLSizeMake(rows, 1, 1)
++             threadsPerThreadgroup:MTLSizeMake(ds4_gpu_rms_norm_threads(n), 1, 1)];
++        ds4_gpu_end_compute_encoder(cb, enc);
++
++        if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) g_test_v41_fusions_dispatches |= 64u;
++        if (!ds4_gpu_finish_command_buffer(cb, owned, "weighted RMS norm")) return -1;
++    }
++
++    return 1;
++}
+ 
+ int ds4_gpu_add_rms_norm_weight_tensor(
+         ds4_gpu_tensor       *norm_out,
+--- a/ds4.c
++++ b/ds4.c
+@@ -40653,6 +40653,11 @@
+ 
+ static bool ds41_norm(ds4_gpu_tensor *out, const ds4_gpu_tensor *in,
+                       const ds4_model *m, const ds4_tensor *weight) {
++#ifdef __APPLE__
++    const int rc = ds4_gpu_dsv41_norm_bf16(out, in, m->map, m->size,
++        weight->abs_offset, (uint32_t)weight->dim[0], DS4_RMS_EPS);
++    if (rc) return rc > 0;
++#endif
+     return ds4_gpu_rms_norm_weight_tensor(out, in, m->map, m->size,
+         weight->abs_offset, (uint32_t)weight->dim[0], DS4_RMS_EPS) &&
+         ds41_bf16(out, (uint32_t)weight->dim[0]);
+--- a/ds4_deepseek41_gpu.h
++++ b/ds4_deepseek41_gpu.h
+@@ -111,7 +111,9 @@
+         uint64_t model_size, uint64_t weight_offset, uint64_t in_dim,
+         uint64_t out_dim, const ds4_gpu_tensor *x, uint32_t rows);
+ 
+-
++int ds4_gpu_dsv41_norm_bf16(ds4_gpu_tensor *out, const ds4_gpu_tensor *x,
++        const void *model_map, uint64_t model_size, uint64_t weight_offset,
++        uint32_t n, float eps);
+ int ds4_gpu_dsv41_qb_bf16_admitted(void);
+ int ds4_gpu_dsv41_gather_reuse_admitted(void);
+ /* The M3 Ultra exact paths (router, HC, shared, histogram top-k, Q4 tail cull)
+--- a/tests/test_deepseek41_fusions.c
++++ b/tests/test_deepseek41_fusions.c
+@@ -217,6 +217,59 @@
+                raw_nonfinite_out,rounding_sensitive_out);
+     }
+ 
++    /* Weighted norm BF16 store: separate and in-place outputs plus guards. */
++    {
++        const unsigned widths[] = {128,512,1280,5120,8192,16384};
++        const unsigned rows[] = {1,2,7};
++        unsigned cases=0;
++        for(unsigned d=0;d<12;d++) for(unsigned wi=0;wi<6;wi++)
++        for(unsigned ri=0;ri<3;ri++) {
++            const unsigned n=widths[wi],r=rows[ri];
++            const size_t used=(size_t)n*r*4;
++            ds4_gpu_tensor *x=ds4_gpu_tensor_alloc_managed(used),*storage=ds4_gpu_tensor_alloc_managed(used+2*G);
++            ds4_gpu_tensor *y=ds4_gpu_tensor_view(storage,G,used);
++            unsigned char *ref=malloc(used); CHECK(x&&storage&&y&&ref);
++            float *v=ds4_gpu_tensor_contents(x),*w=model;
++            for(unsigned i=0;i<n*r;i++) v[i]=d==0?0:d==1?1e18f:sample();
++            for(unsigned i=0;i<n;i++) w[i]=sample();
++            if(d>=2&&d<8) {memcpy(v+(d*17)%(n*r),&exceptional[d-2],4);memcpy(w+(d*37)%n,&exceptional[d-2],4);}
++            const float eps=(d&1)?1e-20f:1e-6f;
++            for(unsigned arm=0;arm<2;arm++) {
++                memset(ds4_gpu_tensor_contents(storage),0xa5,used+2*G);
++                if(d&1) CHECK(ds4_gpu_tensor_write(y,0,v,used));
++                ds4_gpu_tensor *source=(d&1)?y:x;
++                CHECK(ds4_gpu_begin_commands());
++                if(arm==1) {
++                    for(unsigned row=0;row<r;row++) {
++                        ds4_gpu_tensor *xr=ds4_gpu_tensor_view(source,(size_t)row*n*4,n*4);
++                        ds4_gpu_tensor *yr=ds4_gpu_tensor_view(y,(size_t)row*n*4,n*4);
++                        const int rc=ds4_gpu_dsv41_norm_bf16(yr,xr,model,bytes,0,n,eps);
++                        CHECK(rc==(n<=8192?1:0));
++                        if(!rc) {
++                            CHECK(ds4_gpu_rms_norm_weight_tensor(yr,xr,model,bytes,0,n,eps));
++                            CHECK(ds4_gpu_dsv41_quantize(yr,n,1,DS4_V41_BF16));
++                        }
++                        ds4_gpu_tensor_free(xr);ds4_gpu_tensor_free(yr);
++                    }
++                } else {
++                    CHECK(ds4_gpu_rms_norm_weight_rows_tensor(y,source,model,bytes,0,n,r,eps));
++                    CHECK(ds4_gpu_dsv41_quantize(y,n,r,DS4_V41_BF16));
++                }
++                CHECK(ds4_gpu_end_commands());
++                CHECK(ds4_gpu_test_v41_fusions_take_dispatches()==(arm&&n<=8192?64u:0u));
++                unsigned char *p=ds4_gpu_tensor_contents(storage);
++                for(unsigned i=0;i<G;i++){CHECK(p[i]==0xa5);CHECK(p[G+used+i]==0xa5);}
++                if(arm&1) equal(ref,p+G,used,"norm BF16",cases);
++                else memcpy(ref,p+G,used);
++            }
++            ds4_gpu_set_quality(true);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);ds4_gpu_set_quality(false);
++            ds4_gpu_set_ssd_streaming(true);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);ds4_gpu_set_ssd_streaming(false);
++            setenv("DS4_METAL_DISABLE_V41_NORM_BF16","1",1);CHECK(ds4_gpu_dsv41_norm_bf16(y,x,model,bytes,0,n,eps)==0);unsetenv("DS4_METAL_DISABLE_V41_NORM_BF16");
++            ds4_gpu_tensor_free(y);ds4_gpu_tensor_free(storage);ds4_gpu_tensor_free(x);free(ref);cases++;
++        }
++        printf("norm: %u cases, BF16 stores and in-place outputs exact\n",cases);
++    }
++
+     {
+         const unsigned in=5120, od=384;
+         const unsigned counts[]={2,3,4,5,6,7,8};

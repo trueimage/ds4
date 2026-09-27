@@ -1,0 +1,7 @@
+server:
+ds4-server: thinking not closed, ignoring incomplete Qwen tool calls in reasoning
+KV hash scan entries=20 bytes=500000 old_ms=8.316 new_ms=1.049 match=1
+KV hash scan entries=200 bytes=500000 old_ms=15.772 new_ms=1.217 match=1
+KV hash scan entries=1000 bytes=500000 old_ms=18.801 new_ms=1.484 match=1
+server: OK
+ds4 tests: ok

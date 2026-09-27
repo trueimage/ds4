@@ -1,0 +1,29 @@
+{
+  "base": "0aaea5a238fb41a35106a551e73c8409dfb751ac",
+  "previous_published_head": "849e039b4c8048d73423c12cdf201ccbfee8528b",
+  "measured_runtime_snapshot": "f768551d842942f5eed4b257f6c997f8eb5ec29e",
+  "scoped_implementation_commits": [
+    {
+      "commit": "830a33c2b6800520c2ddd13740d562468718d036",
+      "tree": "ceb87d951bd82fe453e25aa75e691c6d94f722c2",
+      "subject": "metal: optimize exact GLM Flash kernels and routing"
+    },
+    {
+      "commit": "e15b46f134d3fed2093cf5c4290afd1f06d0dea8",
+      "tree": "a4ba8003fdf0c164ab1cf5f1ef8ad688cca7bbfd",
+      "subject": "metal: pipeline V4.1 decode and enforce bit-exact fast paths"
+    },
+    {
+      "commit": "9cdca3211f7504c1c8992a1f0d0f12e975173075",
+      "tree": "b3ed4ca9a96d85705f861d931294c7b11c0d6e93",
+      "subject": "server: preserve exact prefixes and reduce checkpoint latency"
+    },
+    {
+      "commit": "60bf722465ec124788b7c719f205cdd6dc7e21e1",
+      "tree": "908ad77bcef53e419ace048f5a869fbb36cf5008",
+      "subject": "gguf: preserve native MXFP4 experts and guard requantization"
+    }
+  ],
+  "runtime_and_makefile_preserved_byte_for_byte": true,
+  "notes": "Only documentation/evidence, generated-binary ignore entries and byte-preserving evidence attributes differ from the tested snapshot."
+}

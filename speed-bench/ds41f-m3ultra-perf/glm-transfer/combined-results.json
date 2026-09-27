@@ -1,0 +1,51 @@
+{
+  "method": "ABBA separate processes; total tokens / total time using two-decimal CSV rates; 64 decode tokens per frontier per run",
+  "runs": [
+    "base-perf-a",
+    "final-perf-a",
+    "final-perf-b",
+    "base-perf-b"
+  ],
+  "results": [
+    {
+      "context": 512,
+      "prefill_tokens": 512,
+      "base_prefill_tps": 272.1498530222304,
+      "final_prefill_tps": 274.3693513119533,
+      "prefill_gain_percent": 0.815542711148054,
+      "base_decode_tps": 23.93,
+      "final_decode_tps": 25.93499132446501,
+      "decode_gain_percent": 8.378568008629372
+    },
+    {
+      "context": 2048,
+      "prefill_tokens": 1536,
+      "base_prefill_tps": 335.0228179986568,
+      "final_prefill_tps": 334.9199701421235,
+      "prefill_gain_percent": -0.030698761698599863,
+      "base_decode_tps": 23.98,
+      "final_decode_tps": 25.964975929135374,
+      "decode_gain_percent": 8.277631063950675
+    },
+    {
+      "context": 8192,
+      "prefill_tokens": 6144,
+      "base_prefill_tps": 355.30995243590104,
+      "final_prefill_tps": 355.4799819961742,
+      "prefill_gain_percent": 0.047853869306924146,
+      "base_decode_tps": 23.77,
+      "final_decode_tps": 25.68499124002336,
+      "decode_gain_percent": 8.05633672706505
+    },
+    {
+      "context": 32703,
+      "prefill_tokens": 24511,
+      "base_prefill_tps": 661.5349482642642,
+      "final_prefill_tps": 662.1699269069877,
+      "prefill_gain_percent": 0.09598565342459064,
+      "base_decode_tps": 23.299995708154505,
+      "final_decode_tps": 25.249984158415838,
+      "decode_gain_percent": 8.369050684326428
+    }
+  ]
+}

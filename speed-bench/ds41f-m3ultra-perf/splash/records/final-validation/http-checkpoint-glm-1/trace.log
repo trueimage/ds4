@@ -1,0 +1,1184 @@
+
+===== request 1 2026-09-26 16:25:52 =====
+kind: chat
+model: glm-5.3-flash
+stream: 1
+tools: 0
+think_mode: none
+prompt_tokens: 10166
+effective_prompt_tokens: 10166
+cached_tokens: 0
+max_tokens: 64
+temperature: 0.000
+top_k: 0
+top_p: 1.000
+min_p: 0.050
+ignore_eos: 1
+seed: 0
+stream_include_usage: 1
+
+--- cache decision ---
+live_tokens_before: 0
+prompt_tokens: 10166
+live_prompt_common: 0
+memory_token_reusable: 0
+memory_miss_reason: no-live-checkpoint
+tool_replay: mem=0 disk=0 canonical=0 missing_ids=0
+cache_source: none
+cached_tokens: 0
+disk_cached_tokens: 0
+
+--- raw request json ---
+{"model": "glm-5.3-flash", "messages": [{"role": "user", "content": "Benchmark checkpoint passage.\n                           I PROMESSI SPOSI\n\n\n\n\n                             INTRODUZIONE\n\n\n_L'historia si pu\u00f2 veramente deffinire una guerra illustre contro il\nTempo, perch\u00e8 togliendoli di mano gl'anni suoi prigionieri, anzi gi\u00e0\nfatti cadaueri, li richiama in vita, li passa in rassegna, e li schiera\ndi nuovo in battaglia. Ma gl'illustri Campioni che in tal Arringo fanno\nmesse di Palme e d'Allori, rapiscono solo che le sole spoglie pi\u00f9\nsfarzose e brillanti, imbalsamando co' loro inchiostri le Imprese de\nPrencipi e Potentati, e qualificati Personaggi, e trapuntando coll'ago\nfinissimo dell'ingegno i fili d'oro e di seta, che formano un perpetuo\nricamo di Attioni gloriose. Per\u00f2 alla mia debolezza non \u00e8 lecito\nsolleuarsi a tal'argomenti, e sublimit\u00e0 pericolose, con aggirarsi tra\nLabirinti de' Politici maneggj, et il rimbombo de' bellici Oricalchi:\nsolo che hauendo hauuto notitia di fatti memorabili, se ben capitorno a\ngente meccaniche, e di piccol affare, mi accingo di lasciarne memoria\na Posteri, con far di tutto schietta e genuinamente il Racconto,\nouuero sia Relatione. Nella quale si vedr\u00e0 in angusto Teatro luttuose\nTraggedie d'horrori, e Scene di malvaggit\u00e0 grandiosa, con intermezzi\nd'Imprese virtuose e buont\u00e0 angeliche, opposte alle operationi\ndiaboliche. E veramente, considerando che questi nostri climi sijno\nsotto l'amparo del Re Cattolico nostro Signore, che \u00e8 quel Sole che mai\ntramonta, e che, sopra di essi, con riflesso Lume, qual Luna giamai\ncalante, risplenda l'Heroe di nobil Prosapia che_ pro tempore _ne tiene\nle sue parti, e gl'Amplissimi Senatori quali Stelle fisse, e gl'altri\nSpettabili Magistrati qual'erranti Pianeti spandino la luce per ogni\ndoue, venendo cos\u00ec a formare un nobilissimo Cielo, altra causale\ntrouar non si pu\u00f2 del vederlo tramutato in inferno d'atti tenebrosi,\nmalvaggit\u00e0 e sevitie che dagl'huomini temerarij si vanno moltiplicando,\nse non se arte e fattura diabolica, attesoch\u00e8 l'humana malitia per s\u00e8\nsola bastar non dourebbe a resistere a tanti Heroi, che con occhij\nd'Argo e braccj di Briareo, si vanno trafficando per li pubblici\nemolumenti. Per locch\u00e8 descriuendo questo Racconto auuenuto ne' tempi\ndi mia verde staggione, abbench\u00e8 la pi\u00f9 parte delle persone che vi\nrappresentano le loro parti, sijno sparite dalla Scena del Mondo, con\nrendersi tributarij delle Parche, pure per degni rispetti, si tacer\u00e0\nli loro nomi, cio\u00e8 la parentela, et il medemo si far\u00e0 de' luochi,\nsolo indicando li Territorij_ generaliter. _N\u00e8 alcuno dir\u00e0 questa sij\nimperfettione del Racconto, e defformit\u00e0 di questo mio rozzo Parto,\na meno questo tale Critico non sij persona affatto diggiuna della\nFilosofia: che quanto agl'huomini in essa versati, ben vederanno nulla\nmancare alla sostanza di detta Narratione. Imperciocch\u00e8, essendo cosa\nevidente, e da verun negata non essere i nomi se non puri purissimi\naccidenti...._\u00bb\n\n--Ma, quando io avr\u00f2 durata l'eroica fatica di trascriver questa storia\nda questo dilavato e graffiato autografo, e l'avr\u00f2 data, come si suol\ndire, alla luce, si trover\u00e0 poi chi duri la fatica di leggerla?--\n\nQuesta riflessione dubitativa, nata nel travaglio del decifrare uno\nscarabocchio che veniva dopo _accidenti_, mi fece sospender la copia,\ne pensar pi\u00f9 seriamente a quello che convenisse di fare.--Ben \u00e8 vero,\ndicevo tra me, scartabellando il manoscritto, ben \u00e8 vero che quella\ngrandine di concettini e di figure non continua cos\u00ec alla distesa per\ntutta l'opera. Il buon secentista ha voluto sul principio mettere in\nmostra la sua virt\u00f9; ma poi, nel corso della narrazione, e talvolta per\nlunghi tratti, lo stile cammina ben pi\u00f9 naturale e pi\u00f9 piano. S\u00ec; ma\ncom'\u00e8 dozzinale! com'\u00e8 sguaiato! com'\u00e8 scorretto! Idiotismi lombardi a\niosa, frasi della lingua adoperate a sproposito, grammatica arbitraria,\nperiodi sgangherati. E poi, qualche eleganza spagnola seminata qua e\nl\u00e0; e poi, ch'\u00e8 peggio, ne' luoghi pi\u00f9 terribili o pi\u00f9 pietosi della\nstoria, a ogni occasione d'eccitar maraviglia, o di far pensare, a\ntutti que' passi insomma che richiedono bens\u00ec un po' di rettorica,\nma rettorica discreta, fine, di buon gusto, costui non manca mai di\nmetterci di quella sua cos\u00ec fatta del proemio. E allora, accozzando,\ncon un'abilit\u00e0 mirabile, le qualit\u00e0 pi\u00f9 opposte, trova la maniera di\nriuscir rozzo insieme e affettato, nella stessa pagina, nello stesso\nperiodo, nello stesso vocabolo. Ecco qui: declamazioni ampollose,\ncomposte a forza di solecismi pedestri, e da per tutto quella\ngoffaggine ambiziosa, ch'\u00e8 il proprio carattere degli scritti di quel\nsecolo, in questo paese. In vero, non \u00e8 cosa da presentare a lettori\nd'oggigiorno: son troppo ammaliziati, troppo disgustati di questo\ngenere di stravaganze. Meno male, che il buon pensiero m'\u00e8 venuto sul\nprincipio di questo sciagurato lavoro: e me ne lavo le mani.--\n\nNell'atto per\u00f2 di chiudere lo scartafaccio, per riporlo, mi sapeva\nmale che una storia cos\u00ec bella dovesse rimanersi tuttavia sconosciuta;\nperch\u00e8, in quanto storia, pu\u00f2 essere che al lettore ne paia altrimenti,\nma a me era parsa bella, come dico; molto bella.--Perch\u00e8 non si\npotrebbe, pensai, prender la serie de' fatti da questo manoscritto,\ne rifarne la dicitura?--Non essendosi presentato alcuna obiezion\nragionevole, il partito fu subito abbracciato. Ed ecco l'origine del\npresente libro, esposta con un'ingenuit\u00e0 pari all'importanza del libro\nmedesimo.\n\nTaluni per\u00f2 di que' fatti, certi costumi descritti dal nostro autore,\nc'eran sembrati cos\u00ec nuovi, cos\u00ec strani, per non dir peggio, che,\nprima di prestargli fede, abbiam voluto interrogare altri testimoni; e\nci siam messi a frugar nelle memorie di quel tempo, per chiarirci se\nveramente il mondo camminasse allora a quel modo. Una tale indagine\ndissip\u00f2 tutti i nostri dubbi: a ogni passo ci abbattevamo in cose\nconsimili, e in cose pi\u00f9 forti: e, quello che ci parve pi\u00f9 decisivo,\nabbiam perfino ritrovati alcuni personaggi, de' quali non avendo mai\navuto notizia fuor che dal nostro manoscritto, eravamo in dubbio se\nfossero realmente esistiti. E, all'occorrenza, citeremo alcuna di\nquelle testimonianze, per procacciar fede alle cose, alle quali, per la\nloro stranezza, il lettore sarebbe pi\u00f9 tentato di negarla.\n\nMa, rifiutando come intollerabile la dicitura del nostro autore, che\ndicitura vi abbiam noi sostituita? Qui sta il punto.\n\nChiunque, senza esser pregato, s'intromette a rifar l'opera altrui,\ns'espone a rendere uno stretto conto della sua, e ne contrae in certo\nmodo l'obbligazione: \u00e8 questa una regola di fatto e di diritto, alla\nquale non pretendiam punto di sottrarci. Anzi, per conformarci ad essa\ndi buon grado, avevam proposto di dar qui minutamente ragione del\nmodo di scrivere da noi tenuto; e, a questo fine, siamo andati, per\ntutto il tempo del lavoro, cercando d'indovinare le critiche possibili\ne contingenti, con intenzione di ribatterle tutte anticipatamente.\nN\u00e8 in questo sarebbe stata la difficolt\u00e0; giacch\u00e8 (dobbiam dirlo a\nonor del vero) non ci si present\u00f2 alla mente una critica, che non le\nvenisse insieme una risposta trionfante, di quelle risposte che, non\ndico risolvon le questioni, ma le mutano. Spesso anche, mettendo due\ncritiche alle mani tra loro, le facevam battere l'una dall'altra; o,\nesaminandole ben a fondo, riscontrandole attentamente, riuscivamo\na scoprire e a mostrare che, cos\u00ec opposte in apparenza, eran per\u00f2\nd'uno stesso genere, nascevan tutt'e due dal non badare ai fatti e\nai princ\u00edpi su cui il giudizio doveva esser fondato; e, messele, con\nloro gran sorpresa, insieme, le mandavamo insieme a spasso. Non ci\nsarebbe mai stato autore che provasse cos\u00ec ad evidenza d'aver fatto\nbene. Ma che? quando siamo stati al punto di raccapezzar tutte le dette\nobiezioni e risposte, per disporle con qualche ordine, misericordia!\nvenivano a fare un libro. Veduta la qual cosa, abbiam messo da parte il\npensiero, per due ragioni che il lettore trover\u00e0 certamente buone: la\nprima, che un libro impiegato a giustificarne un altro, anzi lo stile\nd'un altro, potrebbe parer cosa ridicola: la seconda, che di libri\nbasta uno per volta, quando non \u00e8 d'avanzo.\n\n\n\n\n                           I PROMESSI SPOSI\n\n\n\n\n                            CAPITOLO PRIMO.\n\n\nQuel ramo del lago di Como, che volge a mezzogiorno, tra due catene\nnon interrotte di monti, tutte a seni e a golfi, a seconda dello\nsporgere e del rientrare di quelli, vien, quasi a un tratto, a\nristringersi, e a prender corso e figura di fiume, tra un promontorio\na destra, e un'ampia costiera dall'altra parte; e il ponte, che ivi\ncongiunge le due rive, par che renda ancor pi\u00f9 sensibile all'occhio\nquesta trasformazione, e segni il punto in cui il lago cessa, e\nl'Adda rincomincia, per ripigliar poi nome di lago dove le rive,\nallontanandosi di nuovo, lascian l'acqua distendersi e rallentarsi in\nnuovi golfi e in nuovi seni. La costiera, formata dal deposito di tre\ngrossi torrenti, scende appoggiata a due monti contigui, l'uno detto di\nsan Martino, l'altro, con voce lombarda, il _Resegone_, dai molti suoi\ncocuzzoli in fila, che in vero lo fanno somigliare a una sega: talch\u00e8\nnon \u00e8 chi, al primo vederlo, purch\u00e8 sia di fronte, come per esempio\ndi su le mura di Milano che guardano a settentrione, non lo discerna\ntosto, a un tal contrassegno, in quella lunga e vasta giogaia, dagli\naltri monti di nome pi\u00f9 oscuro e di forma pi\u00f9 comune. Per un buon\npezzo, la costa sale con un pendio lento e continuo; poi si rompe in\npoggi e in valloncelli, in erte e in ispianate, secondo l'ossatura de'\ndue monti, e il lavoro dell'acque. Il lembo estremo, tagliato dalle\nfoci de' torrenti, \u00e8 quasi tutto ghiaia e ciottoloni; il resto, campi\ne vigne, sparse di terre, di ville, di casali; in qualche parte boschi,\nche si prolungano su per la montagna. Lecco, la principale di quelle\nterre, e che d\u00e0 nome al territorio, giace poco discosto dal ponte, alla\nriva del lago, anzi viene in parte a trovarsi nel lago stesso, quando\nquesto ingrossa: un gran borgo al giorno d'oggi, e che s'incammina\na diventar citt\u00e0. Ai tempi in cui accaddero i fatti che prendiamo a\nraccontare, quel borgo, gi\u00e0 considerabile, era anche un castello, e\naveva perci\u00f2 l'onore d'alloggiare un comandante, e il vantaggio di\npossedere una stabile guarnigione di soldati spagnoli, che insegnavan\nla modestia alle fanciulle e alle donne del paese, accarezzavan di\ntempo in tempo le spalle a qualche marito, a qualche padre; e, sul\nfinir dell'estate, non mancavan mai di spandersi nelle vigne, per\ndiradar l'uve, e alleggerire a' contadini le fatiche della vendemmia.\nDall'una all'altra di quelle terre, dall'alture alla riva, da un poggio\nall'altro, correvano, e corrono tuttavia, strade e stradette, pi\u00f9 o men\nripide, o piane; ogni tanto affondate, sepolte tra due muri, donde,\nalzando lo sguardo, non iscoprite che un pezzo di cielo e qualche\nvetta di monte; ogni tanto elevate su terrapieni aperti: e da qui\nla vista spazia per prospetti pi\u00f9 o meno estesi, ma ricchi sempre e\nsempre qualcosa nuovi, secondo che i diversi punti piglian pi\u00f9 o meno\ndella vasta scena circostante, e secondo che questa o quella parte\ncampeggia o si scorcia, spunta o sparisce a vicenda. Dove un pezzo,\ndove un altro, dove una lunga distesa di quel vasto e variato specchio\ndell'acqua; di qua lago, chiuso all'estremit\u00e0 o piuttosto smarrito\nin un gruppo, in un andirivieni di montagne, e di mano in mano pi\u00f9\nallargato tra altri monti che si spiegano, a uno a uno, allo sguardo,\ne che l'acqua riflette capovolti, co' paesetti posti sulle rive; di\nl\u00e0 braccio di fiume, poi lago, poi fiume ancora, che va a perdersi in\nlucido serpeggiamento pur tra' monti che l'accompagnano, degradando\nvia via, e perdendosi quasi anch'essi nell'orizzonte. Il luogo stesso\nda dove contemplate que' vari spettacoli, vi fa spettacolo da ogni\nparte: il monte di cui passeggiate le falde, vi svolge, al di sopra,\nd'intorno, le sue cime e le balze, distinte, rilevate, mutabili quasi a\nogni passo, aprendosi e contornandosi in gioghi ci\u00f2 che v'era sembrato\nprima un sol giogo, e comparendo in vetta ci\u00f2 che poco innanzi vi si\nrappresentava sulla costa: e l'ameno, il domestico di quelle falde\ntempera gradevolmente il selvaggio, e orna vie pi\u00f9 il magnifico\ndell'altre vedute.\n\nPer una di queste stradicciole, tornava bel bello dalla passeggiata\nverso casa, sulla sera del giorno 7 novembre dell'anno 1628, don\nAbbondio, curato d'una delle terre accennate di sopra: il nome di\nquesta, n\u00e8 il casato del personaggio, non si trovan nel manoscritto,\nn\u00e8 a questo luogo n\u00e8 altrove. Diceva tranquillamente il suo ufizio,\ne talvolta, tra un salmo e l'altro, chiudeva il breviario, tenendovi\ndentro, per segno, l'indice della mano destra, e, messa poi questa\nnell'altra dietro la schiena, proseguiva il suo cammino, guardando a\nterra, e buttando con un piede verso il muro i ciottoli che facevano\ninciampo nel sentiero: poi alzava il viso, e, girati oziosamente gli\nocchi all'intorno, li fissava alla parte d'un monte, dove la luce\ndel sole gi\u00e0 scomparso, scappando per i fessi del monte opposto, si\ndipingeva qua e l\u00e0 sui massi sporgenti, come a larghe e inuguali\npezze di porpora. Aperto poi di nuovo il breviario, e recitato un\naltro squarcio, giunse a una voltata della stradetta, dov'era solito\nd'alzar sempre gli occhi dal libro, e di guardarsi dinanzi: e cos\u00ec fece\nanche quel giorno. Dopo la voltata, la strada correva diritta, forse\nun sessanta passi, e poi si divideva in due viottole, a foggia d'un\nipsilon: quella a destra saliva verso il monte, e menava alla cura:\nl'altra scendeva nella valle fino a un torrente; e da questa parte\nil muro non arrivava che all'anche del passeggiero. I muri interni\ndelle due viottole, in vece di riunirsi ad angolo, terminavano in un\ntabernacolo, sul quale eran dipinte certe figure lunghe, serpeggianti,\nche finivano in punta, e che, nell'intenzion dell'artista, e agli occhi\ndegli abitanti del vicinato, volevan dir fiamme; e, alternate con le\nfiamme, cert'altre figure da non potersi descrivere, che volevan dire\nanime del purgatorio: anime e fiamme a color di mattone, sur un fondo\nbigiognolo, con qualche scalcinatura qua e l\u00e0. Il curato, voltata la\nstradetta, e dirizzando, com'era solito, lo sguardo al tabernacolo,\nvide una cosa che non s'aspettava, e che non avrebbe voluto vedere.\nDue uomini stavano, l'uno dirimpetto all'altro, al confluente, per dir\ncos\u00ec, delle due viottole: un di costoro, a cavalcioni sul muricciolo\nbasso, con una gamba spenzolata al di fuori, e l'altro piede posato\nsul terreno della strada; il compagno, in piedi, appoggiato al muro,\ncon le braccia incrociate sul petto. L'abito, il portamento, e\nquello che, dal luogo ov'era giunto il curato, si poteva distinguer\ndell'aspetto, non lasciavan dubbio intorno alla lor condizione. Avevano\nentrambi intorno al capo una reticella verde, che cadeva sull'omero\nsinistro, terminata in una gran nappa, e dalla quale usciva sulla\nfronte un enorme ciuffo: due lunghi mustacchi arricciati in punta: una\ncintura lucida di cuoio, e a quella attaccate due pistole: un piccol\ncorno ripieno di polvere, cascante sul petto, come una collana: un\nmanico di coltellaccio che spuntava fuori d'un taschino degli ampi e\ngonfi calzoni, uno spadone, con una gran guardia traforata a lamine\nd'ottone, congegnate come in cifra, forbite e lucenti: a prima vista si\ndavano a conoscere per individui della specie de' _bravi_.\n\nQuesta specie, ora del tutto perduta, era allora floridissima in\nLombardia, e gi\u00e0 molto antica. Chi non ne avesse idea, ecco alcuni\nsquarci autentici, che potranno darne una bastante de' suoi caratteri\nprincipali, degli sforzi fatti per ispegnerla, e della sua dura e\nrigogliosa vitalit\u00e0.\n\nFino dall'otto aprile dell'anno 1583, l'Illustrissimo ed\nEccellentissimo signor don Carlo d'Aragon, Principe di Castelvetrano,\nDuca di Terranuova, Marchese d'Avola, Conte di Burgeto, grande\nAmmiraglio, e gran Contestabile di Sicilia, Governatore di Milano\ne Capitan Generale di Sua Maest\u00e0 Cattolica in Italia, _pienamente\ninformato della intollerabile miseria in che \u00e8 vivuta e vive questa\nCitt\u00e0 di Milano, per cagione dei bravi e vagabondi_, pubblica un\nbando contro di essi. _Dichiara e diffinisce tutti coloro essere\ncompresi in questo bando, e doversi ritenere bravi e vagabondi_....\n_i quali, essendo forestieri o del paese, non hanno esercizio\nalcuno, od avendolo, non lo fanno_.... _ma, senza salario, o pur con\nesso, s'appoggiano a qualche cavaliere o gentiluomo, officiale o\nmercante_.... _per fargli spalle e favore, o veramente, come si pu\u00f2\npresumere, per tendere insidie ad altri_.... A tutti costoro ordina\nche, nel termine di giorni sei, abbiano a sgomberare il paese, intima\nla galera a' renitenti, e d\u00e0 a tutti gli ufiziali della giustizia\nle pi\u00f9 stranamente ampie e indefinite facolt\u00e0, per l'esecuzione\ndell'ordine. Ma, nell'anno seguente, il 12 aprile, scorgendo il detto\nsignore, _che questa Citt\u00e0 \u00e8 tuttavia piena di detti bravi_....\n_tornati a vivere come prima vivevano, non punto mutato il costume\nloro, n\u00e8 scemato il numero_, d\u00e0 fuori un'altra grida, ancor pi\u00f9\nvigorosa e notabile, nella quale, tra l'altre ordinazioni, prescrive:\n\n_Che qualsivoglia persona, cos\u00ec di questa Citt\u00e0, come forestiera, che\nper due testimonj conster\u00e0 esser tenuto, e comunemente riputato per\nbravo, et aver tal nome, ancorch\u00e8 non si verifichi aver fatto delitto\nalcuno.... per questa sola riputazione di bravo, senza altri indizj,\npossa dai detti giudici e da ognuno di loro esser posto alla corda et\nal tormento, per processo informativo.... et ancorch\u00e8 non confessi\ndelitto alcuno, tuttavia sia mandato alla galea, per detto triennio,\nper la sola opinione e nome di bravo, come di sopra_. Tutto ci\u00f2, e il\ndi pi\u00f9 che si tralascia, perch\u00e8 _Sua Eccellenza \u00e8 risoluta di voler\nessere obbedita da ognuno_.\n\n[Illustrazione: Che i due descritti di sopra stessero ivi ad aspettar\nqualcheduno, era cosa troppo evidente.... (pag. 11)]\n\nAll'udir parole d'un tanto signore, cos\u00ec gagliarde e sicure, e\naccompagnate da tali ordini, viene una gran voglia di credere che, al\nsolo rimbombo di esse, tutti i bravi siano scomparsi per sempre. Ma\nla testimonianza d'un signore non meno autorevole, n\u00e8 meno dotato di\nnomi, ci obbliga a credere tutto il contrario. \u00c8 questi l'Illustrissimo\ned Eccellentissimo Signor Juan Fernandez de Velasco, Contestabile di\nCastiglia, Cameriero maggiore di Sua Maest\u00e0, Duca della Citt\u00e0 di Frias,\nConte di Haro e Castelnovo, Signore della Casa di Velasco, e di quella\ndelli sette Infanti di Lara, Governatore dello Stato di Milano, etc.\nIl 5 giugno dell'anno 1593, pienamente informato anche lui _di quanto\ndanno e rovine sieno_.... _i bravi e vagabondi, e del pessimo effetto\nche tal sorta di gente fa contra il ben pubblico, et in delusione\ndella giustizia_, intima loro di nuovo che, nel termine di giorni sei,\nabbiano a sbrattare il paese, ripetendo a un dipresso le prescrizioni\ne le minacce medesime del suo predecessore. Il 23 maggio poi dell'anno\n1598, _informato, con non poco dispiacere dell'animo suo, che_... _ogni\nd\u00ec pi\u00f9 in questa Citt\u00e0 e Stato va crescendo il numero di questi tali_\n(bravi e vagabondi), _n\u00e8 di loro, giorno e notte, altro si sente che\nferite appostatamente date, omicidii e ruberie et ogni altra qualit\u00e0 di\ndelitti, ai quali si rendono pi\u00f9 facili, confidati essi bravi d'essere\naiutati dai capi e fautori loro_,.... prescrive di nuovo gli stessi\nrimedi, accrescendo la dose, come s'usa nelle malattie ostinate.\n_Ognuno dunque_, conchiude poi, _onninamente si guardi di contravvenire\nin parte alcuna alla grida presente, perch\u00e8, in luogo di provare\nla clemenza di Sua Eccellenza, prover\u00e0 il rigore, e l'ira sua_....\n_essendo risoluta e determinata che questa sia l'ultima e perentoria\nmonizione_.\n\nNon fu per\u00f2 di questo parere l'Illustrissimo ed Eccellentissimo\nSignore, il Signor Don Pietro Enriquez de Acevedo, Conte di Fuentes,\nCapitano, e Governatore dello Stato di Milano; non fu di questo\nparere, e per buone ragioni. _Pienamente informato della miseria in\nche vive questa Citt\u00e0 e Stato per cagione del gran numero di bravi\nche in esso abbonda_.... _e risoluto di totalmente estirpare seme\ntanto pernizioso_, d\u00e0 fuori, il 5 decembre 1600, una nuova grida piena\nanch'essa di severissime comminazioni, _con fermo proponimento che,\ncon ogni rigore, e senza speranza di remissione, siano onninamente\neseguite_.\n\nConvien credere per\u00f2 che non ci si mettesse con tutta quella buona\nvoglia che sapeva impiegare nell'ordir cabale, e nel suscitar nemici al\nsuo gran nemico Enrico IV; giacch\u00e8, per questa parte, la storia attesta\ncome riuscisse ad armare contro quel re il duca di Savoia, a cui fece\nperder pi\u00f9 d'una citt\u00e0; come riuscisse a far congiurare il duca di\nBiron, a cui fece perder la testa; ma, per ci\u00f2 che riguarda quel seme\ntanto pernizioso de' bravi, certo \u00e8 che esso continuava a germogliare,\nil 22 settembre dell'anno 1612. In quel giorno l'Illustrissimo ed\nEccellentissimo Signore, Don Giovanni de Mendozza, Marchese de la\nHynojosa, Gentiluomo, etc. Governatore, etc., pens\u00f2 seriamente ad\nestirparlo. A quest'effetto, sped\u00ec a Pandolfo e Marco Tullio Malatesti,\nstampatori regii camerali, la solita grida, corretta ed accresciuta,\nperch\u00e8 la stampassero ad esterminio de' bravi. Ma questi vissero\nancora per ricevere, il 24 decembre dell'anno 1618, gli stessi e pi\u00f9\nforti colpi dall'Illustrissimo ed Eccellentissimo Signore, il Signor\ndon Gomez Suarez de Figueroa, Duca di Feria, etc. Governatore, etc.\nPer\u00f2, non essendo essi morti neppur di quelli, l'Illustrissimo ed\nEccellentissimo Signore, il Signor Gonzalo Fernandez di Cordova, sotto\nil cui governo accadde la passeggiata di don Abbondio, s'era trovato\ncostretto a ricorreggere e ripubblicare la solita grida contro i bravi,\nil giorno 5 ottobre del 1627, cio\u00e8 un anno, un mese e due giorni prima\ndi quel memorabile avvenimento.\n\nN\u00e8 fu questa l'ultima pubblicazione; ma noi delle posteriori non\ncrediamo dover far menzione, come di cosa che esce dal periodo della\nnostra storia. Ne accenneremo soltanto una del 13 febbraio dell anno\n1632, nella quale l'Illustrissimo ed Eccellentissimo Signore, _el Duque\nde Feria_, per la seconda volta governatore, ci avvisa che _le maggiori\nsceleraggini procedono da quelli che chiamano bravi_. Questo basta\nad assicurarci che, nel tempo di cui noi trattiamo, c'era de' bravi\ntuttavia.\n\nChe i due descritti di sopra stessero ivi ad aspettar qualcheduno, era\ncosa troppo evidente; ma quel che pi\u00f9 dispiacque a don Abbondio fu il\ndover accorgersi, per certi atti, che l'aspettato era lui. Perch\u00e8, al\nsuo apparire, coloro s'eran guardati in viso, alzando la testa, con\nun movimento dal quale si scorgeva che tutt'e due a un tratto avevan\ndetto: \u00e8 lui; quello che stava a cavalcioni s'era alzato, tirando la\nsua gamba sulla strada; l'altro s'era staccato dal muro; e tutt'e due\ngli s'avviavano incontro. Egli, tenendosi sempre il breviario aperto\ndinanzi, come se leggesse, spingeva lo sguardo in su, per ispiar le\nmosse di coloro; e, vedendoseli venir proprio incontro, fu assalito\na un tratto da mille pensieri. Domand\u00f2 subito in fretta a s\u00e8 stesso,\nse, tra i bravi e lui, ci fosse qualche uscita di strada, a destra\no a sinistra; e gli sovvenne subito di no. Fece un rapido esame, se\navesse peccato contro qualche potente, contro qualche vendicativo; ma,\nanche in quel turbamento, il testimonio consolante della coscienza lo\nrassicurava alquanto: i bravi per\u00f2 s'avvicinavano, guardandolo fisso.\nMise l'indice e il medio della mano sinistra nel collare, come per\nraccomodarlo; e, girando le due dita intorno al collo, volgeva intanto\nla faccia all'indietro, torcendo insieme la bocca, e guardando con la\ncoda dell'occhio, fin dove poteva, se qualcheduno arrivasse; ma non\nvide nessuno. Diede un'occhiata, al di sopra del muricciolo, ne' campi:\nnessuno; un'altra pi\u00f9 modesta sulla strada dinanzi; nessuno, fuorch\u00e8\ni bravi. Che fare? tornare indietro, non era a tempo: darla a gambe,\nera lo stesso che dire, inseguitemi, o peggio. Non potendo schivare il\npericolo, vi corse incontro, perch\u00e8 i momenti di quell'incertezza erano\nallora cos\u00ec penosi per lui, che non desiderava altro che d'abbreviarli.\nAffrett\u00f2 il passo, recit\u00f2 un versetto a voce pi\u00f9 alta, compose la\nfaccia a tutta quella quiete e ilarit\u00e0 che pot\u00e8, fece ogni sforzo per\npreparare un sorriso; quando si trov\u00f2 a fronte dei due galantuomini,\ndisse mentalmente: ci siamo; e si ferm\u00f2 su due piedi. \u00abSignor curato,\u00bb\ndisse un di que' due, piantandogli gli occhi in faccia.\n\n\u00abCosa comanda?\u00bb rispose subito don Abbondio, alzando i suoi dal libro,\nche gli rest\u00f2 spalancato nelle mani, come sur un leggio.\n\n\u00abLei ha intenzione,\u00bb prosegu\u00ec l'altro, con l'atto minaccioso e iracondo\ndi chi coglie un suo inferiore sull'intraprendere una ribalderia, \u00ablei\nha intenzione di maritar domani Renzo Tramaglino e Lucia Mondella!\u00bb\n\n\u00abCio\u00e8....\u00bb rispose, con voce tremolante, don Abbondio: \u00abcio\u00e8. Lor\nsignori son uomini di mondo, e sanno benissimo come vanno queste\nfaccende. Il povero curato non c'entra: fanno i loro pasticci tra\nloro, e poi.... e poi, vengon da noi, come s'anderebbe a un banco a\nriscotere: e noi.... noi siamo i servitori del comune.\u00bb\n\n\u00abOr bene,\u00bb gli disse il bravo, all'orecchio, ma in tono solenne di\ncomando, \u00abquesto matrimonio non s'ha da fare, n\u00e8 domani, n\u00e8 mai.\u00bb\n\n\u00abMa, signori miei,\u00bb replic\u00f2 don Abbondio, con la voce mansueta e\ngentile di chi vuoi persuadere un impaziente, \u00abma, signori miei, si\ndegnino di mettersi ne' miei panni. Se la cosa dipendesse da me,...\nvedon bene che a me non me ne vien nulla in tasca....\u00bb\n\n\u00abOrs\u00f9,\u00bb interruppe il bravo, \u00abse la cosa avesse a decidersi a ciarle,\nlei ci metterebbe in sacco. Noi non ne sappiamo, n\u00e8 vogliam saperne di\npi\u00f9. Uomo avvertito.... lei c'intende.\u00bb\n\n\u00abMa lor signori son troppo giusti, troppo ragionevoli....\u00bb\n\n\u00abMa,\u00bb interruppe questa volta l'altro compagnone, che non aveva parlato\nfin allora, \u00abma il matrimonio non si far\u00e0 o....\u00bb e qui una buona\nbestemmia, \u00abo chi lo far\u00e0 non se ne pentir\u00e0, perch\u00e8 non ne avr\u00e0 tempo,\ne....\u00bb un'altra bestemmia.\n\n\u00abZitto, zitto,\u00bb riprese il primo oratore, \u00abil signor curato \u00e8 un uomo\nche sa il viver del mondo; e noi siam galantuomini, che non vogliam\nfargli del male, purch\u00e8 abbia giudizio. Signor curato, l'illustrissimo\nsignor don Rodrigo nostro padrone la riverisce caramente.\u00bb\n\nQuesto nome fu, nella mente di don Abbondio, come, nel forte d'un\ntemporale notturno, un lampo che illumina momentaneamente e in\nconfuso gli oggetti, e accresce il terrore. Fece, come per istinto, un\ngrand'inchino, e disse: \u00abse mi sapessero suggerire....\u00bb\n\n\u00abOh! suggerire a lei che sa di latino!\u00bb interruppe ancora il bravo, con\nun riso tra lo sguaiato e il feroce. \u00abA lei tocca. E sopra tutto, non\nsi lasci uscir parola su questo avviso che le abbiam dato per suo bene;\naltrimenti.... ehm.... sarebbe lo stesso che fare quel tal matrimonio.\nVia, che vuoi che si dica in suo nome all'illustrissimo signor don\nRodrigo?\u00bb\n\n\u00abIl mio rispetto....\u00bb\n\n\u00abSi spieghi meglio!\u00bb\n\n\u00ab....Disposto.... disposto sempre all'ubbidienza.\u00bb E, proferendo queste\nparole, non sapeva nemmen lui se faceva una promessa, o un complimento.\nI bravi le presero, o mostraron di prenderle nel significato pi\u00f9 serio.\n\n\u00abBenissimo, e buona notte, messere,\u00bb disse l'un d'essi, in atto di\npartir col compagno. Don Abbondio, che, pochi momenti prima, avrebbe\ndato un occhio per iscansarli, allora avrebbe voluto prolungar la\nconversazione e le trattative. \u00abSignori....\u00bb cominci\u00f2, chiudendo il\nlibro con le due mani; ma quelli, senza pi\u00f9 dargli udienza, presero la\nstrada dond'era lui venuto, e s'allontanarono, cantando una canzonaccia\nche non voglio trascrivere. Il povero don Abbondio rimase un momento a\nbocca aperta, come incantato; poi prese quella delle due stradette che\nconduceva a casa sua, mettendo innanzi a stento una gamba dopo l'altra,\nche parevano aggranchiate. Come stesse di dentro, s'intender\u00e0 meglio,\nquando avrem detto qualche cosa del suo naturale, e de' tempi in cui\ngli era toccato di vivere.\n\nDon Abbondio (il lettore se n'\u00e8 gi\u00e0 avveduto) non era nato con un\ncuor di leone. Ma fin da' primi suoi anni, aveva dovuto comprendere\nche la peggior condizione, a que' tempi, era quella d'un animale\nsenza artigli e senza zanne, e che pure non si sentisse inclinazione\nd'esser divorato. La forza legale non proteggeva in alcun conto\nl'uomo tranquillo, inoffensivo, e che non avesse altri mezzi di far\npaura altrui. Non gi\u00e0 che mancassero leggi e pene contro le violenze\nprivate. Le leggi anzi diluviavano; i delitti erano enumerati,\ne particolareggiati, con minuta prolissit\u00e0; le pene, pazzamente\nesorbitanti e, se non basta, aumentabili, quasi per ogni caso, ad\narbitrio del legislatore stesso e di cento esecutori; le procedure,\nstudiate soltanto a liberare il giudice da ogni cosa che potesse\nessergli d'impedimento a proferire una condanna: gli squarci che\nabbiam riportati delle gride contro i bravi, ne sono un piccolo, ma\nfedel saggio. Con tutto ci\u00f2, anzi in gran parte a cagion di ci\u00f2,\nquelle gride, ripubblicate e rinforzate di governo in governo, non\nservivano ad altro che ad attestare ampollosamente l'impotenza\nde' loro autori; o, se producevan qualche effetto immediato, era\nprincipalmente d'aggiunger molte vessazioni a quelle che i pacifici e\ni deboli gi\u00e0 soffrivano da' perturbatori, e d'accrescer le violenze,\ne l'astuzia di questi. L'impunit\u00e0 era organizzata, e aveva radici che\nle gride non toccavano, o non potevano smovere. Tali eran gli asili,\ntali i privilegi d'alcune classi, in parte riconosciuti dalla forza\nlegale, in parte tollerati con astioso silenzio, o impugnati con vane\nproteste, ma sostenuti in fatto e difesi da quelle classi, con attivit\u00e0\nd'interesse, e con gelosia di puntiglio. Ora, quest'impunit\u00e0 minacciata\ne insultata, ma non distrutta dalle gride, doveva naturalmente, a ogni\nminaccia, e a ogni insulto, adoperar nuovi sforzi e nuove invenzioni,\nper conservarsi. Cos\u00ec accadeva in effetto; e, all'apparire delle gride\ndirette a comprimere i violenti, questi cercavano nella loro forza\nreale i nuovi mezzi pi\u00f9 opportuni, per continuare a far ci\u00f2 che le\ngride venivano a proibire. Potevan ben esse inceppare a ogni passo,\ne molestare l'uomo bonario, che fosse senza forza propria e senza\nprotezione; perch\u00e8, col fine d'aver sotto la mano ogni uomo, per\nprevenire o per punire ogni delitto, assoggettavano ogni mossa del\nprivato al volere arbitrario d'esecutori d'ogni genere. Ma chi, prima\ndi commettere il delitto, aveva prese le sue misure per ricoverarsi\na tempo in un convento, in un palazzo, dove i birri non avrebber mai\nosato metter piede; chi, senz'altre precauzioni, portava una livrea\nche impegnasse a difenderlo la vanit\u00e0 e l'interesse d'una famiglia\npotente, di tutto un ceto, era libero nelle sue operazioni, e poteva\nridersi di tutto quel fracasso delle gride. Di quegli stessi ch'eran\ndeputati a farle eseguire, alcuni appartenevano per nascita alla\nparte privilegiata, alcuni ne dipendevano per clientela; gli uni\ne gli altri, per educazione, per interesse, per consuetudine, per\nimitazione, ne avevano abbracciate le massime, e si sarebbero ben\nguardati dall'offenderle, per amor d'un pezzo di carta attaccato sulle\ncantonate. Gli uomini poi incaricati dell'esecuzione immediata, quando\nfossero stati intraprendenti come eroi, ubbidienti come monaci, e\npronti a sacrificarsi come martiri, non avrebber per\u00f2 potuto venirne\nalla fine, inferiori com'eran di numero a quelli che si trattava di\nsottomettere, e con una gran probabilit\u00e0 d'essere abbandonati da chi,\nin astratto e, per cos\u00ec dire, in teoria, imponeva loro di operare. Ma,\noltre di ci\u00f2, costoro eran generalmente de' pi\u00f9 abbietti e ribaldi\nsoggetti del loro tempo; l'incarico loro era tenuto a vile anche da\nquelli che potevano averne terrore, e il loro titolo un improperio. Era\nquindi ben naturale che costoro, in vece d'arrischiare, anzi di gettar\nla vita in un'impresa disperata, vendessero la loro inazione, o anche\nla loro connivenza ai potenti, e si riservassero a esercitare la loro\nesecrata autorit\u00e0 e la forza che pure avevano, in quelle occasioni\ndove non c'era pericolo; nell'opprimer cio\u00e8, e nel vessare gli uomini\npacifici e senza difesa.\n\nL'uomo che vuole offendere, o che teme, ogni momento, d'essere offeso,\ncerca naturalmente alleati e compagni. Quindi era, in que' tempi,\nportata al massimo punto la tendenza degl'individui a tenersi collegati\nin classi, a formarne delle nuove, e a procurare ognuno la maggior\npotenza di quella a cui apparteneva. Il clero vegliava a sostenere\ne ad estendere le sue immunit\u00e0, la nobilt\u00e0 i suoi privilegi, il\nmilitare le sue esenzioni.\nSummarize this passage in a short paragraph."}], "temperature": 0, "think": false, "max_tokens": 64, "ignore_eos": true, "stream": true, "stream_options": {"include_usage": true}}
+
+--- rendered prompt ---
+[gMASK]<sop><|user|>Benchmark checkpoint passage.
+                           I PROMESSI SPOSI
+
+
+
+
+                             INTRODUZIONE
+
+
+_L'historia si può veramente deffinire una guerra illustre contro il
+Tempo, perchè togliendoli di mano gl'anni suoi prigionieri, anzi già
+fatti cadaueri, li richiama in vita, li passa in rassegna, e li schiera
+di nuovo in battaglia. Ma gl'illustri Campioni che in tal Arringo fanno
+messe di Palme e d'Allori, rapiscono solo che le sole spoglie più
+sfarzose e brillanti, imbalsamando co' loro inchiostri le Imprese de
+Prencipi e Potentati, e qualificati Personaggi, e trapuntando coll'ago
+finissimo dell'ingegno i fili d'oro e di seta, che formano un perpetuo
+ricamo di Attioni gloriose. Però alla mia debolezza non è lecito
+solleuarsi a tal'argomenti, e sublimità pericolose, con aggirarsi tra
+Labirinti de' Politici maneggj, et il rimbombo de' bellici Oricalchi:
+solo che hauendo hauuto notitia di fatti memorabili, se ben capitorno a
+gente meccaniche, e di piccol affare, mi accingo di lasciarne memoria
+a Posteri, con far di tutto schietta e genuinamente il Racconto,
+ouuero sia Relatione. Nella quale si vedrà in angusto Teatro luttuose
+Traggedie d'horrori, e Scene di malvaggità grandiosa, con intermezzi
+d'Imprese virtuose e buontà angeliche, opposte alle operationi
+diaboliche. E veramente, considerando che questi nostri climi sijno
+sotto l'amparo del Re Cattolico nostro Signore, che è quel Sole che mai
+tramonta, e che, sopra di essi, con riflesso Lume, qual Luna giamai
+calante, risplenda l'Heroe di nobil Prosapia che_ pro tempore _ne tiene
+le sue parti, e gl'Amplissimi Senatori quali Stelle fisse, e gl'altri
+Spettabili Magistrati qual'erranti Pianeti spandino la luce per ogni
+doue, venendo così a formare un nobilissimo Cielo, altra causale
+trouar non si può del vederlo tramutato in inferno d'atti tenebrosi,
+malvaggità e sevitie che dagl'huomini temerarij si vanno moltiplicando,
+se non se arte e fattura diabolica, attesochè l'humana malitia per sè
+sola bastar non dourebbe a resistere a tanti Heroi, che con occhij
+d'Argo e braccj di Briareo, si vanno trafficando per li pubblici
+emolumenti. Per locchè descriuendo questo Racconto auuenuto ne' tempi
+di mia verde staggione, abbenchè la più parte delle persone che vi
+rappresentano le loro parti, sijno sparite dalla Scena del Mondo, con
+rendersi tributarij delle Parche, pure per degni rispetti, si tacerà
+li loro nomi, cioè la parentela, et il medemo si farà de' luochi,
+solo indicando li Territorij_ generaliter. _Nè alcuno dirà questa sij
+imperfettione del Racconto, e defformità di questo mio rozzo Parto,
+a meno questo tale Critico non sij persona affatto diggiuna della
+Filosofia: che quanto agl'huomini in essa versati, ben vederanno nulla
+mancare alla sostanza di detta Narratione. Imperciocchè, essendo cosa
+evidente, e da verun negata non essere i nomi se non puri purissimi
+accidenti...._»
+
+--Ma, quando io avrò durata l'eroica fatica di trascriver questa storia
+da questo dilavato e graffiato autografo, e l'avrò data, come si suol
+dire, alla luce, si troverà poi chi duri la fatica di leggerla?--
+
+Questa riflessione dubitativa, nata nel travaglio del decifrare uno
+scarabocchio che veniva dopo _accidenti_, mi fece sospender la copia,
+e pensar più seriamente a quello che convenisse di fare.--Ben è vero,
+dicevo tra me, scartabellando il manoscritto, ben è vero che quella
+grandine di concettini e di figure non continua così alla distesa per
+tutta l'opera. Il buon secentista ha voluto sul principio mettere in
+mostra la sua virtù; ma poi, nel corso della narrazione, e talvolta per
+lunghi tratti, lo stile cammina ben più naturale e più piano. Sì; ma
+com'è dozzinale! com'è sguaiato! com'è scorretto! Idiotismi lombardi a
+iosa, frasi della lingua adoperate a sproposito, grammatica arbitraria,
+periodi sgangherati. E poi, qualche eleganza spagnola seminata qua e
+là; e poi, ch'è peggio, ne' luoghi più terribili o più pietosi della
+storia, a ogni occasione d'eccitar maraviglia, o di far pensare, a
+tutti que' passi insomma che richiedono bensì un po' di rettorica,
+ma rettorica discreta, fine, di buon gusto, costui non manca mai di
+metterci di quella sua così fatta del proemio. E allora, accozzando,
+con un'abilità mirabile, le qualità più opposte, trova la maniera di
+riuscir rozzo insieme e affettato, nella stessa pagina, nello stesso
+periodo, nello stesso vocabolo. Ecco qui: declamazioni ampollose,
+composte a forza di solecismi pedestri, e da per tutto quella
+goffaggine ambiziosa, ch'è il proprio carattere degli scritti di quel
+secolo, in questo paese. In vero, non è cosa da presentare a lettori
+d'oggigiorno: son troppo ammaliziati, troppo disgustati di questo
+genere di stravaganze. Meno male, che il buon pensiero m'è venuto sul
+principio di questo sciagurato lavoro: e me ne lavo le mani.--
+
+Nell'atto però di chiudere lo scartafaccio, per riporlo, mi sapeva
+male che una storia così bella dovesse rimanersi tuttavia sconosciuta;
+perchè, in quanto storia, può essere che al lettore ne paia altrimenti,
+ma a me era parsa bella, come dico; molto bella.--Perchè non si
+potrebbe, pensai, prender la serie de' fatti da questo manoscritto,
+e rifarne la dicitura?--Non essendosi presentato alcuna obiezion
+ragionevole, il partito fu subito abbracciato. Ed ecco l'origine del
+presente libro, esposta con un'ingenuità pari all'importanza del libro
+medesimo.
+
+Taluni però di que' fatti, certi costumi descritti dal nostro autore,
+c'eran sembrati così nuovi, così strani, per non dir peggio, che,
+prima di prestargli fede, abbiam voluto interrogare altri testimoni; e
+ci siam messi a frugar nelle memorie di quel tempo, per chiarirci se
+veramente il mondo camminasse allora a quel modo. Una tale indagine
+dissipò tutti i nostri dubbi: a ogni passo ci abbattevamo in cose
+consimili, e in cose più forti: e, quello che ci parve più decisivo,
+abbiam perfino ritrovati alcuni personaggi, de' quali non avendo mai
+avuto notizia fuor che dal nostro manoscritto, eravamo in dubbio se
+fossero realmente esistiti. E, all'occorrenza, citeremo alcuna di
+quelle testimonianze, per procacciar fede alle cose, alle quali, per la
+loro stranezza, il lettore sarebbe più tentato di negarla.
+
+Ma, rifiutando come intollerabile la dicitura del nostro autore, che
+dicitura vi abbiam noi sostituita? Qui sta il punto.
+
+Chiunque, senza esser pregato, s'intromette a rifar l'opera altrui,
+s'espone a rendere uno stretto conto della sua, e ne contrae in certo
+modo l'obbligazione: è questa una regola di fatto e di diritto, alla
+quale non pretendiam punto di sottrarci. Anzi, per conformarci ad essa
+di buon grado, avevam proposto di dar qui minutamente ragione del
+modo di scrivere da noi tenuto; e, a questo fine, siamo andati, per
+tutto il tempo del lavoro, cercando d'indovinare le critiche possibili
+e contingenti, con intenzione di ribatterle tutte anticipatamente.
+Nè in questo sarebbe stata la difficoltà; giacchè (dobbiam dirlo a
+onor del vero) non ci si presentò alla mente una critica, che non le
+venisse insieme una risposta trionfante, di quelle risposte che, non
+dico risolvon le questioni, ma le mutano. Spesso anche, mettendo due
+critiche alle mani tra loro, le facevam battere l'una dall'altra; o,
+esaminandole ben a fondo, riscontrandole attentamente, riuscivamo
+a scoprire e a mostrare che, così opposte in apparenza, eran però
+d'uno stesso genere, nascevan tutt'e due dal non badare ai fatti e
+ai princípi su cui il giudizio doveva esser fondato; e, messele, con
+loro gran sorpresa, insieme, le mandavamo insieme a spasso. Non ci
+sarebbe mai stato autore che provasse così ad evidenza d'aver fatto
+bene. Ma che? quando siamo stati al punto di raccapezzar tutte le dette
+obiezioni e risposte, per disporle con qualche ordine, misericordia!
+venivano a fare un libro. Veduta la qual cosa, abbiam messo da parte il
+pensiero, per due ragioni che il lettore troverà certamente buone: la
+prima, che un libro impiegato a giustificarne un altro, anzi lo stile
+d'un altro, potrebbe parer cosa ridicola: la seconda, che di libri
+basta uno per volta, quando non è d'avanzo.
+
+
+
+
+                           I PROMESSI SPOSI
+
+
+
+
+                            CAPITOLO PRIMO.
+
+
+Quel ramo del lago di Como, che volge a mezzogiorno, tra due catene
+non interrotte di monti, tutte a seni e a golfi, a seconda dello
+sporgere e del rientrare di quelli, vien, quasi a un tratto, a
+ristringersi, e a prender corso e figura di fiume, tra un promontorio
+a destra, e un'ampia costiera dall'altra parte; e il ponte, che ivi
+congiunge le due rive, par che renda ancor più sensibile all'occhio
+questa trasformazione, e segni il punto in cui il lago cessa, e
+l'Adda rincomincia, per ripigliar poi nome di lago dove le rive,
+allontanandosi di nuovo, lascian l'acqua distendersi e rallentarsi in
+nuovi golfi e in nuovi seni. La costiera, formata dal deposito di tre
+grossi torrenti, scende appoggiata a due monti contigui, l'uno detto di
+san Martino, l'altro, con voce lombarda, il _Resegone_, dai molti suoi
+cocuzzoli in fila, che in vero lo fanno somigliare a una sega: talchè
+non è chi, al primo vederlo, purchè sia di fronte, come per esempio
+di su le mura di Milano che guardano a settentrione, non lo discerna
+tosto, a un tal contrassegno, in quella lunga e vasta giogaia, dagli
+altri monti di nome più oscuro e di forma più comune. Per un buon
+pezzo, la costa sale con un pendio lento e continuo; poi si rompe in
+poggi e in valloncelli, in erte e in ispianate, secondo l'ossatura de'
+due monti, e il lavoro dell'acque. Il lembo estremo, tagliato dalle
+foci de' torrenti, è quasi tutto ghiaia e ciottoloni; il resto, campi
+e vigne, sparse di terre, di ville, di casali; in qualche parte boschi,
+che si prolungano su per la montagna. Lecco, la principale di quelle
+terre, e che dà nome al territorio, giace poco discosto dal ponte, alla
+riva del lago, anzi viene in parte a trovarsi nel lago stesso, quando
+questo ingrossa: un gran borgo al giorno d'oggi, e che s'incammina
+a diventar città. Ai tempi in cui accaddero i fatti che prendiamo a
+raccontare, quel borgo, già considerabile, era anche un castello, e
+aveva perciò l'onore d'alloggiare un comandante, e il vantaggio di
+possedere una stabile guarnigione di soldati spagnoli, che insegnavan
+la modestia alle fanciulle e alle donne del paese, accarezzavan di
+tempo in tempo le spalle a qualche marito, a qualche padre; e, sul
+finir dell'estate, non mancavan mai di spandersi nelle vigne, per
+diradar l'uve, e alleggerire a' contadini le fatiche della vendemmia.
+Dall'una all'altra di quelle terre, dall'alture alla riva, da un poggio
+all'altro, correvano, e corrono tuttavia, strade e stradette, più o men
+ripide, o piane; ogni tanto affondate, sepolte tra due muri, donde,
+alzando lo sguardo, non iscoprite che un pezzo di cielo e qualche
+vetta di monte; ogni tanto elevate su terrapieni aperti: e da qui
+la vista spazia per prospetti più o meno estesi, ma ricchi sempre e
+sempre qualcosa nuovi, secondo che i diversi punti piglian più o meno
+della vasta scena circostante, e secondo che questa o quella parte
+campeggia o si scorcia, spunta o sparisce a vicenda. Dove un pezzo,
+dove un altro, dove una lunga distesa di quel vasto e variato specchio
+dell'acqua; di qua lago, chiuso all'estremità o piuttosto smarrito
+in un gruppo, in un andirivieni di montagne, e di mano in mano più
+allargato tra altri monti che si spiegano, a uno a uno, allo sguardo,
+e che l'acqua riflette capovolti, co' paesetti posti sulle rive; di
+là braccio di fiume, poi lago, poi fiume ancora, che va a perdersi in
+lucido serpeggiamento pur tra' monti che l'accompagnano, degradando
+via via, e perdendosi quasi anch'essi nell'orizzonte. Il luogo stesso
+da dove contemplate que' vari spettacoli, vi fa spettacolo da ogni
+parte: il monte di cui passeggiate le falde, vi svolge, al di sopra,
+d'intorno, le sue cime e le balze, distinte, rilevate, mutabili quasi a
+ogni passo, aprendosi e contornandosi in gioghi ciò che v'era sembrato
+prima un sol giogo, e comparendo in vetta ciò che poco innanzi vi si
+rappresentava sulla costa: e l'ameno, il domestico di quelle falde
+tempera gradevolmente il selvaggio, e orna vie più il magnifico
+dell'altre vedute.
+
+Per una di queste stradicciole, tornava bel bello dalla passeggiata
+verso casa, sulla sera del giorno 7 novembre dell'anno 1628, don
+Abbondio, curato d'una delle terre accennate di sopra: il nome di
+questa, nè il casato del personaggio, non si trovan nel manoscritto,
+nè a questo luogo nè altrove. Diceva tranquillamente il suo ufizio,
+e talvolta, tra un salmo e l'altro, chiudeva il breviario, tenendovi
+dentro, per segno, l'indice della mano destra, e, messa poi questa
+nell'altra dietro la schiena, proseguiva il suo cammino, guardando a
+terra, e buttando con un piede verso il muro i ciottoli che facevano
+inciampo nel sentiero: poi alzava il viso, e, girati oziosamente gli
+occhi all'intorno, li fissava alla parte d'un monte, dove la luce
+del sole già scomparso, scappando per i fessi del monte opposto, si
+dipingeva qua e là sui massi sporgenti, come a larghe e inuguali
+pezze di porpora. Aperto poi di nuovo il breviario, e recitato un
+altro squarcio, giunse a una voltata della stradetta, dov'era solito
+d'alzar sempre gli occhi dal libro, e di guardarsi dinanzi: e così fece
+anche quel giorno. Dopo la voltata, la strada correva diritta, forse
+un sessanta passi, e poi si divideva in due viottole, a foggia d'un
+ipsilon: quella a destra saliva verso il monte, e menava alla cura:
+l'altra scendeva nella valle fino a un torrente; e da questa parte
+il muro non arrivava che all'anche del passeggiero. I muri interni
+delle due viottole, in vece di riunirsi ad angolo, terminavano in un
+tabernacolo, sul quale eran dipinte certe figure lunghe, serpeggianti,
+che finivano in punta, e che, nell'intenzion dell'artista, e agli occhi
+degli abitanti del vicinato, volevan dir fiamme; e, alternate con le
+fiamme, cert'altre figure da non potersi descrivere, che volevan dire
+anime del purgatorio: anime e fiamme a color di mattone, sur un fondo
+bigiognolo, con qualche scalcinatura qua e là. Il curato, voltata la
+stradetta, e dirizzando, com'era solito, lo sguardo al tabernacolo,
+vide una cosa che non s'aspettava, e che non avrebbe voluto vedere.
+Due uomini stavano, l'uno dirimpetto all'altro, al confluente, per dir
+così, delle due viottole: un di costoro, a cavalcioni sul muricciolo
+basso, con una gamba spenzolata al di fuori, e l'altro piede posato
+sul terreno della strada; il compagno, in piedi, appoggiato al muro,
+con le braccia incrociate sul petto. L'abito, il portamento, e
+quello che, dal luogo ov'era giunto il curato, si poteva distinguer
+dell'aspetto, non lasciavan dubbio intorno alla lor condizione. Avevano
+entrambi intorno al capo una reticella verde, che cadeva sull'omero
+sinistro, terminata in una gran nappa, e dalla quale usciva sulla
+fronte un enorme ciuffo: due lunghi mustacchi arricciati in punta: una
+cintura lucida di cuoio, e a quella attaccate due pistole: un piccol
+corno ripieno di polvere, cascante sul petto, come una collana: un
+manico di coltellaccio che spuntava fuori d'un taschino degli ampi e
+gonfi calzoni, uno spadone, con una gran guardia traforata a lamine
+d'ottone, congegnate come in cifra, forbite e lucenti: a prima vista si
+davano a conoscere per individui della specie de' _bravi_.
+
+Questa specie, ora del tutto perduta, era allora floridissima in
+Lombardia, e già molto antica. Chi non ne avesse idea, ecco alcuni
+squarci autentici, che potranno darne una bastante de' suoi caratteri
+principali, degli sforzi fatti per ispegnerla, e della sua dura e
+rigogliosa vitalità.
+
+Fino dall'otto aprile dell'anno 1583, l'Illustrissimo ed
+Eccellentissimo signor don Carlo d'Aragon, Principe di Castelvetrano,
+Duca di Terranuova, Marchese d'Avola, Conte di Burgeto, grande
+Ammiraglio, e gran Contestabile di Sicilia, Governatore di Milano
+e Capitan Generale di Sua Maestà Cattolica in Italia, _pienamente
+informato della intollerabile miseria in che è vivuta e vive questa
+Città di Milano, per cagione dei bravi e vagabondi_, pubblica un
+bando contro di essi. _Dichiara e diffinisce tutti coloro essere
+compresi in questo bando, e doversi ritenere bravi e vagabondi_....
+_i quali, essendo forestieri o del paese, non hanno esercizio
+alcuno, od avendolo, non lo fanno_.... _ma, senza salario, o pur con
+esso, s'appoggiano a qualche cavaliere o gentiluomo, officiale o
+mercante_.... _per fargli spalle e favore, o veramente, come si può
+presumere, per tendere insidie ad altri_.... A tutti costoro ordina
+che, nel termine di giorni sei, abbiano a sgomberare il paese, intima
+la galera a' renitenti, e dà a tutti gli ufiziali della giustizia
+le più stranamente ampie e indefinite facoltà, per l'esecuzione
+dell'ordine. Ma, nell'anno seguente, il 12 aprile, scorgendo il detto
+signore, _che questa Città è tuttavia piena di detti bravi_....
+_tornati a vivere come prima vivevano, non punto mutato il costume
+loro, nè scemato il numero_, dà fuori un'altra grida, ancor più
+vigorosa e notabile, nella quale, tra l'altre ordinazioni, prescrive:
+
+_Che qualsivoglia persona, così di questa Città, come forestiera, che
+per due testimonj consterà esser tenuto, e comunemente riputato per
+bravo, et aver tal nome, ancorchè non si verifichi aver fatto delitto
+alcuno.... per questa sola riputazione di bravo, senza altri indizj,
+possa dai detti giudici e da ognuno di loro esser posto alla corda et
+al tormento, per processo informativo.... et ancorchè non confessi
+delitto alcuno, tuttavia sia mandato alla galea, per detto triennio,
+per la sola opinione e nome di bravo, come di sopra_. Tutto ciò, e il
+di più che si tralascia, perchè _Sua Eccellenza è risoluta di voler
+essere obbedita da ognuno_.
+
+[Illustrazione: Che i due descritti di sopra stessero ivi ad aspettar
+qualcheduno, era cosa troppo evidente.... (pag. 11)]
+
+All'udir parole d'un tanto signore, così gagliarde e sicure, e
+accompagnate da tali ordini, viene una gran voglia di credere che, al
+solo rimbombo di esse, tutti i bravi siano scomparsi per sempre. Ma
+la testimonianza d'un signore non meno autorevole, nè meno dotato di
+nomi, ci obbliga a credere tutto il contrario. È questi l'Illustrissimo
+ed Eccellentissimo Signor Juan Fernandez de Velasco, Contestabile di
+Castiglia, Cameriero maggiore di Sua Maestà, Duca della Città di Frias,
+Conte di Haro e Castelnovo, Signore della Casa di Velasco, e di quella
+delli sette Infanti di Lara, Governatore dello Stato di Milano, etc.
+Il 5 giugno dell'anno 1593, pienamente informato anche lui _di quanto
+danno e rovine sieno_.... _i bravi e vagabondi, e del pessimo effetto
+che tal sorta di gente fa contra il ben pubblico, et in delusione
+della giustizia_, intima loro di nuovo che, nel termine di giorni sei,
+abbiano a sbrattare il paese, ripetendo a un dipresso le prescrizioni
+e le minacce medesime del suo predecessore. Il 23 maggio poi dell'anno
+1598, _informato, con non poco dispiacere dell'animo suo, che_... _ogni
+dì più in questa Città e Stato va crescendo il numero di questi tali_
+(bravi e vagabondi), _nè di loro, giorno e notte, altro si sente che
+ferite appostatamente date, omicidii e ruberie et ogni altra qualità di
+delitti, ai quali si rendono più facili, confidati essi bravi d'essere
+aiutati dai capi e fautori loro_,.... prescrive di nuovo gli stessi
+rimedi, accrescendo la dose, come s'usa nelle malattie ostinate.
+_Ognuno dunque_, conchiude poi, _onninamente si guardi di contravvenire
+in parte alcuna alla grida presente, perchè, in luogo di provare
+la clemenza di Sua Eccellenza, proverà il rigore, e l'ira sua_....
+_essendo risoluta e determinata che questa sia l'ultima e perentoria
+monizione_.
+
+Non fu però di questo parere l'Illustrissimo ed Eccellentissimo
+Signore, il Signor Don Pietro Enriquez de Acevedo, Conte di Fuentes,
+Capitano, e Governatore dello Stato di Milano; non fu di questo
+parere, e per buone ragioni. _Pienamente informato della miseria in
+che vive questa Città e Stato per cagione del gran numero di bravi
+che in esso abbonda_.... _e risoluto di totalmente estirpare seme
+tanto pernizioso_, dà fuori, il 5 decembre 1600, una nuova grida piena
+anch'essa di severissime comminazioni, _con fermo proponimento che,
+con ogni rigore, e senza speranza di remissione, siano onninamente
+eseguite_.
+
+Convien credere però che non ci si mettesse con tutta quella buona
+voglia che sapeva impiegare nell'ordir cabale, e nel suscitar nemici al
+suo gran nemico Enrico IV; giacchè, per questa parte, la storia attesta
+come riuscisse ad armare contro quel re il duca di Savoia, a cui fece
+perder più d'una città; come riuscisse a far congiurare il duca di
+Biron, a cui fece perder la testa; ma, per ciò che riguarda quel seme
+tanto pernizioso de' bravi, certo è che esso continuava a germogliare,
+il 22 settembre dell'anno 1612. In quel giorno l'Illustrissimo ed
+Eccellentissimo Signore, Don Giovanni de Mendozza, Marchese de la
+Hynojosa, Gentiluomo, etc. Governatore, etc., pensò seriamente ad
+estirparlo. A quest'effetto, spedì a Pandolfo e Marco Tullio Malatesti,
+stampatori regii camerali, la solita grida, corretta ed accresciuta,
+perchè la stampassero ad esterminio de' bravi. Ma questi vissero
+ancora per ricevere, il 24 decembre dell'anno 1618, gli stessi e più
+forti colpi dall'Illustrissimo ed Eccellentissimo Signore, il Signor
+don Gomez Suarez de Figueroa, Duca di Feria, etc. Governatore, etc.
+Però, non essendo essi morti neppur di quelli, l'Illustrissimo ed
+Eccellentissimo Signore, il Signor Gonzalo Fernandez di Cordova, sotto
+il cui governo accadde la passeggiata di don Abbondio, s'era trovato
+costretto a ricorreggere e ripubblicare la solita grida contro i bravi,
+il giorno 5 ottobre del 1627, cioè un anno, un mese e due giorni prima
+di quel memorabile avvenimento.
+
+Nè fu questa l'ultima pubblicazione; ma noi delle posteriori non
+crediamo dover far menzione, come di cosa che esce dal periodo della
+nostra storia. Ne accenneremo soltanto una del 13 febbraio dell anno
+1632, nella quale l'Illustrissimo ed Eccellentissimo Signore, _el Duque
+de Feria_, per la seconda volta governatore, ci avvisa che _le maggiori
+sceleraggini procedono da quelli che chiamano bravi_. Questo basta
+ad assicurarci che, nel tempo di cui noi trattiamo, c'era de' bravi
+tuttavia.
+
+Che i due descritti di sopra stessero ivi ad aspettar qualcheduno, era
+cosa troppo evidente; ma quel che più dispiacque a don Abbondio fu il
+dover accorgersi, per certi atti, che l'aspettato era lui. Perchè, al
+suo apparire, coloro s'eran guardati in viso, alzando la testa, con
+un movimento dal quale si scorgeva che tutt'e due a un tratto avevan
+detto: è lui; quello che stava a cavalcioni s'era alzato, tirando la
+sua gamba sulla strada; l'altro s'era staccato dal muro; e tutt'e due
+gli s'avviavano incontro. Egli, tenendosi sempre il breviario aperto
+dinanzi, come se leggesse, spingeva lo sguardo in su, per ispiar le
+mosse di coloro; e, vedendoseli venir proprio incontro, fu assalito
+a un tratto da mille pensieri. Domandò subito in fretta a sè stesso,
+se, tra i bravi e lui, ci fosse qualche uscita di strada, a destra
+o a sinistra; e gli sovvenne subito di no. Fece un rapido esame, se
+avesse peccato contro qualche potente, contro qualche vendicativo; ma,
+anche in quel turbamento, il testimonio consolante della coscienza lo
+rassicurava alquanto: i bravi però s'avvicinavano, guardandolo fisso.
+Mise l'indice e il medio della mano sinistra nel collare, come per
+raccomodarlo; e, girando le due dita intorno al collo, volgeva intanto
+la faccia all'indietro, torcendo insieme la bocca, e guardando con la
+coda dell'occhio, fin dove poteva, se qualcheduno arrivasse; ma non
+vide nessuno. Diede un'occhiata, al di sopra del muricciolo, ne' campi:
+nessuno; un'altra più modesta sulla strada dinanzi; nessuno, fuorchè
+i bravi. Che fare? tornare indietro, non era a tempo: darla a gambe,
+era lo stesso che dire, inseguitemi, o peggio. Non potendo schivare il
+pericolo, vi corse incontro, perchè i momenti di quell'incertezza erano
+allora così penosi per lui, che non desiderava altro che d'abbreviarli.
+Affrettò il passo, recitò un versetto a voce più alta, compose la
+faccia a tutta quella quiete e ilarità che potè, fece ogni sforzo per
+preparare un sorriso; quando si trovò a fronte dei due galantuomini,
+disse mentalmente: ci siamo; e si fermò su due piedi. «Signor curato,»
+disse un di que' due, piantandogli gli occhi in faccia.
+
+«Cosa comanda?» rispose subito don Abbondio, alzando i suoi dal libro,
+che gli restò spalancato nelle mani, come sur un leggio.
+
+«Lei ha intenzione,» proseguì l'altro, con l'atto minaccioso e iracondo
+di chi coglie un suo inferiore sull'intraprendere una ribalderia, «lei
+ha intenzione di maritar domani Renzo Tramaglino e Lucia Mondella!»
+
+«Cioè....» rispose, con voce tremolante, don Abbondio: «cioè. Lor
+signori son uomini di mondo, e sanno benissimo come vanno queste
+faccende. Il povero curato non c'entra: fanno i loro pasticci tra
+loro, e poi.... e poi, vengon da noi, come s'anderebbe a un banco a
+riscotere: e noi.... noi siamo i servitori del comune.»
+
+«Or bene,» gli disse il bravo, all'orecchio, ma in tono solenne di
+comando, «questo matrimonio non s'ha da fare, nè domani, nè mai.»
+
+«Ma, signori miei,» replicò don Abbondio, con la voce mansueta e
+gentile di chi vuoi persuadere un impaziente, «ma, signori miei, si
+degnino di mettersi ne' miei panni. Se la cosa dipendesse da me,...
+vedon bene che a me non me ne vien nulla in tasca....»
+
+«Orsù,» interruppe il bravo, «se la cosa avesse a decidersi a ciarle,
+lei ci metterebbe in sacco. Noi non ne sappiamo, nè vogliam saperne di
+più. Uomo avvertito.... lei c'intende.»
+
+«Ma lor signori son troppo giusti, troppo ragionevoli....»
+
+«Ma,» interruppe questa volta l'altro compagnone, che non aveva parlato
+fin allora, «ma il matrimonio non si farà o....» e qui una buona
+bestemmia, «o chi lo farà non se ne pentirà, perchè non ne avrà tempo,
+e....» un'altra bestemmia.
+
+«Zitto, zitto,» riprese il primo oratore, «il signor curato è un uomo
+che sa il viver del mondo; e noi siam galantuomini, che non vogliam
+fargli del male, purchè abbia giudizio. Signor curato, l'illustrissimo
+signor don Rodrigo nostro padrone la riverisce caramente.»
+
+Questo nome fu, nella mente di don Abbondio, come, nel forte d'un
+temporale notturno, un lampo che illumina momentaneamente e in
+confuso gli oggetti, e accresce il terrore. Fece, come per istinto, un
+grand'inchino, e disse: «se mi sapessero suggerire....»
+
+«Oh! suggerire a lei che sa di latino!» interruppe ancora il bravo, con
+un riso tra lo sguaiato e il feroce. «A lei tocca. E sopra tutto, non
+si lasci uscir parola su questo avviso che le abbiam dato per suo bene;
+altrimenti.... ehm.... sarebbe lo stesso che fare quel tal matrimonio.
+Via, che vuoi che si dica in suo nome all'illustrissimo signor don
+Rodrigo?»
+
+«Il mio rispetto....»
+
+«Si spieghi meglio!»
+
+«....Disposto.... disposto sempre all'ubbidienza.» E, proferendo queste
+parole, non sapeva nemmen lui se faceva una promessa, o un complimento.
+I bravi le presero, o mostraron di prenderle nel significato più serio.
+
+«Benissimo, e buona notte, messere,» disse l'un d'essi, in atto di
+partir col compagno. Don Abbondio, che, pochi momenti prima, avrebbe
+dato un occhio per iscansarli, allora avrebbe voluto prolungar la
+conversazione e le trattative. «Signori....» cominciò, chiudendo il
+libro con le due mani; ma quelli, senza più dargli udienza, presero la
+strada dond'era lui venuto, e s'allontanarono, cantando una canzonaccia
+che non voglio trascrivere. Il povero don Abbondio rimase un momento a
+bocca aperta, come incantato; poi prese quella delle due stradette che
+conduceva a casa sua, mettendo innanzi a stento una gamba dopo l'altra,
+che parevano aggranchiate. Come stesse di dentro, s'intenderà meglio,
+quando avrem detto qualche cosa del suo naturale, e de' tempi in cui
+gli era toccato di vivere.
+
+Don Abbondio (il lettore se n'è già avveduto) non era nato con un
+cuor di leone. Ma fin da' primi suoi anni, aveva dovuto comprendere
+che la peggior condizione, a que' tempi, era quella d'un animale
+senza artigli e senza zanne, e che pure non si sentisse inclinazione
+d'esser divorato. La forza legale non proteggeva in alcun conto
+l'uomo tranquillo, inoffensivo, e che non avesse altri mezzi di far
+paura altrui. Non già che mancassero leggi e pene contro le violenze
+private. Le leggi anzi diluviavano; i delitti erano enumerati,
+e particolareggiati, con minuta prolissità; le pene, pazzamente
+esorbitanti e, se non basta, aumentabili, quasi per ogni caso, ad
+arbitrio del legislatore stesso e di cento esecutori; le procedure,
+studiate soltanto a liberare il giudice da ogni cosa che potesse
+essergli d'impedimento a proferire una condanna: gli squarci che
+abbiam riportati delle gride contro i bravi, ne sono un piccolo, ma
+fedel saggio. Con tutto ciò, anzi in gran parte a cagion di ciò,
+quelle gride, ripubblicate e rinforzate di governo in governo, non
+servivano ad altro che ad attestare ampollosamente l'impotenza
+de' loro autori; o, se producevan qualche effetto immediato, era
+principalmente d'aggiunger molte vessazioni a quelle che i pacifici e
+i deboli già soffrivano da' perturbatori, e d'accrescer le violenze,
+e l'astuzia di questi. L'impunità era organizzata, e aveva radici che
+le gride non toccavano, o non potevano smovere. Tali eran gli asili,
+tali i privilegi d'alcune classi, in parte riconosciuti dalla forza
+legale, in parte tollerati con astioso silenzio, o impugnati con vane
+proteste, ma sostenuti in fatto e difesi da quelle classi, con attività
+d'interesse, e con gelosia di puntiglio. Ora, quest'impunità minacciata
+e insultata, ma non distrutta dalle gride, doveva naturalmente, a ogni
+minaccia, e a ogni insulto, adoperar nuovi sforzi e nuove invenzioni,
+per conservarsi. Così accadeva in effetto; e, all'apparire delle gride
+dirette a comprimere i violenti, questi cercavano nella loro forza
+reale i nuovi mezzi più opportuni, per continuare a far ciò che le
+gride venivano a proibire. Potevan ben esse inceppare a ogni passo,
+e molestare l'uomo bonario, che fosse senza forza propria e senza
+protezione; perchè, col fine d'aver sotto la mano ogni uomo, per
+prevenire o per punire ogni delitto, assoggettavano ogni mossa del
+privato al volere arbitrario d'esecutori d'ogni genere. Ma chi, prima
+di commettere il delitto, aveva prese le sue misure per ricoverarsi
+a tempo in un convento, in un palazzo, dove i birri non avrebber mai
+osato metter piede; chi, senz'altre precauzioni, portava una livrea
+che impegnasse a difenderlo la vanità e l'interesse d'una famiglia
+potente, di tutto un ceto, era libero nelle sue operazioni, e poteva
+ridersi di tutto quel fracasso delle gride. Di quegli stessi ch'eran
+deputati a farle eseguire, alcuni appartenevano per nascita alla
+parte privilegiata, alcuni ne dipendevano per clientela; gli uni
+e gli altri, per educazione, per interesse, per consuetudine, per
+imitazione, ne avevano abbracciate le massime, e si sarebbero ben
+guardati dall'offenderle, per amor d'un pezzo di carta attaccato sulle
+cantonate. Gli uomini poi incaricati dell'esecuzione immediata, quando
+fossero stati intraprendenti come eroi, ubbidienti come monaci, e
+pronti a sacrificarsi come martiri, non avrebber però potuto venirne
+alla fine, inferiori com'eran di numero a quelli che si trattava di
+sottomettere, e con una gran probabilità d'essere abbandonati da chi,
+in astratto e, per così dire, in teoria, imponeva loro di operare. Ma,
+oltre di ciò, costoro eran generalmente de' più abbietti e ribaldi
+soggetti del loro tempo; l'incarico loro era tenuto a vile anche da
+quelli che potevano averne terrore, e il loro titolo un improperio. Era
+quindi ben naturale che costoro, in vece d'arrischiare, anzi di gettar
+la vita in un'impresa disperata, vendessero la loro inazione, o anche
+la loro connivenza ai potenti, e si riservassero a esercitare la loro
+esecrata autorità e la forza che pure avevano, in quelle occasioni
+dove non c'era pericolo; nell'opprimer cioè, e nel vessare gli uomini
+pacifici e senza difesa.
+
+L'uomo che vuole offendere, o che teme, ogni momento, d'essere offeso,
+cerca naturalmente alleati e compagni. Quindi era, in que' tempi,
+portata al massimo punto la tendenza degl'individui a tenersi collegati
+in classi, a formarne delle nuove, e a procurare ognuno la maggior
+potenza di quella a cui apparteneva. Il clero vegliava a sostenere
+e ad estendere le sue immunità, la nobiltà i suoi privilegi, il
+militare le sue esenzioni.
+Summarize this passage in a short paragraph.<|assistant|><think></think>
+
+--- generated text ---
+
+
+--- trace: prefill done; decode_max=64 ctx_room=22602 ---
+
+The passage is the introduction and opening chapter of Alessandro Manzoni's *I Promessi Sposi* (The Betrothed). It begins with a mock-serious preface explaining that the author found an old, bombastic 17th-century manuscript and has rewritten its story in plainer language. The narrative
+
+--- parsed message ---
+finish: length
+generated_tokens: 64
+dsml_start: 0
+dsml_end: 0
+elapsed_sec: 25.078
+
+content:
+The passage is the introduction and opening chapter of Alessandro Manzoni's *I Promessi Sposi* (The Betrothed). It begins with a mock-serious preface explaining that the author found an old, bombastic 17th-century manuscript and has rewritten its story in plainer language. The narrative
+
+===== end request 1 =====
+
+===== request 2 2026-09-26 16:26:17 =====
+kind: chat
+model: glm-5.3-flash
+stream: 1
+tools: 0
+think_mode: none
+prompt_tokens: 10240
+effective_prompt_tokens: 10240
+cached_tokens: 10230
+max_tokens: 64
+temperature: 0.000
+top_k: 0
+top_p: 1.000
+min_p: 0.050
+ignore_eos: 1
+seed: 0
+stream_include_usage: 1
+
+--- cache decision ---
+live_tokens_before: 10230
+prompt_tokens: 10240
+live_prompt_common: 10230
+memory_token_reusable: 1
+memory_miss_reason: live-prefix-match
+tool_replay: mem=0 disk=0 canonical=0 missing_ids=0
+cache_source: memory-token
+cached_tokens: 10230
+disk_cached_tokens: 0
+
+--- raw request json ---
+{"model": "glm-5.3-flash", "messages": [{"role": "user", "content": "Benchmark checkpoint passage.\n                           I PROMESSI SPOSI\n\n\n\n\n                             INTRODUZIONE\n\n\n_L'historia si pu\u00f2 veramente deffinire una guerra illustre contro il\nTempo, perch\u00e8 togliendoli di mano gl'anni suoi prigionieri, anzi gi\u00e0\nfatti cadaueri, li richiama in vita, li passa in rassegna, e li schiera\ndi nuovo in battaglia. Ma gl'illustri Campioni che in tal Arringo fanno\nmesse di Palme e d'Allori, rapiscono solo che le sole spoglie pi\u00f9\nsfarzose e brillanti, imbalsamando co' loro inchiostri le Imprese de\nPrencipi e Potentati, e qualificati Personaggi, e trapuntando coll'ago\nfinissimo dell'ingegno i fili d'oro e di seta, che formano un perpetuo\nricamo di Attioni gloriose. Per\u00f2 alla mia debolezza non \u00e8 lecito\nsolleuarsi a tal'argomenti, e sublimit\u00e0 pericolose, con aggirarsi tra\nLabirinti de' Politici maneggj, et il rimbombo de' bellici Oricalchi:\nsolo che hauendo hauuto notitia di fatti memorabili, se ben capitorno a\ngente meccaniche, e di piccol affare, mi accingo di lasciarne memoria\na Posteri, con far di tutto schietta e genuinamente il Racconto,\nouuero sia Relatione. Nella quale si vedr\u00e0 in angusto Teatro luttuose\nTraggedie d'horrori, e Scene di malvaggit\u00e0 grandiosa, con intermezzi\nd'Imprese virtuose e buont\u00e0 angeliche, opposte alle operationi\ndiaboliche. E veramente, considerando che questi nostri climi sijno\nsotto l'amparo del Re Cattolico nostro Signore, che \u00e8 quel Sole che mai\ntramonta, e che, sopra di essi, con riflesso Lume, qual Luna giamai\ncalante, risplenda l'Heroe di nobil Prosapia che_ pro tempore _ne tiene\nle sue parti, e gl'Amplissimi Senatori quali Stelle fisse, e gl'altri\nSpettabili Magistrati qual'erranti Pianeti spandino la luce per ogni\ndoue, venendo cos\u00ec a formare un nobilissimo Cielo, altra causale\ntrouar non si pu\u00f2 del vederlo tramutato in inferno d'atti tenebrosi,\nmalvaggit\u00e0 e sevitie che dagl'huomini temerarij si vanno moltiplicando,\nse non se arte e fattura diabolica, attesoch\u00e8 l'humana malitia per s\u00e8\nsola bastar non dourebbe a resistere a tanti Heroi, che con occhij\nd'Argo e braccj di Briareo, si vanno trafficando per li pubblici\nemolumenti. Per locch\u00e8 descriuendo questo Racconto auuenuto ne' tempi\ndi mia verde staggione, abbench\u00e8 la pi\u00f9 parte delle persone che vi\nrappresentano le loro parti, sijno sparite dalla Scena del Mondo, con\nrendersi tributarij delle Parche, pure per degni rispetti, si tacer\u00e0\nli loro nomi, cio\u00e8 la parentela, et il medemo si far\u00e0 de' luochi,\nsolo indicando li Territorij_ generaliter. _N\u00e8 alcuno dir\u00e0 questa sij\nimperfettione del Racconto, e defformit\u00e0 di questo mio rozzo Parto,\na meno questo tale Critico non sij persona affatto diggiuna della\nFilosofia: che quanto agl'huomini in essa versati, ben vederanno nulla\nmancare alla sostanza di detta Narratione. Imperciocch\u00e8, essendo cosa\nevidente, e da verun negata non essere i nomi se non puri purissimi\naccidenti...._\u00bb\n\n--Ma, quando io avr\u00f2 durata l'eroica fatica di trascriver questa storia\nda questo dilavato e graffiato autografo, e l'avr\u00f2 data, come si suol\ndire, alla luce, si trover\u00e0 poi chi duri la fatica di leggerla?--\n\nQuesta riflessione dubitativa, nata nel travaglio del decifrare uno\nscarabocchio che veniva dopo _accidenti_, mi fece sospender la copia,\ne pensar pi\u00f9 seriamente a quello che convenisse di fare.--Ben \u00e8 vero,\ndicevo tra me, scartabellando il manoscritto, ben \u00e8 vero che quella\ngrandine di concettini e di figure non continua cos\u00ec alla distesa per\ntutta l'opera. Il buon secentista ha voluto sul principio mettere in\nmostra la sua virt\u00f9; ma poi, nel corso della narrazione, e talvolta per\nlunghi tratti, lo stile cammina ben pi\u00f9 naturale e pi\u00f9 piano. S\u00ec; ma\ncom'\u00e8 dozzinale! com'\u00e8 sguaiato! com'\u00e8 scorretto! Idiotismi lombardi a\niosa, frasi della lingua adoperate a sproposito, grammatica arbitraria,\nperiodi sgangherati. E poi, qualche eleganza spagnola seminata qua e\nl\u00e0; e poi, ch'\u00e8 peggio, ne' luoghi pi\u00f9 terribili o pi\u00f9 pietosi della\nstoria, a ogni occasione d'eccitar maraviglia, o di far pensare, a\ntutti que' passi insomma che richiedono bens\u00ec un po' di rettorica,\nma rettorica discreta, fine, di buon gusto, costui non manca mai di\nmetterci di quella sua cos\u00ec fatta del proemio. E allora, accozzando,\ncon un'abilit\u00e0 mirabile, le qualit\u00e0 pi\u00f9 opposte, trova la maniera di\nriuscir rozzo insieme e affettato, nella stessa pagina, nello stesso\nperiodo, nello stesso vocabolo. Ecco qui: declamazioni ampollose,\ncomposte a forza di solecismi pedestri, e da per tutto quella\ngoffaggine ambiziosa, ch'\u00e8 il proprio carattere degli scritti di quel\nsecolo, in questo paese. In vero, non \u00e8 cosa da presentare a lettori\nd'oggigiorno: son troppo ammaliziati, troppo disgustati di questo\ngenere di stravaganze. Meno male, che il buon pensiero m'\u00e8 venuto sul\nprincipio di questo sciagurato lavoro: e me ne lavo le mani.--\n\nNell'atto per\u00f2 di chiudere lo scartafaccio, per riporlo, mi sapeva\nmale che una storia cos\u00ec bella dovesse rimanersi tuttavia sconosciuta;\nperch\u00e8, in quanto storia, pu\u00f2 essere che al lettore ne paia altrimenti,\nma a me era parsa bella, come dico; molto bella.--Perch\u00e8 non si\npotrebbe, pensai, prender la serie de' fatti da questo manoscritto,\ne rifarne la dicitura?--Non essendosi presentato alcuna obiezion\nragionevole, il partito fu subito abbracciato. Ed ecco l'origine del\npresente libro, esposta con un'ingenuit\u00e0 pari all'importanza del libro\nmedesimo.\n\nTaluni per\u00f2 di que' fatti, certi costumi descritti dal nostro autore,\nc'eran sembrati cos\u00ec nuovi, cos\u00ec strani, per non dir peggio, che,\nprima di prestargli fede, abbiam voluto interrogare altri testimoni; e\nci siam messi a frugar nelle memorie di quel tempo, per chiarirci se\nveramente il mondo camminasse allora a quel modo. Una tale indagine\ndissip\u00f2 tutti i nostri dubbi: a ogni passo ci abbattevamo in cose\nconsimili, e in cose pi\u00f9 forti: e, quello che ci parve pi\u00f9 decisivo,\nabbiam perfino ritrovati alcuni personaggi, de' quali non avendo mai\navuto notizia fuor che dal nostro manoscritto, eravamo in dubbio se\nfossero realmente esistiti. E, all'occorrenza, citeremo alcuna di\nquelle testimonianze, per procacciar fede alle cose, alle quali, per la\nloro stranezza, il lettore sarebbe pi\u00f9 tentato di negarla.\n\nMa, rifiutando come intollerabile la dicitura del nostro autore, che\ndicitura vi abbiam noi sostituita? Qui sta il punto.\n\nChiunque, senza esser pregato, s'intromette a rifar l'opera altrui,\ns'espone a rendere uno stretto conto della sua, e ne contrae in certo\nmodo l'obbligazione: \u00e8 questa una regola di fatto e di diritto, alla\nquale non pretendiam punto di sottrarci. Anzi, per conformarci ad essa\ndi buon grado, avevam proposto di dar qui minutamente ragione del\nmodo di scrivere da noi tenuto; e, a questo fine, siamo andati, per\ntutto il tempo del lavoro, cercando d'indovinare le critiche possibili\ne contingenti, con intenzione di ribatterle tutte anticipatamente.\nN\u00e8 in questo sarebbe stata la difficolt\u00e0; giacch\u00e8 (dobbiam dirlo a\nonor del vero) non ci si present\u00f2 alla mente una critica, che non le\nvenisse insieme una risposta trionfante, di quelle risposte che, non\ndico risolvon le questioni, ma le mutano. Spesso anche, mettendo due\ncritiche alle mani tra loro, le facevam battere l'una dall'altra; o,\nesaminandole ben a fondo, riscontrandole attentamente, riuscivamo\na scoprire e a mostrare che, cos\u00ec opposte in apparenza, eran per\u00f2\nd'uno stesso genere, nascevan tutt'e due dal non badare ai fatti e\nai princ\u00edpi su cui il giudizio doveva esser fondato; e, messele, con\nloro gran sorpresa, insieme, le mandavamo insieme a spasso. Non ci\nsarebbe mai stato autore che provasse cos\u00ec ad evidenza d'aver fatto\nbene. Ma che? quando siamo stati al punto di raccapezzar tutte le dette\nobiezioni e risposte, per disporle con qualche ordine, misericordia!\nvenivano a fare un libro. Veduta la qual cosa, abbiam messo da parte il\npensiero, per due ragioni che il lettore trover\u00e0 certamente buone: la\nprima, che un libro impiegato a giustificarne un altro, anzi lo stile\nd'un altro, potrebbe parer cosa ridicola: la seconda, che di libri\nbasta uno per volta, quando non \u00e8 d'avanzo.\n\n\n\n\n                           I PROMESSI SPOSI\n\n\n\n\n                            CAPITOLO PRIMO.\n\n\nQuel ramo del lago di Como, che volge a mezzogiorno, tra due catene\nnon interrotte di monti, tutte a seni e a golfi, a seconda dello\nsporgere e del rientrare di quelli, vien, quasi a un tratto, a\nristringersi, e a prender corso e figura di fiume, tra un promontorio\na destra, e un'ampia costiera dall'altra parte; e il ponte, che ivi\ncongiunge le due rive, par che renda ancor pi\u00f9 sensibile all'occhio\nquesta trasformazione, e segni il punto in cui il lago cessa, e\nl'Adda rincomincia, per ripigliar poi nome di lago dove le rive,\nallontanandosi di nuovo, lascian l'acqua distendersi e rallentarsi in\nnuovi golfi e in nuovi seni. La costiera, formata dal deposito di tre\ngrossi torrenti, scende appoggiata a due monti contigui, l'uno detto di\nsan Martino, l'altro, con voce lombarda, il _Resegone_, dai molti suoi\ncocuzzoli in fila, che in vero lo fanno somigliare a una sega: talch\u00e8\nnon \u00e8 chi, al primo vederlo, purch\u00e8 sia di fronte, come per esempio\ndi su le mura di Milano che guardano a settentrione, non lo discerna\ntosto, a un tal contrassegno, in quella lunga e vasta giogaia, dagli\naltri monti di nome pi\u00f9 oscuro e di forma pi\u00f9 comune. Per un buon\npezzo, la costa sale con un pendio lento e continuo; poi si rompe in\npoggi e in valloncelli, in erte e in ispianate, secondo l'ossatura de'\ndue monti, e il lavoro dell'acque. Il lembo estremo, tagliato dalle\nfoci de' torrenti, \u00e8 quasi tutto ghiaia e ciottoloni; il resto, campi\ne vigne, sparse di terre, di ville, di casali; in qualche parte boschi,\nche si prolungano su per la montagna. Lecco, la principale di quelle\nterre, e che d\u00e0 nome al territorio, giace poco discosto dal ponte, alla\nriva del lago, anzi viene in parte a trovarsi nel lago stesso, quando\nquesto ingrossa: un gran borgo al giorno d'oggi, e che s'incammina\na diventar citt\u00e0. Ai tempi in cui accaddero i fatti che prendiamo a\nraccontare, quel borgo, gi\u00e0 considerabile, era anche un castello, e\naveva perci\u00f2 l'onore d'alloggiare un comandante, e il vantaggio di\npossedere una stabile guarnigione di soldati spagnoli, che insegnavan\nla modestia alle fanciulle e alle donne del paese, accarezzavan di\ntempo in tempo le spalle a qualche marito, a qualche padre; e, sul\nfinir dell'estate, non mancavan mai di spandersi nelle vigne, per\ndiradar l'uve, e alleggerire a' contadini le fatiche della vendemmia.\nDall'una all'altra di quelle terre, dall'alture alla riva, da un poggio\nall'altro, correvano, e corrono tuttavia, strade e stradette, pi\u00f9 o men\nripide, o piane; ogni tanto affondate, sepolte tra due muri, donde,\nalzando lo sguardo, non iscoprite che un pezzo di cielo e qualche\nvetta di monte; ogni tanto elevate su terrapieni aperti: e da qui\nla vista spazia per prospetti pi\u00f9 o meno estesi, ma ricchi sempre e\nsempre qualcosa nuovi, secondo che i diversi punti piglian pi\u00f9 o meno\ndella vasta scena circostante, e secondo che questa o quella parte\ncampeggia o si scorcia, spunta o sparisce a vicenda. Dove un pezzo,\ndove un altro, dove una lunga distesa di quel vasto e variato specchio\ndell'acqua; di qua lago, chiuso all'estremit\u00e0 o piuttosto smarrito\nin un gruppo, in un andirivieni di montagne, e di mano in mano pi\u00f9\nallargato tra altri monti che si spiegano, a uno a uno, allo sguardo,\ne che l'acqua riflette capovolti, co' paesetti posti sulle rive; di\nl\u00e0 braccio di fiume, poi lago, poi fiume ancora, che va a perdersi in\nlucido serpeggiamento pur tra' monti che l'accompagnano, degradando\nvia via, e perdendosi quasi anch'essi nell'orizzonte. Il luogo stesso\nda dove contemplate que' vari spettacoli, vi fa spettacolo da ogni\nparte: il monte di cui passeggiate le falde, vi svolge, al di sopra,\nd'intorno, le sue cime e le balze, distinte, rilevate, mutabili quasi a\nogni passo, aprendosi e contornandosi in gioghi ci\u00f2 che v'era sembrato\nprima un sol giogo, e comparendo in vetta ci\u00f2 che poco innanzi vi si\nrappresentava sulla costa: e l'ameno, il domestico di quelle falde\ntempera gradevolmente il selvaggio, e orna vie pi\u00f9 il magnifico\ndell'altre vedute.\n\nPer una di queste stradicciole, tornava bel bello dalla passeggiata\nverso casa, sulla sera del giorno 7 novembre dell'anno 1628, don\nAbbondio, curato d'una delle terre accennate di sopra: il nome di\nquesta, n\u00e8 il casato del personaggio, non si trovan nel manoscritto,\nn\u00e8 a questo luogo n\u00e8 altrove. Diceva tranquillamente il suo ufizio,\ne talvolta, tra un salmo e l'altro, chiudeva il breviario, tenendovi\ndentro, per segno, l'indice della mano destra, e, messa poi questa\nnell'altra dietro la schiena, proseguiva il suo cammino, guardando a\nterra, e buttando con un piede verso il muro i ciottoli che facevano\ninciampo nel sentiero: poi alzava il viso, e, girati oziosamente gli\nocchi all'intorno, li fissava alla parte d'un monte, dove la luce\ndel sole gi\u00e0 scomparso, scappando per i fessi del monte opposto, si\ndipingeva qua e l\u00e0 sui massi sporgenti, come a larghe e inuguali\npezze di porpora. Aperto poi di nuovo il breviario, e recitato un\naltro squarcio, giunse a una voltata della stradetta, dov'era solito\nd'alzar sempre gli occhi dal libro, e di guardarsi dinanzi: e cos\u00ec fece\nanche quel giorno. Dopo la voltata, la strada correva diritta, forse\nun sessanta passi, e poi si divideva in due viottole, a foggia d'un\nipsilon: quella a destra saliva verso il monte, e menava alla cura:\nl'altra scendeva nella valle fino a un torrente; e da questa parte\nil muro non arrivava che all'anche del passeggiero. I muri interni\ndelle due viottole, in vece di riunirsi ad angolo, terminavano in un\ntabernacolo, sul quale eran dipinte certe figure lunghe, serpeggianti,\nche finivano in punta, e che, nell'intenzion dell'artista, e agli occhi\ndegli abitanti del vicinato, volevan dir fiamme; e, alternate con le\nfiamme, cert'altre figure da non potersi descrivere, che volevan dire\nanime del purgatorio: anime e fiamme a color di mattone, sur un fondo\nbigiognolo, con qualche scalcinatura qua e l\u00e0. Il curato, voltata la\nstradetta, e dirizzando, com'era solito, lo sguardo al tabernacolo,\nvide una cosa che non s'aspettava, e che non avrebbe voluto vedere.\nDue uomini stavano, l'uno dirimpetto all'altro, al confluente, per dir\ncos\u00ec, delle due viottole: un di costoro, a cavalcioni sul muricciolo\nbasso, con una gamba spenzolata al di fuori, e l'altro piede posato\nsul terreno della strada; il compagno, in piedi, appoggiato al muro,\ncon le braccia incrociate sul petto. L'abito, il portamento, e\nquello che, dal luogo ov'era giunto il curato, si poteva distinguer\ndell'aspetto, non lasciavan dubbio intorno alla lor condizione. Avevano\nentrambi intorno al capo una reticella verde, che cadeva sull'omero\nsinistro, terminata in una gran nappa, e dalla quale usciva sulla\nfronte un enorme ciuffo: due lunghi mustacchi arricciati in punta: una\ncintura lucida di cuoio, e a quella attaccate due pistole: un piccol\ncorno ripieno di polvere, cascante sul petto, come una collana: un\nmanico di coltellaccio che spuntava fuori d'un taschino degli ampi e\ngonfi calzoni, uno spadone, con una gran guardia traforata a lamine\nd'ottone, congegnate come in cifra, forbite e lucenti: a prima vista si\ndavano a conoscere per individui della specie de' _bravi_.\n\nQuesta specie, ora del tutto perduta, era allora floridissima in\nLombardia, e gi\u00e0 molto antica. Chi non ne avesse idea, ecco alcuni\nsquarci autentici, che potranno darne una bastante de' suoi caratteri\nprincipali, degli sforzi fatti per ispegnerla, e della sua dura e\nrigogliosa vitalit\u00e0.\n\nFino dall'otto aprile dell'anno 1583, l'Illustrissimo ed\nEccellentissimo signor don Carlo d'Aragon, Principe di Castelvetrano,\nDuca di Terranuova, Marchese d'Avola, Conte di Burgeto, grande\nAmmiraglio, e gran Contestabile di Sicilia, Governatore di Milano\ne Capitan Generale di Sua Maest\u00e0 Cattolica in Italia, _pienamente\ninformato della intollerabile miseria in che \u00e8 vivuta e vive questa\nCitt\u00e0 di Milano, per cagione dei bravi e vagabondi_, pubblica un\nbando contro di essi. _Dichiara e diffinisce tutti coloro essere\ncompresi in questo bando, e doversi ritenere bravi e vagabondi_....\n_i quali, essendo forestieri o del paese, non hanno esercizio\nalcuno, od avendolo, non lo fanno_.... _ma, senza salario, o pur con\nesso, s'appoggiano a qualche cavaliere o gentiluomo, officiale o\nmercante_.... _per fargli spalle e favore, o veramente, come si pu\u00f2\npresumere, per tendere insidie ad altri_.... A tutti costoro ordina\nche, nel termine di giorni sei, abbiano a sgomberare il paese, intima\nla galera a' renitenti, e d\u00e0 a tutti gli ufiziali della giustizia\nle pi\u00f9 stranamente ampie e indefinite facolt\u00e0, per l'esecuzione\ndell'ordine. Ma, nell'anno seguente, il 12 aprile, scorgendo il detto\nsignore, _che questa Citt\u00e0 \u00e8 tuttavia piena di detti bravi_....\n_tornati a vivere come prima vivevano, non punto mutato il costume\nloro, n\u00e8 scemato il numero_, d\u00e0 fuori un'altra grida, ancor pi\u00f9\nvigorosa e notabile, nella quale, tra l'altre ordinazioni, prescrive:\n\n_Che qualsivoglia persona, cos\u00ec di questa Citt\u00e0, come forestiera, che\nper due testimonj conster\u00e0 esser tenuto, e comunemente riputato per\nbravo, et aver tal nome, ancorch\u00e8 non si verifichi aver fatto delitto\nalcuno.... per questa sola riputazione di bravo, senza altri indizj,\npossa dai detti giudici e da ognuno di loro esser posto alla corda et\nal tormento, per processo informativo.... et ancorch\u00e8 non confessi\ndelitto alcuno, tuttavia sia mandato alla galea, per detto triennio,\nper la sola opinione e nome di bravo, come di sopra_. Tutto ci\u00f2, e il\ndi pi\u00f9 che si tralascia, perch\u00e8 _Sua Eccellenza \u00e8 risoluta di voler\nessere obbedita da ognuno_.\n\n[Illustrazione: Che i due descritti di sopra stessero ivi ad aspettar\nqualcheduno, era cosa troppo evidente.... (pag. 11)]\n\nAll'udir parole d'un tanto signore, cos\u00ec gagliarde e sicure, e\naccompagnate da tali ordini, viene una gran voglia di credere che, al\nsolo rimbombo di esse, tutti i bravi siano scomparsi per sempre. Ma\nla testimonianza d'un signore non meno autorevole, n\u00e8 meno dotato di\nnomi, ci obbliga a credere tutto il contrario. \u00c8 questi l'Illustrissimo\ned Eccellentissimo Signor Juan Fernandez de Velasco, Contestabile di\nCastiglia, Cameriero maggiore di Sua Maest\u00e0, Duca della Citt\u00e0 di Frias,\nConte di Haro e Castelnovo, Signore della Casa di Velasco, e di quella\ndelli sette Infanti di Lara, Governatore dello Stato di Milano, etc.\nIl 5 giugno dell'anno 1593, pienamente informato anche lui _di quanto\ndanno e rovine sieno_.... _i bravi e vagabondi, e del pessimo effetto\nche tal sorta di gente fa contra il ben pubblico, et in delusione\ndella giustizia_, intima loro di nuovo che, nel termine di giorni sei,\nabbiano a sbrattare il paese, ripetendo a un dipresso le prescrizioni\ne le minacce medesime del suo predecessore. Il 23 maggio poi dell'anno\n1598, _informato, con non poco dispiacere dell'animo suo, che_... _ogni\nd\u00ec pi\u00f9 in questa Citt\u00e0 e Stato va crescendo il numero di questi tali_\n(bravi e vagabondi), _n\u00e8 di loro, giorno e notte, altro si sente che\nferite appostatamente date, omicidii e ruberie et ogni altra qualit\u00e0 di\ndelitti, ai quali si rendono pi\u00f9 facili, confidati essi bravi d'essere\naiutati dai capi e fautori loro_,.... prescrive di nuovo gli stessi\nrimedi, accrescendo la dose, come s'usa nelle malattie ostinate.\n_Ognuno dunque_, conchiude poi, _onninamente si guardi di contravvenire\nin parte alcuna alla grida presente, perch\u00e8, in luogo di provare\nla clemenza di Sua Eccellenza, prover\u00e0 il rigore, e l'ira sua_....\n_essendo risoluta e determinata che questa sia l'ultima e perentoria\nmonizione_.\n\nNon fu per\u00f2 di questo parere l'Illustrissimo ed Eccellentissimo\nSignore, il Signor Don Pietro Enriquez de Acevedo, Conte di Fuentes,\nCapitano, e Governatore dello Stato di Milano; non fu di questo\nparere, e per buone ragioni. _Pienamente informato della miseria in\nche vive questa Citt\u00e0 e Stato per cagione del gran numero di bravi\nche in esso abbonda_.... _e risoluto di totalmente estirpare seme\ntanto pernizioso_, d\u00e0 fuori, il 5 decembre 1600, una nuova grida piena\nanch'essa di severissime comminazioni, _con fermo proponimento che,\ncon ogni rigore, e senza speranza di remissione, siano onninamente\neseguite_.\n\nConvien credere per\u00f2 che non ci si mettesse con tutta quella buona\nvoglia che sapeva impiegare nell'ordir cabale, e nel suscitar nemici al\nsuo gran nemico Enrico IV; giacch\u00e8, per questa parte, la storia attesta\ncome riuscisse ad armare contro quel re il duca di Savoia, a cui fece\nperder pi\u00f9 d'una citt\u00e0; come riuscisse a far congiurare il duca di\nBiron, a cui fece perder la testa; ma, per ci\u00f2 che riguarda quel seme\ntanto pernizioso de' bravi, certo \u00e8 che esso continuava a germogliare,\nil 22 settembre dell'anno 1612. In quel giorno l'Illustrissimo ed\nEccellentissimo Signore, Don Giovanni de Mendozza, Marchese de la\nHynojosa, Gentiluomo, etc. Governatore, etc., pens\u00f2 seriamente ad\nestirparlo. A quest'effetto, sped\u00ec a Pandolfo e Marco Tullio Malatesti,\nstampatori regii camerali, la solita grida, corretta ed accresciuta,\nperch\u00e8 la stampassero ad esterminio de' bravi. Ma questi vissero\nancora per ricevere, il 24 decembre dell'anno 1618, gli stessi e pi\u00f9\nforti colpi dall'Illustrissimo ed Eccellentissimo Signore, il Signor\ndon Gomez Suarez de Figueroa, Duca di Feria, etc. Governatore, etc.\nPer\u00f2, non essendo essi morti neppur di quelli, l'Illustrissimo ed\nEccellentissimo Signore, il Signor Gonzalo Fernandez di Cordova, sotto\nil cui governo accadde la passeggiata di don Abbondio, s'era trovato\ncostretto a ricorreggere e ripubblicare la solita grida contro i bravi,\nil giorno 5 ottobre del 1627, cio\u00e8 un anno, un mese e due giorni prima\ndi quel memorabile avvenimento.\n\nN\u00e8 fu questa l'ultima pubblicazione; ma noi delle posteriori non\ncrediamo dover far menzione, come di cosa che esce dal periodo della\nnostra storia. Ne accenneremo soltanto una del 13 febbraio dell anno\n1632, nella quale l'Illustrissimo ed Eccellentissimo Signore, _el Duque\nde Feria_, per la seconda volta governatore, ci avvisa che _le maggiori\nsceleraggini procedono da quelli che chiamano bravi_. Questo basta\nad assicurarci che, nel tempo di cui noi trattiamo, c'era de' bravi\ntuttavia.\n\nChe i due descritti di sopra stessero ivi ad aspettar qualcheduno, era\ncosa troppo evidente; ma quel che pi\u00f9 dispiacque a don Abbondio fu il\ndover accorgersi, per certi atti, che l'aspettato era lui. Perch\u00e8, al\nsuo apparire, coloro s'eran guardati in viso, alzando la testa, con\nun movimento dal quale si scorgeva che tutt'e due a un tratto avevan\ndetto: \u00e8 lui; quello che stava a cavalcioni s'era alzato, tirando la\nsua gamba sulla strada; l'altro s'era staccato dal muro; e tutt'e due\ngli s'avviavano incontro. Egli, tenendosi sempre il breviario aperto\ndinanzi, come se leggesse, spingeva lo sguardo in su, per ispiar le\nmosse di coloro; e, vedendoseli venir proprio incontro, fu assalito\na un tratto da mille pensieri. Domand\u00f2 subito in fretta a s\u00e8 stesso,\nse, tra i bravi e lui, ci fosse qualche uscita di strada, a destra\no a sinistra; e gli sovvenne subito di no. Fece un rapido esame, se\navesse peccato contro qualche potente, contro qualche vendicativo; ma,\nanche in quel turbamento, il testimonio consolante della coscienza lo\nrassicurava alquanto: i bravi per\u00f2 s'avvicinavano, guardandolo fisso.\nMise l'indice e il medio della mano sinistra nel collare, come per\nraccomodarlo; e, girando le due dita intorno al collo, volgeva intanto\nla faccia all'indietro, torcendo insieme la bocca, e guardando con la\ncoda dell'occhio, fin dove poteva, se qualcheduno arrivasse; ma non\nvide nessuno. Diede un'occhiata, al di sopra del muricciolo, ne' campi:\nnessuno; un'altra pi\u00f9 modesta sulla strada dinanzi; nessuno, fuorch\u00e8\ni bravi. Che fare? tornare indietro, non era a tempo: darla a gambe,\nera lo stesso che dire, inseguitemi, o peggio. Non potendo schivare il\npericolo, vi corse incontro, perch\u00e8 i momenti di quell'incertezza erano\nallora cos\u00ec penosi per lui, che non desiderava altro che d'abbreviarli.\nAffrett\u00f2 il passo, recit\u00f2 un versetto a voce pi\u00f9 alta, compose la\nfaccia a tutta quella quiete e ilarit\u00e0 che pot\u00e8, fece ogni sforzo per\npreparare un sorriso; quando si trov\u00f2 a fronte dei due galantuomini,\ndisse mentalmente: ci siamo; e si ferm\u00f2 su due piedi. \u00abSignor curato,\u00bb\ndisse un di que' due, piantandogli gli occhi in faccia.\n\n\u00abCosa comanda?\u00bb rispose subito don Abbondio, alzando i suoi dal libro,\nche gli rest\u00f2 spalancato nelle mani, come sur un leggio.\n\n\u00abLei ha intenzione,\u00bb prosegu\u00ec l'altro, con l'atto minaccioso e iracondo\ndi chi coglie un suo inferiore sull'intraprendere una ribalderia, \u00ablei\nha intenzione di maritar domani Renzo Tramaglino e Lucia Mondella!\u00bb\n\n\u00abCio\u00e8....\u00bb rispose, con voce tremolante, don Abbondio: \u00abcio\u00e8. Lor\nsignori son uomini di mondo, e sanno benissimo come vanno queste\nfaccende. Il povero curato non c'entra: fanno i loro pasticci tra\nloro, e poi.... e poi, vengon da noi, come s'anderebbe a un banco a\nriscotere: e noi.... noi siamo i servitori del comune.\u00bb\n\n\u00abOr bene,\u00bb gli disse il bravo, all'orecchio, ma in tono solenne di\ncomando, \u00abquesto matrimonio non s'ha da fare, n\u00e8 domani, n\u00e8 mai.\u00bb\n\n\u00abMa, signori miei,\u00bb replic\u00f2 don Abbondio, con la voce mansueta e\ngentile di chi vuoi persuadere un impaziente, \u00abma, signori miei, si\ndegnino di mettersi ne' miei panni. Se la cosa dipendesse da me,...\nvedon bene che a me non me ne vien nulla in tasca....\u00bb\n\n\u00abOrs\u00f9,\u00bb interruppe il bravo, \u00abse la cosa avesse a decidersi a ciarle,\nlei ci metterebbe in sacco. Noi non ne sappiamo, n\u00e8 vogliam saperne di\npi\u00f9. Uomo avvertito.... lei c'intende.\u00bb\n\n\u00abMa lor signori son troppo giusti, troppo ragionevoli....\u00bb\n\n\u00abMa,\u00bb interruppe questa volta l'altro compagnone, che non aveva parlato\nfin allora, \u00abma il matrimonio non si far\u00e0 o....\u00bb e qui una buona\nbestemmia, \u00abo chi lo far\u00e0 non se ne pentir\u00e0, perch\u00e8 non ne avr\u00e0 tempo,\ne....\u00bb un'altra bestemmia.\n\n\u00abZitto, zitto,\u00bb riprese il primo oratore, \u00abil signor curato \u00e8 un uomo\nche sa il viver del mondo; e noi siam galantuomini, che non vogliam\nfargli del male, purch\u00e8 abbia giudizio. Signor curato, l'illustrissimo\nsignor don Rodrigo nostro padrone la riverisce caramente.\u00bb\n\nQuesto nome fu, nella mente di don Abbondio, come, nel forte d'un\ntemporale notturno, un lampo che illumina momentaneamente e in\nconfuso gli oggetti, e accresce il terrore. Fece, come per istinto, un\ngrand'inchino, e disse: \u00abse mi sapessero suggerire....\u00bb\n\n\u00abOh! suggerire a lei che sa di latino!\u00bb interruppe ancora il bravo, con\nun riso tra lo sguaiato e il feroce. \u00abA lei tocca. E sopra tutto, non\nsi lasci uscir parola su questo avviso che le abbiam dato per suo bene;\naltrimenti.... ehm.... sarebbe lo stesso che fare quel tal matrimonio.\nVia, che vuoi che si dica in suo nome all'illustrissimo signor don\nRodrigo?\u00bb\n\n\u00abIl mio rispetto....\u00bb\n\n\u00abSi spieghi meglio!\u00bb\n\n\u00ab....Disposto.... disposto sempre all'ubbidienza.\u00bb E, proferendo queste\nparole, non sapeva nemmen lui se faceva una promessa, o un complimento.\nI bravi le presero, o mostraron di prenderle nel significato pi\u00f9 serio.\n\n\u00abBenissimo, e buona notte, messere,\u00bb disse l'un d'essi, in atto di\npartir col compagno. Don Abbondio, che, pochi momenti prima, avrebbe\ndato un occhio per iscansarli, allora avrebbe voluto prolungar la\nconversazione e le trattative. \u00abSignori....\u00bb cominci\u00f2, chiudendo il\nlibro con le due mani; ma quelli, senza pi\u00f9 dargli udienza, presero la\nstrada dond'era lui venuto, e s'allontanarono, cantando una canzonaccia\nche non voglio trascrivere. Il povero don Abbondio rimase un momento a\nbocca aperta, come incantato; poi prese quella delle due stradette che\nconduceva a casa sua, mettendo innanzi a stento una gamba dopo l'altra,\nche parevano aggranchiate. Come stesse di dentro, s'intender\u00e0 meglio,\nquando avrem detto qualche cosa del suo naturale, e de' tempi in cui\ngli era toccato di vivere.\n\nDon Abbondio (il lettore se n'\u00e8 gi\u00e0 avveduto) non era nato con un\ncuor di leone. Ma fin da' primi suoi anni, aveva dovuto comprendere\nche la peggior condizione, a que' tempi, era quella d'un animale\nsenza artigli e senza zanne, e che pure non si sentisse inclinazione\nd'esser divorato. La forza legale non proteggeva in alcun conto\nl'uomo tranquillo, inoffensivo, e che non avesse altri mezzi di far\npaura altrui. Non gi\u00e0 che mancassero leggi e pene contro le violenze\nprivate. Le leggi anzi diluviavano; i delitti erano enumerati,\ne particolareggiati, con minuta prolissit\u00e0; le pene, pazzamente\nesorbitanti e, se non basta, aumentabili, quasi per ogni caso, ad\narbitrio del legislatore stesso e di cento esecutori; le procedure,\nstudiate soltanto a liberare il giudice da ogni cosa che potesse\nessergli d'impedimento a proferire una condanna: gli squarci che\nabbiam riportati delle gride contro i bravi, ne sono un piccolo, ma\nfedel saggio. Con tutto ci\u00f2, anzi in gran parte a cagion di ci\u00f2,\nquelle gride, ripubblicate e rinforzate di governo in governo, non\nservivano ad altro che ad attestare ampollosamente l'impotenza\nde' loro autori; o, se producevan qualche effetto immediato, era\nprincipalmente d'aggiunger molte vessazioni a quelle che i pacifici e\ni deboli gi\u00e0 soffrivano da' perturbatori, e d'accrescer le violenze,\ne l'astuzia di questi. L'impunit\u00e0 era organizzata, e aveva radici che\nle gride non toccavano, o non potevano smovere. Tali eran gli asili,\ntali i privilegi d'alcune classi, in parte riconosciuti dalla forza\nlegale, in parte tollerati con astioso silenzio, o impugnati con vane\nproteste, ma sostenuti in fatto e difesi da quelle classi, con attivit\u00e0\nd'interesse, e con gelosia di puntiglio. Ora, quest'impunit\u00e0 minacciata\ne insultata, ma non distrutta dalle gride, doveva naturalmente, a ogni\nminaccia, e a ogni insulto, adoperar nuovi sforzi e nuove invenzioni,\nper conservarsi. Cos\u00ec accadeva in effetto; e, all'apparire delle gride\ndirette a comprimere i violenti, questi cercavano nella loro forza\nreale i nuovi mezzi pi\u00f9 opportuni, per continuare a far ci\u00f2 che le\ngride venivano a proibire. Potevan ben esse inceppare a ogni passo,\ne molestare l'uomo bonario, che fosse senza forza propria e senza\nprotezione; perch\u00e8, col fine d'aver sotto la mano ogni uomo, per\nprevenire o per punire ogni delitto, assoggettavano ogni mossa del\nprivato al volere arbitrario d'esecutori d'ogni genere. Ma chi, prima\ndi commettere il delitto, aveva prese le sue misure per ricoverarsi\na tempo in un convento, in un palazzo, dove i birri non avrebber mai\nosato metter piede; chi, senz'altre precauzioni, portava una livrea\nche impegnasse a difenderlo la vanit\u00e0 e l'interesse d'una famiglia\npotente, di tutto un ceto, era libero nelle sue operazioni, e poteva\nridersi di tutto quel fracasso delle gride. Di quegli stessi ch'eran\ndeputati a farle eseguire, alcuni appartenevano per nascita alla\nparte privilegiata, alcuni ne dipendevano per clientela; gli uni\ne gli altri, per educazione, per interesse, per consuetudine, per\nimitazione, ne avevano abbracciate le massime, e si sarebbero ben\nguardati dall'offenderle, per amor d'un pezzo di carta attaccato sulle\ncantonate. Gli uomini poi incaricati dell'esecuzione immediata, quando\nfossero stati intraprendenti come eroi, ubbidienti come monaci, e\npronti a sacrificarsi come martiri, non avrebber per\u00f2 potuto venirne\nalla fine, inferiori com'eran di numero a quelli che si trattava di\nsottomettere, e con una gran probabilit\u00e0 d'essere abbandonati da chi,\nin astratto e, per cos\u00ec dire, in teoria, imponeva loro di operare. Ma,\noltre di ci\u00f2, costoro eran generalmente de' pi\u00f9 abbietti e ribaldi\nsoggetti del loro tempo; l'incarico loro era tenuto a vile anche da\nquelli che potevano averne terrore, e il loro titolo un improperio. Era\nquindi ben naturale che costoro, in vece d'arrischiare, anzi di gettar\nla vita in un'impresa disperata, vendessero la loro inazione, o anche\nla loro connivenza ai potenti, e si riservassero a esercitare la loro\nesecrata autorit\u00e0 e la forza che pure avevano, in quelle occasioni\ndove non c'era pericolo; nell'opprimer cio\u00e8, e nel vessare gli uomini\npacifici e senza difesa.\n\nL'uomo che vuole offendere, o che teme, ogni momento, d'essere offeso,\ncerca naturalmente alleati e compagni. Quindi era, in que' tempi,\nportata al massimo punto la tendenza degl'individui a tenersi collegati\nin classi, a formarne delle nuove, e a procurare ognuno la maggior\npotenza di quella a cui apparteneva. Il clero vegliava a sostenere\ne ad estendere le sue immunit\u00e0, la nobilt\u00e0 i suoi privilegi, il\nmilitare le sue esenzioni.\nSummarize this passage in a short paragraph."}, {"role": "assistant", "content": "The passage is the introduction and opening chapter of Alessandro Manzoni's *I Promessi Sposi* (The Betrothed). It begins with a mock-serious preface explaining that the author found an old, bombastic 17th-century manuscript and has rewritten its story in plainer language. The narrative"}, {"role": "user", "content": "Continue with one additional sentence."}], "temperature": 0, "think": false, "max_tokens": 64, "ignore_eos": true, "stream": true, "stream_options": {"include_usage": true}}
+
+--- rendered prompt ---
+[gMASK]<sop><|user|>Benchmark checkpoint passage.
+                           I PROMESSI SPOSI
+
+
+
+
+                             INTRODUZIONE
+
+
+_L'historia si può veramente deffinire una guerra illustre contro il
+Tempo, perchè togliendoli di mano gl'anni suoi prigionieri, anzi già
+fatti cadaueri, li richiama in vita, li passa in rassegna, e li schiera
+di nuovo in battaglia. Ma gl'illustri Campioni che in tal Arringo fanno
+messe di Palme e d'Allori, rapiscono solo che le sole spoglie più
+sfarzose e brillanti, imbalsamando co' loro inchiostri le Imprese de
+Prencipi e Potentati, e qualificati Personaggi, e trapuntando coll'ago
+finissimo dell'ingegno i fili d'oro e di seta, che formano un perpetuo
+ricamo di Attioni gloriose. Però alla mia debolezza non è lecito
+solleuarsi a tal'argomenti, e sublimità pericolose, con aggirarsi tra
+Labirinti de' Politici maneggj, et il rimbombo de' bellici Oricalchi:
+solo che hauendo hauuto notitia di fatti memorabili, se ben capitorno a
+gente meccaniche, e di piccol affare, mi accingo di lasciarne memoria
+a Posteri, con far di tutto schietta e genuinamente il Racconto,
+ouuero sia Relatione. Nella quale si vedrà in angusto Teatro luttuose
+Traggedie d'horrori, e Scene di malvaggità grandiosa, con intermezzi
+d'Imprese virtuose e buontà angeliche, opposte alle operationi
+diaboliche. E veramente, considerando che questi nostri climi sijno
+sotto l'amparo del Re Cattolico nostro Signore, che è quel Sole che mai
+tramonta, e che, sopra di essi, con riflesso Lume, qual Luna giamai
+calante, risplenda l'Heroe di nobil Prosapia che_ pro tempore _ne tiene
+le sue parti, e gl'Amplissimi Senatori quali Stelle fisse, e gl'altri
+Spettabili Magistrati qual'erranti Pianeti spandino la luce per ogni
+doue, venendo così a formare un nobilissimo Cielo, altra causale
+trouar non si può del vederlo tramutato in inferno d'atti tenebrosi,
+malvaggità e sevitie che dagl'huomini temerarij si vanno moltiplicando,
+se non se arte e fattura diabolica, attesochè l'humana malitia per sè
+sola bastar non dourebbe a resistere a tanti Heroi, che con occhij
+d'Argo e braccj di Briareo, si vanno trafficando per li pubblici
+emolumenti. Per locchè descriuendo questo Racconto auuenuto ne' tempi
+di mia verde staggione, abbenchè la più parte delle persone che vi
+rappresentano le loro parti, sijno sparite dalla Scena del Mondo, con
+rendersi tributarij delle Parche, pure per degni rispetti, si tacerà
+li loro nomi, cioè la parentela, et il medemo si farà de' luochi,
+solo indicando li Territorij_ generaliter. _Nè alcuno dirà questa sij
+imperfettione del Racconto, e defformità di questo mio rozzo Parto,
+a meno questo tale Critico non sij persona affatto diggiuna della
+Filosofia: che quanto agl'huomini in essa versati, ben vederanno nulla
+mancare alla sostanza di detta Narratione. Imperciocchè, essendo cosa
+evidente, e da verun negata non essere i nomi se non puri purissimi
+accidenti...._»
+
+--Ma, quando io avrò durata l'eroica fatica di trascriver questa storia
+da questo dilavato e graffiato autografo, e l'avrò data, come si suol
+dire, alla luce, si troverà poi chi duri la fatica di leggerla?--
+
+Questa riflessione dubitativa, nata nel travaglio del decifrare uno
+scarabocchio che veniva dopo _accidenti_, mi fece sospender la copia,
+e pensar più seriamente a quello che convenisse di fare.--Ben è vero,
+dicevo tra me, scartabellando il manoscritto, ben è vero che quella
+grandine di concettini e di figure non continua così alla distesa per
+tutta l'opera. Il buon secentista ha voluto sul principio mettere in
+mostra la sua virtù; ma poi, nel corso della narrazione, e talvolta per
+lunghi tratti, lo stile cammina ben più naturale e più piano. Sì; ma
+com'è dozzinale! com'è sguaiato! com'è scorretto! Idiotismi lombardi a
+iosa, frasi della lingua adoperate a sproposito, grammatica arbitraria,
+periodi sgangherati. E poi, qualche eleganza spagnola seminata qua e
+là; e poi, ch'è peggio, ne' luoghi più terribili o più pietosi della
+storia, a ogni occasione d'eccitar maraviglia, o di far pensare, a
+tutti que' passi insomma che richiedono bensì un po' di rettorica,
+ma rettorica discreta, fine, di buon gusto, costui non manca mai di
+metterci di quella sua così fatta del proemio. E allora, accozzando,
+con un'abilità mirabile, le qualità più opposte, trova la maniera di
+riuscir rozzo insieme e affettato, nella stessa pagina, nello stesso
+periodo, nello stesso vocabolo. Ecco qui: declamazioni ampollose,
+composte a forza di solecismi pedestri, e da per tutto quella
+goffaggine ambiziosa, ch'è il proprio carattere degli scritti di quel
+secolo, in questo paese. In vero, non è cosa da presentare a lettori
+d'oggigiorno: son troppo ammaliziati, troppo disgustati di questo
+genere di stravaganze. Meno male, che il buon pensiero m'è venuto sul
+principio di questo sciagurato lavoro: e me ne lavo le mani.--
+
+Nell'atto però di chiudere lo scartafaccio, per riporlo, mi sapeva
+male che una storia così bella dovesse rimanersi tuttavia sconosciuta;
+perchè, in quanto storia, può essere che al lettore ne paia altrimenti,
+ma a me era parsa bella, come dico; molto bella.--Perchè non si
+potrebbe, pensai, prender la serie de' fatti da questo manoscritto,
+e rifarne la dicitura?--Non essendosi presentato alcuna obiezion
+ragionevole, il partito fu subito abbracciato. Ed ecco l'origine del
+presente libro, esposta con un'ingenuità pari all'importanza del libro
+medesimo.
+
+Taluni però di que' fatti, certi costumi descritti dal nostro autore,
+c'eran sembrati così nuovi, così strani, per non dir peggio, che,
+prima di prestargli fede, abbiam voluto interrogare altri testimoni; e
+ci siam messi a frugar nelle memorie di quel tempo, per chiarirci se
+veramente il mondo camminasse allora a quel modo. Una tale indagine
+dissipò tutti i nostri dubbi: a ogni passo ci abbattevamo in cose
+consimili, e in cose più forti: e, quello che ci parve più decisivo,
+abbiam perfino ritrovati alcuni personaggi, de' quali non avendo mai
+avuto notizia fuor che dal nostro manoscritto, eravamo in dubbio se
+fossero realmente esistiti. E, all'occorrenza, citeremo alcuna di
+quelle testimonianze, per procacciar fede alle cose, alle quali, per la
+loro stranezza, il lettore sarebbe più tentato di negarla.
+
+Ma, rifiutando come intollerabile la dicitura del nostro autore, che
+dicitura vi abbiam noi sostituita? Qui sta il punto.
+
+Chiunque, senza esser pregato, s'intromette a rifar l'opera altrui,
+s'espone a rendere uno stretto conto della sua, e ne contrae in certo
+modo l'obbligazione: è questa una regola di fatto e di diritto, alla
+quale non pretendiam punto di sottrarci. Anzi, per conformarci ad essa
+di buon grado, avevam proposto di dar qui minutamente ragione del
+modo di scrivere da noi tenuto; e, a questo fine, siamo andati, per
+tutto il tempo del lavoro, cercando d'indovinare le critiche possibili
+e contingenti, con intenzione di ribatterle tutte anticipatamente.
+Nè in questo sarebbe stata la difficoltà; giacchè (dobbiam dirlo a
+onor del vero) non ci si presentò alla mente una critica, che non le
+venisse insieme una risposta trionfante, di quelle risposte che, non
+dico risolvon le questioni, ma le mutano. Spesso anche, mettendo due
+critiche alle mani tra loro, le facevam battere l'una dall'altra; o,
+esaminandole ben a fondo, riscontrandole attentamente, riuscivamo
+a scoprire e a mostrare che, così opposte in apparenza, eran però
+d'uno stesso genere, nascevan tutt'e due dal non badare ai fatti e
+ai princípi su cui il giudizio doveva esser fondato; e, messele, con
+loro gran sorpresa, insieme, le mandavamo insieme a spasso. Non ci
+sarebbe mai stato autore che provasse così ad evidenza d'aver fatto
+bene. Ma che? quando siamo stati al punto di raccapezzar tutte le dette
+obiezioni e risposte, per disporle con qualche ordine, misericordia!
+venivano a fare un libro. Veduta la qual cosa, abbiam messo da parte il
+pensiero, per due ragioni che il lettore troverà certamente buone: la
+prima, che un libro impiegato a giustificarne un altro, anzi lo stile
+d'un altro, potrebbe parer cosa ridicola: la seconda, che di libri
+basta uno per volta, quando non è d'avanzo.
+
+
+
+
+                           I PROMESSI SPOSI
+
+
+
+
+                            CAPITOLO PRIMO.
+
+
+Quel ramo del lago di Como, che volge a mezzogiorno, tra due catene
+non interrotte di monti, tutte a seni e a golfi, a seconda dello
+sporgere e del rientrare di quelli, vien, quasi a un tratto, a
+ristringersi, e a prender corso e figura di fiume, tra un promontorio
+a destra, e un'ampia costiera dall'altra parte; e il ponte, che ivi
+congiunge le due rive, par che renda ancor più sensibile all'occhio
+questa trasformazione, e segni il punto in cui il lago cessa, e
+l'Adda rincomincia, per ripigliar poi nome di lago dove le rive,
+allontanandosi di nuovo, lascian l'acqua distendersi e rallentarsi in
+nuovi golfi e in nuovi seni. La costiera, formata dal deposito di tre
+grossi torrenti, scende appoggiata a due monti contigui, l'uno detto di
+san Martino, l'altro, con voce lombarda, il _Resegone_, dai molti suoi
+cocuzzoli in fila, che in vero lo fanno somigliare a una sega: talchè
+non è chi, al primo vederlo, purchè sia di fronte, come per esempio
+di su le mura di Milano che guardano a settentrione, non lo discerna
+tosto, a un tal contrassegno, in quella lunga e vasta giogaia, dagli
+altri monti di nome più oscuro e di forma più comune. Per un buon
+pezzo, la costa sale con un pendio lento e continuo; poi si rompe in
+poggi e in valloncelli, in erte e in ispianate, secondo l'ossatura de'
+due monti, e il lavoro dell'acque. Il lembo estremo, tagliato dalle
+foci de' torrenti, è quasi tutto ghiaia e ciottoloni; il resto, campi
+e vigne, sparse di terre, di ville, di casali; in qualche parte boschi,
+che si prolungano su per la montagna. Lecco, la principale di quelle
+terre, e che dà nome al territorio, giace poco discosto dal ponte, alla
+riva del lago, anzi viene in parte a trovarsi nel lago stesso, quando
+questo ingrossa: un gran borgo al giorno d'oggi, e che s'incammina
+a diventar città. Ai tempi in cui accaddero i fatti che prendiamo a
+raccontare, quel borgo, già considerabile, era anche un castello, e
+aveva perciò l'onore d'alloggiare un comandante, e il vantaggio di
+possedere una stabile guarnigione di soldati spagnoli, che insegnavan
+la modestia alle fanciulle e alle donne del paese, accarezzavan di
+tempo in tempo le spalle a qualche marito, a qualche padre; e, sul
+finir dell'estate, non mancavan mai di spandersi nelle vigne, per
+diradar l'uve, e alleggerire a' contadini le fatiche della vendemmia.
+Dall'una all'altra di quelle terre, dall'alture alla riva, da un poggio
+all'altro, correvano, e corrono tuttavia, strade e stradette, più o men
+ripide, o piane; ogni tanto affondate, sepolte tra due muri, donde,
+alzando lo sguardo, non iscoprite che un pezzo di cielo e qualche
+vetta di monte; ogni tanto elevate su terrapieni aperti: e da qui
+la vista spazia per prospetti più o meno estesi, ma ricchi sempre e
+sempre qualcosa nuovi, secondo che i diversi punti piglian più o meno
+della vasta scena circostante, e secondo che questa o quella parte
+campeggia o si scorcia, spunta o sparisce a vicenda. Dove un pezzo,
+dove un altro, dove una lunga distesa di quel vasto e variato specchio
+dell'acqua; di qua lago, chiuso all'estremità o piuttosto smarrito
+in un gruppo, in un andirivieni di montagne, e di mano in mano più
+allargato tra altri monti che si spiegano, a uno a uno, allo sguardo,
+e che l'acqua riflette capovolti, co' paesetti posti sulle rive; di
+là braccio di fiume, poi lago, poi fiume ancora, che va a perdersi in
+lucido serpeggiamento pur tra' monti che l'accompagnano, degradando
+via via, e perdendosi quasi anch'essi nell'orizzonte. Il luogo stesso
+da dove contemplate que' vari spettacoli, vi fa spettacolo da ogni
+parte: il monte di cui passeggiate le falde, vi svolge, al di sopra,
+d'intorno, le sue cime e le balze, distinte, rilevate, mutabili quasi a
+ogni passo, aprendosi e contornandosi in gioghi ciò che v'era sembrato
+prima un sol giogo, e comparendo in vetta ciò che poco innanzi vi si
+rappresentava sulla costa: e l'ameno, il domestico di quelle falde
+tempera gradevolmente il selvaggio, e orna vie più il magnifico
+dell'altre vedute.
+
+Per una di queste stradicciole, tornava bel bello dalla passeggiata
+verso casa, sulla sera del giorno 7 novembre dell'anno 1628, don
+Abbondio, curato d'una delle terre accennate di sopra: il nome di
+questa, nè il casato del personaggio, non si trovan nel manoscritto,
+nè a questo luogo nè altrove. Diceva tranquillamente il suo ufizio,
+e talvolta, tra un salmo e l'altro, chiudeva il breviario, tenendovi
+dentro, per segno, l'indice della mano destra, e, messa poi questa
+nell'altra dietro la schiena, proseguiva il suo cammino, guardando a
+terra, e buttando con un piede verso il muro i ciottoli che facevano
+inciampo nel sentiero: poi alzava il viso, e, girati oziosamente gli
+occhi all'intorno, li fissava alla parte d'un monte, dove la luce
+del sole già scomparso, scappando per i fessi del monte opposto, si
+dipingeva qua e là sui massi sporgenti, come a larghe e inuguali
+pezze di porpora. Aperto poi di nuovo il breviario, e recitato un
+altro squarcio, giunse a una voltata della stradetta, dov'era solito
+d'alzar sempre gli occhi dal libro, e di guardarsi dinanzi: e così fece
+anche quel giorno. Dopo la voltata, la strada correva diritta, forse
+un sessanta passi, e poi si divideva in due viottole, a foggia d'un
+ipsilon: quella a destra saliva verso il monte, e menava alla cura:
+l'altra scendeva nella valle fino a un torrente; e da questa parte
+il muro non arrivava che all'anche del passeggiero. I muri interni
+delle due viottole, in vece di riunirsi ad angolo, terminavano in un
+tabernacolo, sul quale eran dipinte certe figure lunghe, serpeggianti,
+che finivano in punta, e che, nell'intenzion dell'artista, e agli occhi
+degli abitanti del vicinato, volevan dir fiamme; e, alternate con le
+fiamme, cert'altre figure da non potersi descrivere, che volevan dire
+anime del purgatorio: anime e fiamme a color di mattone, sur un fondo
+bigiognolo, con qualche scalcinatura qua e là. Il curato, voltata la
+stradetta, e dirizzando, com'era solito, lo sguardo al tabernacolo,
+vide una cosa che non s'aspettava, e che non avrebbe voluto vedere.
+Due uomini stavano, l'uno dirimpetto all'altro, al confluente, per dir
+così, delle due viottole: un di costoro, a cavalcioni sul muricciolo
+basso, con una gamba spenzolata al di fuori, e l'altro piede posato
+sul terreno della strada; il compagno, in piedi, appoggiato al muro,
+con le braccia incrociate sul petto. L'abito, il portamento, e
+quello che, dal luogo ov'era giunto il curato, si poteva distinguer
+dell'aspetto, non lasciavan dubbio intorno alla lor condizione. Avevano
+entrambi intorno al capo una reticella verde, che cadeva sull'omero
+sinistro, terminata in una gran nappa, e dalla quale usciva sulla
+fronte un enorme ciuffo: due lunghi mustacchi arricciati in punta: una
+cintura lucida di cuoio, e a quella attaccate due pistole: un piccol
+corno ripieno di polvere, cascante sul petto, come una collana: un
+manico di coltellaccio che spuntava fuori d'un taschino degli ampi e
+gonfi calzoni, uno spadone, con una gran guardia traforata a lamine
+d'ottone, congegnate come in cifra, forbite e lucenti: a prima vista si
+davano a conoscere per individui della specie de' _bravi_.
+
+Questa specie, ora del tutto perduta, era allora floridissima in
+Lombardia, e già molto antica. Chi non ne avesse idea, ecco alcuni
+squarci autentici, che potranno darne una bastante de' suoi caratteri
+principali, degli sforzi fatti per ispegnerla, e della sua dura e
+rigogliosa vitalità.
+
+Fino dall'otto aprile dell'anno 1583, l'Illustrissimo ed
+Eccellentissimo signor don Carlo d'Aragon, Principe di Castelvetrano,
+Duca di Terranuova, Marchese d'Avola, Conte di Burgeto, grande
+Ammiraglio, e gran Contestabile di Sicilia, Governatore di Milano
+e Capitan Generale di Sua Maestà Cattolica in Italia, _pienamente
+informato della intollerabile miseria in che è vivuta e vive questa
+Città di Milano, per cagione dei bravi e vagabondi_, pubblica un
+bando contro di essi. _Dichiara e diffinisce tutti coloro essere
+compresi in questo bando, e doversi ritenere bravi e vagabondi_....
+_i quali, essendo forestieri o del paese, non hanno esercizio
+alcuno, od avendolo, non lo fanno_.... _ma, senza salario, o pur con
+esso, s'appoggiano a qualche cavaliere o gentiluomo, officiale o
+mercante_.... _per fargli spalle e favore, o veramente, come si può
+presumere, per tendere insidie ad altri_.... A tutti costoro ordina
+che, nel termine di giorni sei, abbiano a sgomberare il paese, intima
+la galera a' renitenti, e dà a tutti gli ufiziali della giustizia
+le più stranamente ampie e indefinite facoltà, per l'esecuzione
+dell'ordine. Ma, nell'anno seguente, il 12 aprile, scorgendo il detto
+signore, _che questa Città è tuttavia piena di detti bravi_....
+_tornati a vivere come prima vivevano, non punto mutato il costume
+loro, nè scemato il numero_, dà fuori un'altra grida, ancor più
+vigorosa e notabile, nella quale, tra l'altre ordinazioni, prescrive:
+
+_Che qualsivoglia persona, così di questa Città, come forestiera, che
+per due testimonj consterà esser tenuto, e comunemente riputato per
+bravo, et aver tal nome, ancorchè non si verifichi aver fatto delitto
+alcuno.... per questa sola riputazione di bravo, senza altri indizj,
+possa dai detti giudici e da ognuno di loro esser posto alla corda et
+al tormento, per processo informativo.... et ancorchè non confessi
+delitto alcuno, tuttavia sia mandato alla galea, per detto triennio,
+per la sola opinione e nome di bravo, come di sopra_. Tutto ciò, e il
+di più che si tralascia, perchè _Sua Eccellenza è risoluta di voler
+essere obbedita da ognuno_.
+
+[Illustrazione: Che i due descritti di sopra stessero ivi ad aspettar
+qualcheduno, era cosa troppo evidente.... (pag. 11)]
+
+All'udir parole d'un tanto signore, così gagliarde e sicure, e
+accompagnate da tali ordini, viene una gran voglia di credere che, al
+solo rimbombo di esse, tutti i bravi siano scomparsi per sempre. Ma
+la testimonianza d'un signore non meno autorevole, nè meno dotato di
+nomi, ci obbliga a credere tutto il contrario. È questi l'Illustrissimo
+ed Eccellentissimo Signor Juan Fernandez de Velasco, Contestabile di
+Castiglia, Cameriero maggiore di Sua Maestà, Duca della Città di Frias,
+Conte di Haro e Castelnovo, Signore della Casa di Velasco, e di quella
+delli sette Infanti di Lara, Governatore dello Stato di Milano, etc.
+Il 5 giugno dell'anno 1593, pienamente informato anche lui _di quanto
+danno e rovine sieno_.... _i bravi e vagabondi, e del pessimo effetto
+che tal sorta di gente fa contra il ben pubblico, et in delusione
+della giustizia_, intima loro di nuovo che, nel termine di giorni sei,
+abbiano a sbrattare il paese, ripetendo a un dipresso le prescrizioni
+e le minacce medesime del suo predecessore. Il 23 maggio poi dell'anno
+1598, _informato, con non poco dispiacere dell'animo suo, che_... _ogni
+dì più in questa Città e Stato va crescendo il numero di questi tali_
+(bravi e vagabondi), _nè di loro, giorno e notte, altro si sente che
+ferite appostatamente date, omicidii e ruberie et ogni altra qualità di
+delitti, ai quali si rendono più facili, confidati essi bravi d'essere
+aiutati dai capi e fautori loro_,.... prescrive di nuovo gli stessi
+rimedi, accrescendo la dose, come s'usa nelle malattie ostinate.
+_Ognuno dunque_, conchiude poi, _onninamente si guardi di contravvenire
+in parte alcuna alla grida presente, perchè, in luogo di provare
+la clemenza di Sua Eccellenza, proverà il rigore, e l'ira sua_....
+_essendo risoluta e determinata che questa sia l'ultima e perentoria
+monizione_.
+
+Non fu però di questo parere l'Illustrissimo ed Eccellentissimo
+Signore, il Signor Don Pietro Enriquez de Acevedo, Conte di Fuentes,
+Capitano, e Governatore dello Stato di Milano; non fu di questo
+parere, e per buone ragioni. _Pienamente informato della miseria in
+che vive questa Città e Stato per cagione del gran numero di bravi
+che in esso abbonda_.... _e risoluto di totalmente estirpare seme
+tanto pernizioso_, dà fuori, il 5 decembre 1600, una nuova grida piena
+anch'essa di severissime comminazioni, _con fermo proponimento che,
+con ogni rigore, e senza speranza di remissione, siano onninamente
+eseguite_.
+
+Convien credere però che non ci si mettesse con tutta quella buona
+voglia che sapeva impiegare nell'ordir cabale, e nel suscitar nemici al
+suo gran nemico Enrico IV; giacchè, per questa parte, la storia attesta
+come riuscisse ad armare contro quel re il duca di Savoia, a cui fece
+perder più d'una città; come riuscisse a far congiurare il duca di
+Biron, a cui fece perder la testa; ma, per ciò che riguarda quel seme
+tanto pernizioso de' bravi, certo è che esso continuava a germogliare,
+il 22 settembre dell'anno 1612. In quel giorno l'Illustrissimo ed
+Eccellentissimo Signore, Don Giovanni de Mendozza, Marchese de la
+Hynojosa, Gentiluomo, etc. Governatore, etc., pensò seriamente ad
+estirparlo. A quest'effetto, spedì a Pandolfo e Marco Tullio Malatesti,
+stampatori regii camerali, la solita grida, corretta ed accresciuta,
+perchè la stampassero ad esterminio de' bravi. Ma questi vissero
+ancora per ricevere, il 24 decembre dell'anno 1618, gli stessi e più
+forti colpi dall'Illustrissimo ed Eccellentissimo Signore, il Signor
+don Gomez Suarez de Figueroa, Duca di Feria, etc. Governatore, etc.
+Però, non essendo essi morti neppur di quelli, l'Illustrissimo ed
+Eccellentissimo Signore, il Signor Gonzalo Fernandez di Cordova, sotto
+il cui governo accadde la passeggiata di don Abbondio, s'era trovato
+costretto a ricorreggere e ripubblicare la solita grida contro i bravi,
+il giorno 5 ottobre del 1627, cioè un anno, un mese e due giorni prima
+di quel memorabile avvenimento.
+
+Nè fu questa l'ultima pubblicazione; ma noi delle posteriori non
+crediamo dover far menzione, come di cosa che esce dal periodo della
+nostra storia. Ne accenneremo soltanto una del 13 febbraio dell anno
+1632, nella quale l'Illustrissimo ed Eccellentissimo Signore, _el Duque
+de Feria_, per la seconda volta governatore, ci avvisa che _le maggiori
+sceleraggini procedono da quelli che chiamano bravi_. Questo basta
+ad assicurarci che, nel tempo di cui noi trattiamo, c'era de' bravi
+tuttavia.
+
+Che i due descritti di sopra stessero ivi ad aspettar qualcheduno, era
+cosa troppo evidente; ma quel che più dispiacque a don Abbondio fu il
+dover accorgersi, per certi atti, che l'aspettato era lui. Perchè, al
+suo apparire, coloro s'eran guardati in viso, alzando la testa, con
+un movimento dal quale si scorgeva che tutt'e due a un tratto avevan
+detto: è lui; quello che stava a cavalcioni s'era alzato, tirando la
+sua gamba sulla strada; l'altro s'era staccato dal muro; e tutt'e due
+gli s'avviavano incontro. Egli, tenendosi sempre il breviario aperto
+dinanzi, come se leggesse, spingeva lo sguardo in su, per ispiar le
+mosse di coloro; e, vedendoseli venir proprio incontro, fu assalito
+a un tratto da mille pensieri. Domandò subito in fretta a sè stesso,
+se, tra i bravi e lui, ci fosse qualche uscita di strada, a destra
+o a sinistra; e gli sovvenne subito di no. Fece un rapido esame, se
+avesse peccato contro qualche potente, contro qualche vendicativo; ma,
+anche in quel turbamento, il testimonio consolante della coscienza lo
+rassicurava alquanto: i bravi però s'avvicinavano, guardandolo fisso.
+Mise l'indice e il medio della mano sinistra nel collare, come per
+raccomodarlo; e, girando le due dita intorno al collo, volgeva intanto
+la faccia all'indietro, torcendo insieme la bocca, e guardando con la
+coda dell'occhio, fin dove poteva, se qualcheduno arrivasse; ma non
+vide nessuno. Diede un'occhiata, al di sopra del muricciolo, ne' campi:
+nessuno; un'altra più modesta sulla strada dinanzi; nessuno, fuorchè
+i bravi. Che fare? tornare indietro, non era a tempo: darla a gambe,
+era lo stesso che dire, inseguitemi, o peggio. Non potendo schivare il
+pericolo, vi corse incontro, perchè i momenti di quell'incertezza erano
+allora così penosi per lui, che non desiderava altro che d'abbreviarli.
+Affrettò il passo, recitò un versetto a voce più alta, compose la
+faccia a tutta quella quiete e ilarità che potè, fece ogni sforzo per
+preparare un sorriso; quando si trovò a fronte dei due galantuomini,
+disse mentalmente: ci siamo; e si fermò su due piedi. «Signor curato,»
+disse un di que' due, piantandogli gli occhi in faccia.
+
+«Cosa comanda?» rispose subito don Abbondio, alzando i suoi dal libro,
+che gli restò spalancato nelle mani, come sur un leggio.
+
+«Lei ha intenzione,» proseguì l'altro, con l'atto minaccioso e iracondo
+di chi coglie un suo inferiore sull'intraprendere una ribalderia, «lei
+ha intenzione di maritar domani Renzo Tramaglino e Lucia Mondella!»
+
+«Cioè....» rispose, con voce tremolante, don Abbondio: «cioè. Lor
+signori son uomini di mondo, e sanno benissimo come vanno queste
+faccende. Il povero curato non c'entra: fanno i loro pasticci tra
+loro, e poi.... e poi, vengon da noi, come s'anderebbe a un banco a
+riscotere: e noi.... noi siamo i servitori del comune.»
+
+«Or bene,» gli disse il bravo, all'orecchio, ma in tono solenne di
+comando, «questo matrimonio non s'ha da fare, nè domani, nè mai.»
+
+«Ma, signori miei,» replicò don Abbondio, con la voce mansueta e
+gentile di chi vuoi persuadere un impaziente, «ma, signori miei, si
+degnino di mettersi ne' miei panni. Se la cosa dipendesse da me,...
+vedon bene che a me non me ne vien nulla in tasca....»
+
+«Orsù,» interruppe il bravo, «se la cosa avesse a decidersi a ciarle,
+lei ci metterebbe in sacco. Noi non ne sappiamo, nè vogliam saperne di
+più. Uomo avvertito.... lei c'intende.»
+
+«Ma lor signori son troppo giusti, troppo ragionevoli....»
+
+«Ma,» interruppe questa volta l'altro compagnone, che non aveva parlato
+fin allora, «ma il matrimonio non si farà o....» e qui una buona
+bestemmia, «o chi lo farà non se ne pentirà, perchè non ne avrà tempo,
+e....» un'altra bestemmia.
+
+«Zitto, zitto,» riprese il primo oratore, «il signor curato è un uomo
+che sa il viver del mondo; e noi siam galantuomini, che non vogliam
+fargli del male, purchè abbia giudizio. Signor curato, l'illustrissimo
+signor don Rodrigo nostro padrone la riverisce caramente.»
+
+Questo nome fu, nella mente di don Abbondio, come, nel forte d'un
+temporale notturno, un lampo che illumina momentaneamente e in
+confuso gli oggetti, e accresce il terrore. Fece, come per istinto, un
+grand'inchino, e disse: «se mi sapessero suggerire....»
+
+«Oh! suggerire a lei che sa di latino!» interruppe ancora il bravo, con
+un riso tra lo sguaiato e il feroce. «A lei tocca. E sopra tutto, non
+si lasci uscir parola su questo avviso che le abbiam dato per suo bene;
+altrimenti.... ehm.... sarebbe lo stesso che fare quel tal matrimonio.
+Via, che vuoi che si dica in suo nome all'illustrissimo signor don
+Rodrigo?»
+
+«Il mio rispetto....»
+
+«Si spieghi meglio!»
+
+«....Disposto.... disposto sempre all'ubbidienza.» E, proferendo queste
+parole, non sapeva nemmen lui se faceva una promessa, o un complimento.
+I bravi le presero, o mostraron di prenderle nel significato più serio.
+
+«Benissimo, e buona notte, messere,» disse l'un d'essi, in atto di
+partir col compagno. Don Abbondio, che, pochi momenti prima, avrebbe
+dato un occhio per iscansarli, allora avrebbe voluto prolungar la
+conversazione e le trattative. «Signori....» cominciò, chiudendo il
+libro con le due mani; ma quelli, senza più dargli udienza, presero la
+strada dond'era lui venuto, e s'allontanarono, cantando una canzonaccia
+che non voglio trascrivere. Il povero don Abbondio rimase un momento a
+bocca aperta, come incantato; poi prese quella delle due stradette che
+conduceva a casa sua, mettendo innanzi a stento una gamba dopo l'altra,
+che parevano aggranchiate. Come stesse di dentro, s'intenderà meglio,
+quando avrem detto qualche cosa del suo naturale, e de' tempi in cui
+gli era toccato di vivere.
+
+Don Abbondio (il lettore se n'è già avveduto) non era nato con un
+cuor di leone. Ma fin da' primi suoi anni, aveva dovuto comprendere
+che la peggior condizione, a que' tempi, era quella d'un animale
+senza artigli e senza zanne, e che pure non si sentisse inclinazione
+d'esser divorato. La forza legale non proteggeva in alcun conto
+l'uomo tranquillo, inoffensivo, e che non avesse altri mezzi di far
+paura altrui. Non già che mancassero leggi e pene contro le violenze
+private. Le leggi anzi diluviavano; i delitti erano enumerati,
+e particolareggiati, con minuta prolissità; le pene, pazzamente
+esorbitanti e, se non basta, aumentabili, quasi per ogni caso, ad
+arbitrio del legislatore stesso e di cento esecutori; le procedure,
+studiate soltanto a liberare il giudice da ogni cosa che potesse
+essergli d'impedimento a proferire una condanna: gli squarci che
+abbiam riportati delle gride contro i bravi, ne sono un piccolo, ma
+fedel saggio. Con tutto ciò, anzi in gran parte a cagion di ciò,
+quelle gride, ripubblicate e rinforzate di governo in governo, non
+servivano ad altro che ad attestare ampollosamente l'impotenza
+de' loro autori; o, se producevan qualche effetto immediato, era
+principalmente d'aggiunger molte vessazioni a quelle che i pacifici e
+i deboli già soffrivano da' perturbatori, e d'accrescer le violenze,
+e l'astuzia di questi. L'impunità era organizzata, e aveva radici che
+le gride non toccavano, o non potevano smovere. Tali eran gli asili,
+tali i privilegi d'alcune classi, in parte riconosciuti dalla forza
+legale, in parte tollerati con astioso silenzio, o impugnati con vane
+proteste, ma sostenuti in fatto e difesi da quelle classi, con attività
+d'interesse, e con gelosia di puntiglio. Ora, quest'impunità minacciata
+e insultata, ma non distrutta dalle gride, doveva naturalmente, a ogni
+minaccia, e a ogni insulto, adoperar nuovi sforzi e nuove invenzioni,
+per conservarsi. Così accadeva in effetto; e, all'apparire delle gride
+dirette a comprimere i violenti, questi cercavano nella loro forza
+reale i nuovi mezzi più opportuni, per continuare a far ciò che le
+gride venivano a proibire. Potevan ben esse inceppare a ogni passo,
+e molestare l'uomo bonario, che fosse senza forza propria e senza
+protezione; perchè, col fine d'aver sotto la mano ogni uomo, per
+prevenire o per punire ogni delitto, assoggettavano ogni mossa del
+privato al volere arbitrario d'esecutori d'ogni genere. Ma chi, prima
+di commettere il delitto, aveva prese le sue misure per ricoverarsi
+a tempo in un convento, in un palazzo, dove i birri non avrebber mai
+osato metter piede; chi, senz'altre precauzioni, portava una livrea
+che impegnasse a difenderlo la vanità e l'interesse d'una famiglia
+potente, di tutto un ceto, era libero nelle sue operazioni, e poteva
+ridersi di tutto quel fracasso delle gride. Di quegli stessi ch'eran
+deputati a farle eseguire, alcuni appartenevano per nascita alla
+parte privilegiata, alcuni ne dipendevano per clientela; gli uni
+e gli altri, per educazione, per interesse, per consuetudine, per
+imitazione, ne avevano abbracciate le massime, e si sarebbero ben
+guardati dall'offenderle, per amor d'un pezzo di carta attaccato sulle
+cantonate. Gli uomini poi incaricati dell'esecuzione immediata, quando
+fossero stati intraprendenti come eroi, ubbidienti come monaci, e
+pronti a sacrificarsi come martiri, non avrebber però potuto venirne
+alla fine, inferiori com'eran di numero a quelli che si trattava di
+sottomettere, e con una gran probabilità d'essere abbandonati da chi,
+in astratto e, per così dire, in teoria, imponeva loro di operare. Ma,
+oltre di ciò, costoro eran generalmente de' più abbietti e ribaldi
+soggetti del loro tempo; l'incarico loro era tenuto a vile anche da
+quelli che potevano averne terrore, e il loro titolo un improperio. Era
+quindi ben naturale che costoro, in vece d'arrischiare, anzi di gettar
+la vita in un'impresa disperata, vendessero la loro inazione, o anche
+la loro connivenza ai potenti, e si riservassero a esercitare la loro
+esecrata autorità e la forza che pure avevano, in quelle occasioni
+dove non c'era pericolo; nell'opprimer cioè, e nel vessare gli uomini
+pacifici e senza difesa.
+
+L'uomo che vuole offendere, o che teme, ogni momento, d'essere offeso,
+cerca naturalmente alleati e compagni. Quindi era, in que' tempi,
+portata al massimo punto la tendenza degl'individui a tenersi collegati
+in classi, a formarne delle nuove, e a procurare ognuno la maggior
+potenza di quella a cui apparteneva. Il clero vegliava a sostenere
+e ad estendere le sue immunità, la nobiltà i suoi privilegi, il
+militare le sue esenzioni.
+Summarize this passage in a short paragraph.<|assistant|><think></think>The passage is the introduction and opening chapter of Alessandro Manzoni's *I Promessi Sposi* (The Betrothed). It begins with a mock-serious preface explaining that the author found an old, bombastic 17th-century manuscript and has rewritten its story in plainer language. The narrative<|user|>Continue with one additional sentence.<|assistant|><think></think>
+
+--- generated text ---
+
+
+--- trace: prefill done; decode_max=64 ctx_room=22528 ---
+
+The narrative then opens with a scenic description of Lake Como, where on the evening of November 7, 1628, the timid curate Don Abbondio is confronted by two "bravi" (henchmen) who threaten him on behalf of their master Don Rodrigo, forbidding him from performing the marriage
+
+--- parsed message ---
+finish: length
+generated_tokens: 64
+dsml_start: 0
+dsml_end: 0
+elapsed_sec: 2.776
+
+content:
+The narrative then opens with a scenic description of Lake Como, where on the evening of November 7, 1628, the timid curate Don Abbondio is confronted by two "bravi" (henchmen) who threaten him on behalf of their master Don Rodrigo, forbidding him from performing the marriage
+
+===== end request 2 =====

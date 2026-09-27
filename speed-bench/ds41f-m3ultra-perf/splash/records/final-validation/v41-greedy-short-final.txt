@@ -1,0 +1,51 @@
+# Open-Addressing Hash Table Lookup
+
+Here's a portable C implementation of a linear-probing open-addressing hash table lookup:
+
+```c
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+/* Sentinel marking a slot that was deleted (tombstone). */
+#define TOMBSTONE ((const char *)1)
+
+typedef struct {
+    const char **keys;   /* NULL = empty, TOMBSTONE = deleted */
+    const void **vals;
+    size_t       cap;    /* power of two */
+    size_t       count;  /* live entries */
+} ht_t;
+
+/* FNV-1a: simple, portable, decent distribution. */
+static uint64_t hash_str(const char *s)
+{
+    uint64_t h = 1469598103934665603ULL;
+    while (*s) {
+        h ^= (unsigned char)*s++;
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+/* Returns pointer to value, or NULL if key is absent. */
+const void *ht_get(const ht_t *ht, const char *key)
+{
+    if (!ht || ht->cap == 0) return NULL;
+
+    size_t mask = ht->cap - 1;
+    size_t i    = (size_t)hash_str(key) & mask;
+
+    for (size_t probes = 0; probes < ht->cap; ++probes) {
+        const char *k = ht->keys[i];
+
+        if (k == NULL) {
+            /* Empty slot: key was never inserted (or was deleted and
+               the probe chain was broken). Stop. */
+            return NULL;
+        }
+        if (k != TOMBSTONE && strcmp(k, key) == 0) {
+            return ht->vals[i];
+        }
+        i = (i + 1) & mask;   /* linear probing */
+    }

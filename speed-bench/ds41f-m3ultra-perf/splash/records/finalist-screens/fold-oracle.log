@@ -1,0 +1,7 @@
+2026-09-26 14:41:54.103 test_deepseek41_attention[79493:115697138] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.033 ms, residency requested in 0.072 ms, warmup 7.229 ms (mapped 0.02 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+attention: 384 reduce cases, every head bit and guard exact

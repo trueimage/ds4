@@ -1,0 +1,26 @@
+[
+  {
+    "file": "2048.bin",
+    "bytes": 202327452,
+    "sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+    "exact": true
+  },
+  {
+    "file": "16384.bin",
+    "bytes": 545531292,
+    "sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+    "exact": true
+  },
+  {
+    "file": "8192.bin",
+    "bytes": 349414812,
+    "sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+    "exact": true
+  },
+  {
+    "file": "4096.bin",
+    "bytes": 251356572,
+    "sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+    "exact": true
+  }
+]

@@ -1,0 +1,83 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 4.762 ms, residency requested in 1705.527 ms, warmup 7.544 ms (mapped 182024.03 MiB from offset 9.07 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.37 GiB (raw 0.00 + compressed 0.37) + buffers 2.98 GiB + resident model 177.76 GiB = 181.10 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=2048 raw_kv_rows=0 compressed_kv_rows=32768 backend=metal
+ds4-bench: context buffers 3422.43 MiB (ctx=32768, backend=metal, prefill_chunk=2048, raw_kv_rows=0, compressed_kv_rows=32768)
+ds4: GLM session ctx=32768 (model max=1048576); prefill/work cap=4096; dense attention limit=2051
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=32768 logical_ctx=32768 kv_layers=45 indexer_layers=11 f16 0.37 GiB
+ds4: GLM compact indexed prefill chunk=2048 score_rows=2048 score_scratch=64.00 MiB
+ctx_tokens,prefill_tokens,prefill_tps,gen_tokens,gen_tps,gen_first_ms,gen_steady_tokens,gen_steady_tps,kvcache_bytes
+ds4: kda stage prepare=1.665 ms
+ds4: kda stage recurrence=4.904 ms
+ds4: kda stage prepare=1.166 ms
+ds4: kda stage recurrence=3.627 ms
+ds4: kda stage prepare=1.326 ms
+ds4: kda stage recurrence=3.612 ms
+ds4: kda stage prepare=1.225 ms
+ds4: kda stage recurrence=3.637 ms
+ds4: kda stage prepare=1.141 ms
+ds4: kda stage recurrence=3.610 ms
+ds4: kda stage prepare=1.246 ms
+ds4: kda stage recurrence=3.614 ms
+ds4: kda stage prepare=1.198 ms
+ds4: kda stage recurrence=3.634 ms
+ds4: kda stage prepare=1.185 ms
+ds4: kda stage recurrence=3.639 ms
+ds4: kda stage prepare=1.197 ms
+ds4: kda stage recurrence=3.615 ms
+ds4: kda stage prepare=1.165 ms
+ds4: kda stage recurrence=3.700 ms
+ds4: kda stage prepare=1.153 ms
+ds4: kda stage recurrence=3.725 ms
+ds4: kda stage prepare=1.272 ms
+ds4: kda stage recurrence=3.635 ms
+ds4: kda stage prepare=1.244 ms
+ds4: kda stage recurrence=3.627 ms
+ds4: kda stage prepare=1.253 ms
+ds4: kda stage recurrence=3.591 ms
+ds4: kda stage prepare=1.157 ms
+ds4: kda stage recurrence=3.741 ms
+ds4: kda stage prepare=1.233 ms
+ds4: kda stage recurrence=3.641 ms
+ds4: kda stage prepare=1.173 ms
+ds4: kda stage recurrence=3.644 ms
+ds4: kda stage prepare=1.272 ms
+ds4: kda stage recurrence=3.618 ms
+ds4: kda stage prepare=1.137 ms
+ds4: kda stage recurrence=3.722 ms
+ds4: kda stage prepare=1.221 ms
+ds4: kda stage recurrence=3.613 ms
+ds4: kda stage prepare=1.239 ms
+ds4: kda stage recurrence=3.645 ms
+ds4: kda stage prepare=1.176 ms
+ds4: kda stage recurrence=3.603 ms
+ds4: kda stage prepare=1.183 ms
+ds4: kda stage recurrence=3.590 ms
+ds4: kda stage prepare=1.189 ms
+ds4: kda stage recurrence=3.614 ms
+ds4: kda stage prepare=1.188 ms
+ds4: kda stage recurrence=3.666 ms
+ds4: kda stage prepare=1.157 ms
+ds4: kda stage recurrence=3.615 ms
+ds4: kda stage prepare=1.176 ms
+ds4: kda stage recurrence=3.622 ms
+ds4: kda stage prepare=1.233 ms
+ds4: kda stage recurrence=4.315 ms
+ds4: kda stage prepare=1.159 ms
+ds4: kda stage recurrence=4.740 ms
+ds4: kda stage prepare=1.237 ms
+ds4: kda stage recurrence=3.615 ms
+ds4: kda stage prepare=1.190 ms
+ds4: kda stage recurrence=3.645 ms
+ds4: kda stage prepare=1.240 ms
+ds4: kda stage recurrence=3.627 ms
+ds4: kda stage prepare=1.339 ms
+ds4: kda stage recurrence=3.650 ms
+ds4: kda stage prepare=1.185 ms
+ds4: kda stage recurrence=3.694 ms
+2048,2048,505.40,1,25.31,39.468,0,0.00,0

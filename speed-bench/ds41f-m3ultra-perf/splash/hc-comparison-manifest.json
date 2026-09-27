@@ -1,0 +1,5 @@
+{
+  "source_sha256": "a0b52aa6999c18f332dd9f3259ec8d1c4124e474b3b045b039d23410b02a2b17",
+  "production_source_sha256": "37786a2de2c3a53f4b0dade7694cc0b33a4794b1f963b73962b46647852cbafd",
+  "purpose": "Uncache only the HC rollback in this measurement object; report actual fused and separate executions. Production source and other objects unchanged."
+}

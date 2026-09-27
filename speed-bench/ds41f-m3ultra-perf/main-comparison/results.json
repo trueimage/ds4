@@ -1,0 +1,921 @@
+{
+  "base": "0aaea5a238fb41a35106a551e73c8409dfb751ac",
+  "measured_final": "f768551d842942f5eed4b257f6c997f8eb5ec29e",
+  "curated_implementation": "60bf722465ec124788b7c719f205cdd6dc7e21e1",
+  "models": {
+    "v41": {
+      "rows": [
+        {
+          "ctx_tokens": 512,
+          "prefill_tokens": 512,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                248.94,
+                248.2
+              ],
+              "final": [
+                287.11,
+                287.2
+              ]
+            },
+            "means": {
+              "main": 248.5694492497083,
+              "final": 287.1549929480594
+            },
+            "change_percent": 15.5230434853596,
+            "spread_percent": {
+              "main": 0.29770286036127014,
+              "final": 0.03134195817588933
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                19.34,
+                18.89
+              ],
+              "final": [
+                29.95,
+                29.88
+              ]
+            },
+            "means": {
+              "main": 19.112351556369344,
+              "final": 29.91495905064349
+            },
+            "change_percent": 56.52160312357844,
+            "spread_percent": {
+              "main": 2.3541721161391536,
+              "final": 0.23399632291492659
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                51.94,
+                54.557
+              ],
+              "final": [
+                35.969,
+                33.794
+              ]
+            },
+            "means": {
+              "main": 53.2485,
+              "final": 34.8815
+            },
+            "change_percent": -34.49299041287548,
+            "spread_percent": {
+              "main": 4.9146924326506936,
+              "final": 6.235396986941514
+            }
+          }
+        },
+        {
+          "ctx_tokens": 1024,
+          "prefill_tokens": 512,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                240.87,
+                240.68
+              ],
+              "final": [
+                275.98,
+                276.29
+              ]
+            },
+            "means": {
+              "main": 240.77496251687262,
+              "final": 276.1349129954551
+            },
+            "change_percent": 14.685891800774176,
+            "spread_percent": {
+              "main": 0.07891184716021087,
+              "final": 0.11226392887536976
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                19.52,
+                18.8
+              ],
+              "final": [
+                30.14,
+                30.09
+              ]
+            },
+            "means": {
+              "main": 19.153235908141962,
+              "final": 30.114979246222813
+            },
+            "change_percent": 57.23180871709024,
+            "spread_percent": {
+              "main": 3.7578288100208708,
+              "final": 0.16603021749958727
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                52.518,
+                53.58
+              ],
+              "final": [
+                34.009,
+                32.855
+              ]
+            },
+            "means": {
+              "main": 53.049,
+              "final": 33.432
+            },
+            "change_percent": -36.9790193971611,
+            "spread_percent": {
+              "main": 2.0019227506644754,
+              "final": 3.4517827231395173
+            }
+          }
+        },
+        {
+          "ctx_tokens": 2048,
+          "prefill_tokens": 1024,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                304.72,
+                304.36
+              ],
+              "final": [
+                338.33,
+                338.3
+              ]
+            },
+            "means": {
+              "main": 304.5398936100348,
+              "final": 338.31499933493933
+            },
+            "change_percent": 11.090535733933681,
+            "spread_percent": {
+              "main": 0.11821107243712276,
+              "final": 0.008867475577486282
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                18.63,
+                18.92
+              ],
+              "final": [
+                29.74,
+                30.12
+              ]
+            },
+            "means": {
+              "main": 18.773880159786952,
+              "final": 29.928793852322087
+            },
+            "change_percent": 59.417198776141134,
+            "spread_percent": {
+              "main": 1.5446071904127974,
+              "final": 1.2696291346475195
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                54.136,
+                53.9
+              ],
+              "final": [
+                33.876,
+                34.075
+              ]
+            },
+            "means": {
+              "main": 54.018,
+              "final": 33.9755
+            },
+            "change_percent": -37.1033729497575,
+            "spread_percent": {
+              "main": 0.43689140656818876,
+              "final": 0.5857161778340427
+            }
+          }
+        },
+        {
+          "ctx_tokens": 4096,
+          "prefill_tokens": 2048,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                344.56,
+                344.21
+              ],
+              "final": [
+                373.27,
+                373.16
+              ]
+            },
+            "means": {
+              "main": 344.3849110733627,
+              "final": 373.21499189475236
+            },
+            "change_percent": 8.371470379330347,
+            "spread_percent": {
+              "main": 0.10163044267317763,
+              "final": 0.0294736278016577
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                18.62,
+                18.67
+              ],
+              "final": [
+                29.91,
+                29.97
+              ]
+            },
+            "means": {
+              "main": 18.64496647894878,
+              "final": 29.939969939879756
+            },
+            "change_percent": 60.579371240402445,
+            "spread_percent": {
+              "main": 0.2681684097613339,
+              "final": 0.20040080160320214
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                54.574,
+                51.848
+              ],
+              "final": [
+                34.101,
+                34.067
+              ]
+            },
+            "means": {
+              "main": 53.211,
+              "final": 34.084
+            },
+            "change_percent": -35.9455751630302,
+            "spread_percent": {
+              "main": 5.1230008832760126,
+              "final": 0.09975355005280752
+            }
+          }
+        },
+        {
+          "ctx_tokens": 8192,
+          "prefill_tokens": 4096,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                342.38,
+                342.79
+              ],
+              "final": [
+                367.43,
+                367.77
+              ]
+            },
+            "means": {
+              "main": 342.58487732971383,
+              "final": 367.5999213819369
+            },
+            "change_percent": 7.301852973547285,
+            "spread_percent": {
+              "main": 0.11967832800619553,
+              "final": 0.09249183895537948
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                18.45,
+                18.49
+              ],
+              "final": [
+                29.87,
+                29.86
+              ]
+            },
+            "means": {
+              "main": 18.46997834325934,
+              "final": 29.864999162899714
+            },
+            "change_percent": 61.694825017480404,
+            "spread_percent": {
+              "main": 0.2165674066053013,
+              "final": 0.0334840113845691
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                52.972,
+                55.222
+              ],
+              "final": [
+                34.123,
+                34.128
+              ]
+            },
+            "means": {
+              "main": 54.097,
+              "final": 34.1255
+            },
+            "change_percent": -36.917943693735324,
+            "spread_percent": {
+              "main": 4.159195519160027,
+              "final": 0.014651799973634255
+            }
+          }
+        },
+        {
+          "ctx_tokens": 16384,
+          "prefill_tokens": 8192,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                629.78,
+                628.7
+              ],
+              "final": [
+                658.23,
+                658.33
+              ]
+            },
+            "means": {
+              "main": 629.2395365838154,
+              "final": 658.2799962022241
+            },
+            "change_percent": 4.615167663505604,
+            "spread_percent": {
+              "main": 0.17163562392726578,
+              "final": 0.015191104089448676
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                18.23,
+                18.39
+              ],
+              "final": [
+                29.31,
+                29.52
+              ]
+            },
+            "means": {
+              "main": 18.3096504642272,
+              "final": 29.41462519122896
+            },
+            "change_percent": 60.65093786852076,
+            "spread_percent": {
+              "main": 0.8738394320043699,
+              "final": 0.7139214686384527
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                55.149,
+                54.858
+              ],
+              "final": [
+                34.215,
+                34.586
+              ]
+            },
+            "means": {
+              "main": 55.0035,
+              "final": 34.4005
+            },
+            "change_percent": -37.45761633350605,
+            "spread_percent": {
+              "main": 0.5290572418118918,
+              "final": 1.0784726966177676
+            }
+          }
+        },
+        {
+          "ctx_tokens": 32639,
+          "prefill_tokens": 16255,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                589.1,
+                589.32
+              ],
+              "final": [
+                616.75,
+                616.11
+              ]
+            },
+            "means": {
+              "main": 589.2099794640282,
+              "final": 616.4298338821926
+            },
+            "change_percent": 4.619720535440508,
+            "spread_percent": {
+              "main": 0.037338130717405896,
+              "final": 0.10382362960919915
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                18.24,
+                18.15
+              ],
+              "final": [
+                29.09,
+                29.09
+              ]
+            },
+            "means": {
+              "main": 18.194888705688374,
+              "final": 29.09
+            },
+            "change_percent": 59.88006560823549,
+            "spread_percent": {
+              "main": 0.4946413849958772,
+              "final": 0.0
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                56.426,
+                56.037
+              ],
+              "final": [
+                34.6,
+                35.054
+              ]
+            },
+            "means": {
+              "main": 56.2315,
+              "final": 34.827
+            },
+            "change_percent": -38.064963588024504,
+            "spread_percent": {
+              "main": 0.6917830753225557,
+              "final": 1.3035862979871957
+            }
+          }
+        }
+      ],
+      "exactness": {
+        "exact": true,
+        "rows": 903,
+        "floats": 116739840,
+        "max_position": 32767,
+        "logits_sha256": "da1baae28ee696678126fa7b65caf1aa388a47f2df291d2671a6c7bb2d4d7c64"
+      },
+      "snapshots": [
+        {
+          "frontier": 1024,
+          "main_sha256": "e9a5bdd8122953c0a2de6809b486eb26ea57ddc1ca1e2eb4da7fe3fa474359f1",
+          "final_sha256": "e9a5bdd8122953c0a2de6809b486eb26ea57ddc1ca1e2eb4da7fe3fa474359f1",
+          "bytes": 17560628
+        },
+        {
+          "frontier": 16384,
+          "main_sha256": "cf5e65709dda08bf08c3022bb5d9c1bea4758ebca180b3188630ef3d6d452992",
+          "final_sha256": "cf5e65709dda08bf08c3022bb5d9c1bea4758ebca180b3188630ef3d6d452992",
+          "bytes": 115926068
+        },
+        {
+          "frontier": 2048,
+          "main_sha256": "92af296c2a2c210ea864f5d8ae7516cabd44b11b58ac977cdc011f0823b31ad7",
+          "final_sha256": "92af296c2a2c210ea864f5d8ae7516cabd44b11b58ac977cdc011f0823b31ad7",
+          "bytes": 24118324
+        },
+        {
+          "frontier": 32639,
+          "main_sha256": "ab665dd215137cdb91044d4076f745e22612518649cb4460db1f2352e5d8fd37",
+          "final_sha256": "ab665dd215137cdb91044d4076f745e22612518649cb4460db1f2352e5d8fd37",
+          "bytes": 220031536
+        },
+        {
+          "frontier": 4096,
+          "main_sha256": "50e00ab81fcf55441ee57e2d6d7785b312a1f29eb50a06e4844d89552dfc6efc",
+          "final_sha256": "50e00ab81fcf55441ee57e2d6d7785b312a1f29eb50a06e4844d89552dfc6efc",
+          "bytes": 37233716
+        },
+        {
+          "frontier": 512,
+          "main_sha256": "a5fafcb43bf89634543846736cbaacd942103a03b43900cc4c546bb67418d5cb",
+          "final_sha256": "a5fafcb43bf89634543846736cbaacd942103a03b43900cc4c546bb67418d5cb",
+          "bytes": 14281780
+        },
+        {
+          "frontier": 8192,
+          "main_sha256": "2246a22451eac7e60293f88178890a5d18c556668af11d1785e151ca3da7b79b",
+          "final_sha256": "2246a22451eac7e60293f88178890a5d18c556668af11d1785e151ca3da7b79b",
+          "bytes": 63464500
+        }
+      ]
+    },
+    "glm": {
+      "rows": [
+        {
+          "ctx_tokens": 2048,
+          "prefill_tokens": 2048,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                431.24,
+                431.24
+              ],
+              "final": [
+                512.46,
+                512.97
+              ]
+            },
+            "means": {
+              "main": 431.24,
+              "final": 512.7148731751558
+            },
+            "change_percent": 18.89316231684348,
+            "spread_percent": {
+              "main": 0.0,
+              "final": 0.09947046604838768
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                20.98,
+                21.0
+              ],
+              "final": [
+                26.86,
+                26.89
+              ]
+            },
+            "means": {
+              "main": 20.989995235826584,
+              "final": 26.87499162790698
+            },
+            "change_percent": 28.03714972757898,
+            "spread_percent": {
+              "main": 0.09528346831824475,
+              "final": 0.11162790697674842
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                47.674,
+                48.321
+              ],
+              "final": [
+                38.59,
+                37.803
+              ]
+            },
+            "means": {
+              "main": 47.9975,
+              "final": 38.1965
+            },
+            "change_percent": -20.419813531954787,
+            "spread_percent": {
+              "main": 1.3479868743163674,
+              "final": 2.060398204023945
+            }
+          }
+        },
+        {
+          "ctx_tokens": 4096,
+          "prefill_tokens": 2048,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                380.52,
+                380.39
+              ],
+              "final": [
+                438.04,
+                437.92
+              ]
+            },
+            "means": {
+              "main": 380.45498889487584,
+              "final": 437.97999178044665
+            },
+            "change_percent": 15.12005481980041,
+            "spread_percent": {
+              "main": 0.034169612700581005,
+              "final": 0.027398511347551155
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                20.86,
+                20.88
+              ],
+              "final": [
+                26.74,
+                26.73
+              ]
+            },
+            "means": {
+              "main": 20.869995208433156,
+              "final": 26.734999064896204
+            },
+            "change_percent": 28.10256446102639,
+            "spread_percent": {
+              "main": 0.09583133684714698,
+              "final": 0.03740415186084911
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                48.413,
+                48.603
+              ],
+              "final": [
+                38.217,
+                38.249
+              ]
+            },
+            "means": {
+              "main": 48.507999999999996,
+              "final": 38.233000000000004
+            },
+            "change_percent": -21.182073060113783,
+            "spread_percent": {
+              "main": 0.39168796899481495,
+              "final": 0.08369732953208897
+            }
+          }
+        },
+        {
+          "ctx_tokens": 8192,
+          "prefill_tokens": 4096,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                380.37,
+                380.35
+              ],
+              "final": [
+                437.95,
+                437.9
+              ]
+            },
+            "means": {
+              "main": 380.3599997370912,
+              "final": 437.92499857281496
+            },
+            "change_percent": 15.134346113027997,
+            "spread_percent": {
+              "main": 0.005258176464397363,
+              "final": 0.011417480162130815
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                20.8,
+                20.81
+              ],
+              "final": [
+                26.61,
+                26.6
+              ]
+            },
+            "means": {
+              "main": 20.804998798365776,
+              "final": 26.604999060327007
+            },
+            "change_percent": 27.877916832260617,
+            "spread_percent": {
+              "main": 0.048065368901696756,
+              "final": 0.03758691975191885
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                48.917,
+                48.952
+              ],
+              "final": [
+                38.289,
+                38.055
+              ]
+            },
+            "means": {
+              "main": 48.9345,
+              "final": 38.172
+            },
+            "change_percent": -21.99368543665513,
+            "spread_percent": {
+              "main": 0.0715241802817983,
+              "final": 0.6130147752279204
+            }
+          }
+        },
+        {
+          "ctx_tokens": 16384,
+          "prefill_tokens": 8192,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                377.7,
+                377.58
+              ],
+              "final": [
+                434.75,
+                434.81
+              ]
+            },
+            "means": {
+              "main": 377.63999046711155,
+              "final": 434.7799979299876
+            },
+            "change_percent": 15.130814772079159,
+            "spread_percent": {
+              "main": 0.03177629488401773,
+              "final": 0.013800082800497326
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                20.78,
+                20.72
+              ],
+              "final": [
+                26.48,
+                26.5
+              ]
+            },
+            "means": {
+              "main": 20.749956626506023,
+              "final": 26.489996224990563
+            },
+            "change_percent": 27.66289926193004,
+            "spread_percent": {
+              "main": 0.2891566265060351,
+              "final": 0.07550018875047027
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                50.225,
+                49.15
+              ],
+              "final": [
+                38.738,
+                38.766
+              ]
+            },
+            "means": {
+              "main": 49.6875,
+              "final": 38.751999999999995
+            },
+            "change_percent": -22.008553459119508,
+            "spread_percent": {
+              "main": 2.163522012578622,
+              "final": 0.07225433526011224
+            }
+          }
+        },
+        {
+          "ctx_tokens": 32639,
+          "prefill_tokens": 16255,
+          "gen_tokens": 128,
+          "prefill_tps": {
+            "runs": {
+              "main": [
+                371.96,
+                372.04
+              ],
+              "final": [
+                428.15,
+                428.2
+              ]
+            },
+            "means": {
+              "main": 371.99999569892475,
+              "final": 428.17499854031644
+            },
+            "change_percent": 15.100807390023864,
+            "spread_percent": {
+              "main": 0.021505376344097025,
+              "final": 0.011677468324869825
+            }
+          },
+          "gen_tps": {
+            "runs": {
+              "main": [
+                20.66,
+                20.6
+              ],
+              "final": [
+                26.36,
+                26.36
+              ]
+            },
+            "means": {
+              "main": 20.629956374212313,
+              "final": 26.36
+            },
+            "change_percent": 27.775355031532257,
+            "spread_percent": {
+              "main": 0.2908385845855488,
+              "final": 0.0
+            }
+          },
+          "gen_first_ms": {
+            "runs": {
+              "main": [
+                48.249,
+                48.389
+              ],
+              "final": [
+                38.152,
+                38.009
+              ]
+            },
+            "means": {
+              "main": 48.319,
+              "final": 38.0805
+            },
+            "change_percent": -21.189387197582732,
+            "spread_percent": {
+              "main": 0.2897410956352585,
+              "final": 0.3755202794080978
+            }
+          }
+        }
+      ],
+      "exactness": {
+        "exact": true,
+        "rows": 645,
+        "floats": 99897600,
+        "max_position": 32767,
+        "logits_sha256": "6b8700c52a925bcfc4d393416b56be9a49c58ee2d363b23844cafdf406f6933c"
+      },
+      "snapshots": [
+        {
+          "frontier": 16384,
+          "main_sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+          "final_sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+          "bytes": 545531292
+        },
+        {
+          "frontier": 2048,
+          "main_sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+          "final_sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+          "bytes": 202327452
+        },
+        {
+          "frontier": 32639,
+          "main_sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+          "final_sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+          "bytes": 934671768
+        },
+        {
+          "frontier": 4096,
+          "main_sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+          "final_sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+          "bytes": 251356572
+        },
+        {
+          "frontier": 8192,
+          "main_sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+          "final_sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+          "bytes": 349414812
+        }
+      ]
+    }
+  }
+}

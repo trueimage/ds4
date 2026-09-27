@@ -1,0 +1,41 @@
+diff --git a/ds4.c b/ds4.c
+index 24048ec..24b2c98 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -46601,7 +46601,7 @@ static bool glm53_flash_feature_enabled(glm53_flash_feature feature) {
+         [GLM53_FLASH_DSA_EXACT]            = "DS4_METAL_DISABLE_GLM53_DSA_EXACT",
+     };
+     static int8_t state[GLM53_FLASH_FEATURE_COUNT];   /* 0 unread, 1 on, -1 off */
+-    if (state[feature] == 0) {
++    if (state[feature] == 0 || feature == GLM53_FLASH_HC_PRODUCER_FUSE) {
+         state[feature] =
+             getenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING") == NULL &&
+             getenv(switches[feature]) == NULL ? 1 : -1;
+@@ -49018,6 +49018,11 @@ static uint32_t glm_decode_ablate_mask(void) {
+     return (uint32_t)cached;
+ }
+ 
++static uint64_t hc_compare_fused, hc_compare_separate;
++static void hc_compare_report(void) {
++    fprintf(stderr,"HC executed: fused=%llu separate=%llu\n",(unsigned long long)hc_compare_fused,(unsigned long long)hc_compare_separate);
++}
++__attribute__((constructor)) static void hc_compare_register(void) { atexit(hc_compare_report); }
+ static bool glm53_graph_hc_pre(
+         ds4_glm_gpu_graph       *g,
+         const ds4_model         *model,
+@@ -49074,6 +49079,7 @@ static bool glm53_graph_hc_pre(
+                 DS4_RMS_EPS);
+         if (fused < 0) return false;
+         if (fused > 0) {
++            hc_compare_fused++;
+             if (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_PRE) {
+                 if (ds4_gpu_hc_rms_norm_mix_split_norm_bf16_tensor(
+                         g->hc_mix, collapsed, normalized, g->hc_split,
+@@ -49089,6 +49095,7 @@ static bool glm53_graph_hc_pre(
+         }
+     }
+ #endif
++    hc_compare_separate++;
+     const uint32_t passes =
+         (glm_decode_repeat_mask() & DS4_GLM_REPEAT_HC_PRE) ? 2u : 1u;
+     bool ok = true;

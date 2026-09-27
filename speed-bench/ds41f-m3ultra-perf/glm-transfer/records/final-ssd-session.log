@@ -1,0 +1,27 @@
+2026-09-18 22:43:12.715 test_deepseek41_graph[41096:506663204] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD static weights locked 9.37 GiB; pageable 0.00 GiB
+ds4: SSD streaming initial metal model map (569 spans, 9.37 GiB tensor span)
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.01 GiB (raw 0.01 + compressed 0.00) + buffers 0.16 GiB + resident model 9.37 GiB + expert cache 9.49 GiB = 19.04 GiB planned
+ds4: memory detail: ctx=256 prefill_cap=256 raw_kv_rows=128 compressed_kv_rows=257 backend=metal
+ds4: V4.1 static context buffers 179.69 MiB (ctx=256), Engram disk-only
+ds4: V4.1 static context buffers 179.69 MiB (ctx=256), Engram disk-only
+ds4: session power throttling is not supported for DeepSeek V4.1
+ds4: legacy graph diagnostics do not implement DeepSeek V4.1; use session logits instead
+ds4: legacy graph diagnostics do not implement DeepSeek V4.1; use session logits instead
+ds4: legacy graph diagnostics do not implement DeepSeek V4.1; use session logits instead
+ds4: legacy graph diagnostics do not implement DeepSeek V4.1; use session logits instead
+ds4: legacy graph diagnostics do not implement DeepSeek V4.1; use session logits instead
+V4.1 session/snapshot parity at 1: PASS
+V4.1 session/snapshot parity at 2: PASS
+V4.1 session/snapshot parity at 3: PASS
+V4.1 session/snapshot parity at 127: PASS
+V4.1 session/snapshot parity at 128: PASS
+V4.1 session/snapshot parity at 129: PASS
+V4.1 imatrix normalized inputs, weighted down rows and expert IDs: PASS
+V4.1 final-head prefill versus every-token head: PASS
+V4.1 public sessions, prefix reuse, snapshots, cancellation and bounds: PASS

@@ -1,0 +1,143 @@
+--- a/ds4.c
++++ b/ds4.c
+@@ -40543,8 +40543,14 @@
+         ok = ds4_gpu_dsv41_projection_rows(out, m->map, m->size,
+             weight->abs_offset, width, outputs, count, in);
+     } else if (count >= 2 && count <= DS4_TP_BATCH_MAX_ROWS && weight->type == DS4_TENSOR_F32) {
++        int encoded = 0;
++#ifdef __APPLE__
++        encoded = ds4_gpu_dsv41_f32_rows(out, m->map, m->size,
++            weight->abs_offset, width, outputs, in, count);
++#endif
++        if (encoded < 0) return false;
+         ok = true;
+-        for (uint32_t i = 0; ok && i < count; i++) {
++        for (uint32_t i = 0; !encoded && ok && i < count; i++) {
+             ds4_gpu_tensor *x = ds4_gpu_tensor_view((ds4_gpu_tensor *)in,
+                 (uint64_t)i * width * sizeof(float), (uint64_t)width * sizeof(float));
+             ds4_gpu_tensor *y = ds4_gpu_tensor_view(out,
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -22309,7 +22309,7 @@
+     return 1;
+ }
+ 
+-int ds4_gpu_matmul_f32_tensor(
++static int ds4_gpu_matmul_f32_tensor_impl(
+         ds4_gpu_tensor       *out,
+         const void             *model_map,
+         uint64_t                model_size,
+@@ -22317,7 +22317,7 @@
+         uint64_t                in_dim,
+         uint64_t                out_dim,
+         const ds4_gpu_tensor *x,
+-        uint64_t                n_tok) {
++        uint64_t                n_tok, bool exact_rows) {
+     if (!g_initialized && !ds4_gpu_init()) return 0;
+     if (in_dim > UINT32_MAX || out_dim > UINT32_MAX || n_tok == 0 || n_tok > UINT32_MAX) return 0;
+     if (in_dim > UINT64_MAX / n_tok / sizeof(float) ||
+@@ -22357,8 +22357,8 @@
+         id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+         if (!cb) return 0;
+ 
+-        if (n_tok == 1) {
+-            ds4_gpu_q8_0_matvec_args mv_args = ds4_gpu_make_f32_mv_args(in_dim, out_dim, 1);
++        if (n_tok == 1 || exact_rows) {
++            ds4_gpu_q8_0_matvec_args mv_args = ds4_gpu_make_f32_mv_args(in_dim, out_dim, n_tok);
+             ds4_gpu_mv_dispatch mv_dispatch = ds4_gpu_make_plain_mv_dispatch(in_dim, 1);
+             if (ds4_gpu_plain_mv_single_row(out_dim)) {
+                 mv_dispatch.nr0 = 1;
+@@ -22379,11 +22379,13 @@
+                 [enc setThreadgroupMemoryLength:mv_dispatch.smem atIndex:0];
+             }
+             [enc dispatchThreadgroups:MTLSizeMake(((NSUInteger)out_dim + (NSUInteger)mv_dispatch.nr0 - 1u) / (NSUInteger)mv_dispatch.nr0,
+-                                                  1,
++                                                  n_tok,
+                                                   1)
+                  threadsPerThreadgroup:MTLSizeMake(32, (NSUInteger)mv_dispatch.nsg, 1)];
+             ds4_gpu_end_compute_encoder(cb, enc);
+ 
++            if (exact_rows && (g_test_flags & DS4_GPU_TEST_V41_FUSIONS))
++                g_test_v41_fusions_dispatches |= 128u;
+             if (!ds4_gpu_finish_command_buffer(cb, owned, "F32 tensor matvec")) return 0;
+             return 1;
+         }
+@@ -22472,6 +22474,23 @@
+     }
+ 
+     return 1;
++}
++
++int ds4_gpu_matmul_f32_tensor(ds4_gpu_tensor *out, const void *model_map,
++        uint64_t model_size, uint64_t weight_offset, uint64_t in_dim,
++        uint64_t out_dim, const ds4_gpu_tensor *x, uint64_t n_tok) {
++    return ds4_gpu_matmul_f32_tensor_impl(out, model_map, model_size,
++        weight_offset, in_dim, out_dim, x, n_tok, false);
++}
++
++int ds4_gpu_dsv41_f32_rows(ds4_gpu_tensor *out, const void *model_map,
++        uint64_t model_size, uint64_t weight_offset, uint64_t in_dim,
++        uint64_t out_dim, const ds4_gpu_tensor *x, uint32_t rows) {
++    if (!g_initialized && !ds4_gpu_init()) return -1;
++    if (rows < 2 || rows > 8 || !ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++        "DS4_METAL_DISABLE_V41_VERIFY_ROUTER_ROWS")) return 0;
++    return ds4_gpu_matmul_f32_tensor_impl(out, model_map, model_size,
++        weight_offset, in_dim, out_dim, x, rows, true) ? 1 : -1;
+ }
+ 
+ int ds4_gpu_repeat_hc_tensor(
+--- a/ds4_deepseek41_gpu.h
++++ b/ds4_deepseek41_gpu.h
+@@ -110,6 +110,9 @@
+ int ds4_gpu_dsv41_verify_oa_rows(ds4_gpu_tensor *low, const void *model_map,
+         uint64_t model_size, uint64_t offset, const ds4_gpu_tensor *heads, uint32_t rows);
+ int ds4_gpu_dsv41_verify_attn_out_rows_admitted(void);
++int ds4_gpu_dsv41_f32_rows(ds4_gpu_tensor *out, const void *model_map,
++        uint64_t model_size, uint64_t weight_offset, uint64_t in_dim,
++        uint64_t out_dim, const ds4_gpu_tensor *x, uint32_t rows);
+ 
+ 
+ int ds4_gpu_dsv41_qb_bf16_admitted(void);
+--- a/tests/test_deepseek41_fusions.c
++++ b/tests/test_deepseek41_fusions.c
+@@ -239,6 +239,40 @@
+                raw_nonfinite_out,rounding_sensitive_out);
+     }
+ 
++    {
++        const unsigned in=5120, od=384;
++        const unsigned counts[]={2,3,4,5,6,7,8};
++        float *w=model;
++        for(unsigned i=0;i<in*od;i++) w[i]=sample()/16;
++        for(unsigned draw=0;draw<28;draw++) {
++            const unsigned r=counts[draw%7];const size_t size=(size_t)od*r*4;
++            ds4_gpu_tensor *x=ds4_gpu_tensor_alloc_managed((size_t)in*r*4);
++            ds4_gpu_tensor *y[2]={ds4_gpu_tensor_alloc_managed(size+G),ds4_gpu_tensor_alloc_managed(size+G)};
++            CHECK(x&&y[0]&&y[1]);float *v=ds4_gpu_tensor_contents(x);
++            for(unsigned i=0;i<in*r;i++) v[i]=sample();
++            for(unsigned i=0;i<r;i++) if(draw>=7) memcpy(v+i*in+(draw*17)%in,&exceptional[(draw+i)%6],4);
++            for(unsigned arm=0;arm<2;arm++) {
++                if(arm)unsetenv("DS4_METAL_DISABLE_V41_VERIFY_ROUTER_ROWS");else setenv("DS4_METAL_DISABLE_V41_VERIFY_ROUTER_ROWS","1",1);
++                memset(ds4_gpu_tensor_contents(y[arm]),0xa5,size+G);
++                CHECK(ds4_gpu_begin_commands());
++                CHECK(ds4_gpu_dsv41_f32_rows(y[arm],model,bytes,0,in,od,x,r)==(int)arm);
++                if(!arm)for(unsigned i=0;i<r;i++) {
++                    ds4_gpu_tensor *xr=ds4_gpu_tensor_view(x,(size_t)i*in*4,in*4);
++                    ds4_gpu_tensor *yr=ds4_gpu_tensor_view(y[0],(size_t)i*od*4,od*4);
++                    CHECK(xr&&yr&&ds4_gpu_matmul_f32_tensor(yr,model,bytes,0,in,od,xr,1));
++                    ds4_gpu_tensor_free(xr);ds4_gpu_tensor_free(yr);
++                }
++                CHECK(ds4_gpu_end_commands());
++                CHECK(ds4_gpu_test_v41_fusions_take_dispatches()==(arm?128u:0u));
++            }
++            equal(ds4_gpu_tensor_contents(y[0]),ds4_gpu_tensor_contents(y[1]),size+G,"F32 router rows",draw);
++            ds4_gpu_set_quality(true);CHECK(!ds4_gpu_dsv41_f32_rows(y[1],model,bytes,0,in,od,x,r));ds4_gpu_set_quality(false);
++            ds4_gpu_set_ssd_streaming(true);CHECK(!ds4_gpu_dsv41_f32_rows(y[1],model,bytes,0,in,od,x,r));ds4_gpu_set_ssd_streaming(false);
++            ds4_gpu_tensor_free(x);ds4_gpu_tensor_free(y[0]);ds4_gpu_tensor_free(y[1]);
++        }
++        unsetenv("DS4_METAL_DISABLE_V41_VERIFY_ROUTER_ROWS");
++        puts("F32 router: 28 multi-row cases exact against independent scalar dispatches");
++    }
+ 
+     /* One weight read for every row of a small batch, against a launch per
+      * row: V4.1's Q8_0 shapes, 2 to 8 rows, exceptional scales and inputs. */

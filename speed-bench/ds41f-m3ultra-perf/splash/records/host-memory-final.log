@@ -1,0 +1,3 @@
+cc -O3 -g -mcpu=native -Wall -Wextra -std=c99 -I. tests/test_host_memory.c -o tests/test_host_memory
+./tests/test_host_memory
+host memory: estimates/overflow exact; pressure=1 available=204464914432

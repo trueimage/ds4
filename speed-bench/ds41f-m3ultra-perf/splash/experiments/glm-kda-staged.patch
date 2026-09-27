@@ -1,0 +1,225 @@
+--- a/metal/glm53_kda.metal
++++ b/metal/glm53_kda.metal
+@@ -900,6 +900,95 @@
+     }
+ }
+ 
++/* Stage a block once per value group. Each lane keeps its original four
++ * key columns, recurrence order and SIMD reduction. Prefetch only immutable
++ * input words; state rows and output elements remain disjoint. */
++template<uint SGS, uint BLOCK>
++static inline float glm53_kda_stage_word(uint index, uint first, uint head, uint group,
++        constant glm53_kda_args &args, device const float *q, device const float *k,
++        device const float *v, device const float *decay, device const float *beta) {
++    constexpr uint STRIDE = 3u*128u + SGS*2u + 4u;
++    const uint token = first + index/STRIDE, column = index%STRIDE;
++    if (token >= args.n_rows) return 0.0f;
++    const ulong base = (ulong)token*args.n_heads*128u + head*128u;
++    if (column < 128u) return q[base + column];
++    if (column < 256u) return k[base + column - 128u];
++    if (column < 384u) return decay[base + column - 256u];
++    if (column < 384u + SGS*2u) return v[base + group*SGS*2u + column - 384u];
++    return beta[(ulong)token*args.n_heads + head];
++}
++
++template<uint SGS, uint BLOCK>
++kernel void kernel_glm53_kda_prefill_recurrence_staged(
++        constant glm53_kda_args &args,
++        device const float *q,
++        device const float *k,
++        device const float *v,
++        device const float *decay,
++        device const float *raw_beta,
++        device float *state,
++        device float *out,
++        threadgroup float *tile [[threadgroup(0)]],
++        uint2 tgpig [[threadgroup_position_in_grid]],
++        ushort tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]) {
++    constexpr uint D = 128u, VALUES = 2u;
++    constexpr uint STRIDE = 3u*D + SGS*VALUES + 4u;
++    constexpr uint WORDS = BLOCK*STRIDE, THREADS = SGS*32u;
++    constexpr uint LOADS = (WORDS + THREADS - 1u)/THREADS;
++    const uint head = tgpig.x, value0 = (tgpig.y*SGS + sg)*VALUES, k0 = lane*4u;
++    if (head >= args.n_heads) return;
++    const uint projection = args.n_heads*D;
++    float4 h[VALUES];
++    FOR_UNROLL (uint i = 0; i < VALUES; ++i)
++        h[i] = *((device float4 *)(state + ((ulong)head*D + value0 + i)*D + k0));
++    float prefetched[LOADS];
++    FOR_UNROLL (uint i = 0; i < LOADS; ++i) {
++        const uint word = tid + i*THREADS;
++        if (word < WORDS) prefetched[i] = glm53_kda_stage_word<SGS,BLOCK>(
++            word,0,head,tgpig.y,args,q,k,v,decay,raw_beta);
++    }
++    for (uint first = 0; first < args.n_rows; first += BLOCK) {
++        FOR_UNROLL (uint i = 0; i < LOADS; ++i) {
++            const uint word = tid + i*THREADS;
++            if (word < WORDS) tile[word] = prefetched[i];
++        }
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++        if (first + BLOCK < args.n_rows) {
++            FOR_UNROLL (uint i = 0; i < LOADS; ++i) {
++                const uint word = tid + i*THREADS;
++                if (word < WORDS) prefetched[i] = glm53_kda_stage_word<SGS,BLOCK>(
++                    word,first+BLOCK,head,tgpig.y,args,q,k,v,decay,raw_beta);
++            }
++        }
++        for (uint t = 0; t < BLOCK && first + t < args.n_rows; ++t) {
++            threadgroup const float *row = tile + t*STRIDE;
++            const float4 q4 = *((threadgroup const float4 *)(row + k0));
++            const float4 k4 = *((threadgroup const float4 *)(row + D + k0));
++            const float4 decay4 = *((threadgroup const float4 *)(row + 2u*D + k0));
++            const float beta = 1.0f/(1.0f + exp(-row[3u*D + SGS*VALUES]));
++            const ulong base = (ulong)(first+t)*projection + head*D;
++            FOR_UNROLL (uint i = 0; i < VALUES; ++i) {
++                h[i] *= decay4;
++                const float hk = simd_sum(dot(h[i], k4));
++                const float delta_v = (row[3u*D + sg*VALUES + i] - hk)*beta;
++                h[i] = fma(k4, float4(delta_v), h[i]);
++                const float result = simd_sum(dot(h[i], q4));
++                if (lane == 0u) out[base + value0 + i] = result;
++            }
++        }
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++    }
++    FOR_UNROLL (uint i = 0; i < VALUES; ++i)
++        *((device float4 *)(state + ((ulong)head*D + value0 + i)*D + k0)) = h[i];
++}
++
++typedef decltype(kernel_glm53_kda_prefill_recurrence_staged<16,8>) glm53_kda_staged_t;
++template [[host_name("kernel_glm53_kda_prefill_staged_sg16_b8")]] kernel glm53_kda_staged_t kernel_glm53_kda_prefill_recurrence_staged<16,8>;
++template [[host_name("kernel_glm53_kda_prefill_staged_sg32_b8")]] kernel glm53_kda_staged_t kernel_glm53_kda_prefill_recurrence_staged<32,8>;
++template [[host_name("kernel_glm53_kda_prefill_staged_sg8_b16")]] kernel glm53_kda_staged_t kernel_glm53_kda_prefill_recurrence_staged<8,16>;
++
+ typedef decltype(kernel_glm53_kda_prefill_recurrence_values<2u>) glm53_kda_recurrence_values_t;
+ template [[host_name("kernel_glm53_kda_prefill_recurrence_v2")]]
+ kernel glm53_kda_recurrence_values_t kernel_glm53_kda_prefill_recurrence_values<2u>;
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -49085,6 +49085,29 @@
+             ds4_gpu_get_pipeline(kda_values == 4u ? "kernel_glm53_kda_prefill_recurrence_v4" :
+                                 kda_values == 2u ? "kernel_glm53_kda_prefill_recurrence_v2" :
+                                 "kernel_glm53_kda_prefill_recurrence");
++        uint32_t staged_sgs = 0, staged_block = 0;
++        if (kda_values == 2u && !getenv("DS4_METAL_DISABLE_GLM53_PREFILL_KDA_STAGED")) {
++            const uint32_t sgs = (uint32_t)ds4_gpu_env_u64("DS4_METAL_GLM53_PREFILL_KDA_STAGED_SGS",16,8,32);
++            const uint32_t block = sgs == 8u ? 16u : 8u;
++            bool disjoint = true;
++            const ds4_gpu_tensor *inputs[] = {q,k,v,raw_gate,raw_beta};
++            for (unsigned i = 0; i < 5; ++i) {
++                for (unsigned j = 0; j < 2; ++j) {
++                    const ds4_gpu_tensor *dst = j ? out : recurrent_state;
++                    if (ds4_gpu_buffer_ranges_overlap(ds4_gpu_tensor_buffer(inputs[i]),
++                        ds4_gpu_tensor_offset(inputs[i]),ds4_gpu_tensor_bytes(inputs[i]),
++                        ds4_gpu_tensor_buffer(dst),ds4_gpu_tensor_offset(dst),ds4_gpu_tensor_bytes(dst))) disjoint = false;
++                }
++            }
++            char name[80];snprintf(name,sizeof(name),"kernel_glm53_kda_prefill_staged_sg%u_b%u",sgs,block);
++            id<MTLComputePipelineState> staged = disjoint && (sgs == 8u || sgs == 16u || sgs == 32u) ?
++                ds4_gpu_get_pipeline(name) : nil;
++            const NSUInteger shared = block*(384u + 2u*sgs + 4u)*sizeof(float);
++            if (staged && staged.maxTotalThreadsPerThreadgroup >= sgs*32u &&
++                shared <= [g_device maxThreadgroupMemoryLength]) {
++                recurrence_pipeline = staged;staged_sgs = sgs;staged_block = block;
++            }
++        }
+         id<MTLComputePipelineState> output_pipeline =
+             ds4_gpu_get_pipeline("kernel_glm53_kda_prefill_output");
+         if (!qw || !kw || !vw || !a_log || !dt_bias || !output_norm ||
+@@ -49251,8 +49274,12 @@
+         if (kda_values > 1u) {
+             ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_PREFILL_KDA_RECURRENCE);
+         }
+-        [enc dispatchThreadgroups:MTLSizeMake(n_heads, 32u / kda_values, 1)
+-            threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
++        if (staged_sgs) {
++            [enc setThreadgroupMemoryLength:staged_block*(384u + 2u*staged_sgs + 4u)*sizeof(float) atIndex:0];
++            ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_PREFILL_KDA_STAGED);
++        }
++        [enc dispatchThreadgroups:MTLSizeMake(n_heads, staged_sgs ? 64u/staged_sgs : 32u/kda_values, 1)
++            threadsPerThreadgroup:MTLSizeMake(staged_sgs ? 32u*staged_sgs : 128u, 1, 1)];
+ 
+         if (kda_profile) {
+             ds4_gpu_end_compute_encoder(cb, enc);
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -288,6 +288,7 @@
+     DS4_GPU_GLM53_DSA_SCORE_TILE = 1u << 8,
+     DS4_GPU_GLM53_DECODE_KDA_VALUES4 = 1u << 9,
+     DS4_GPU_GLM53_KDA_INPUTS = 1u << 10,
++    DS4_GPU_GLM53_PREFILL_KDA_STAGED = 1u << 11,
+     DS4_GPU_GLM53_DECODE_KDA_PREFETCH = 1u << 12,
+ };
+ /* Returns and clears GLM tuning coverage recorded only in the test mode. */
+--- a/tests/test_glm53_kda.c
++++ b/tests/test_glm53_kda.c
+@@ -1203,21 +1203,25 @@
+     enum { H = 64, D = 128, P = H * D, MAX_TOKENS = 2048 };
+     enum { Q, K, V, GATE, OGATE, BETA, CONV, STATE, OUT, NBUF };
+     /* Production head count, partial blocks, and explicit fallback boundaries. */
+-    static const uint32_t tokens[] = { 2048, 1596, 65, 33, 17, 4, 3, 1 };
++    static const uint32_t tokens[] = { 2048, 1596, 65, 47, 33, 17, 4, 3, 1 };
+     static const struct {
+         uint32_t block, values;
+         bool last_first, profile, batch, split, rollback;
++        uint32_t staged_sgs;
+     } variants[] = {
+-        {0, 1, false, false, false, false, false}, /* serial reference */
+-        {4, 2, false, false, false, false, false},
+-        {16, 2, false, false, false, false, false},
+-        {32, 2, false, false, false, false, false},
+-        {64, 4, false, false, false, false, false},
+-        {32, 2, true, false, false, false, false}, /* deterministic race regression */
+-        {32, 2, false, true, false, false, false}, /* profiler with an owned CB */
+-        {32, 2, false, true, true, false, false},  /* profiler preserves caller batch */
+-        {32, 2, true, false, true, true, false},   /* continue 33 + 32 tokens */
+-        {32, 2, false, false, false, false, true}, /* aggregate rollback */
++        {0, 1, false, false, false, false, false, 0}, /* serial reference */
++        {4, 2, false, false, false, false, false, 0},
++        {16, 2, false, false, false, false, false, 0},
++        {32, 2, false, false, false, false, false, 0},
++        {64, 4, false, false, false, false, false, 0},
++        {32, 2, true, false, false, false, false, 0}, /* deterministic race regression */
++        {32, 2, false, true, false, false, false, 0}, /* profiler with an owned CB */
++        {32, 2, false, true, true, false, false, 0},  /* profiler preserves caller batch */
++        {32, 2, true, false, true, true, false, 0},   /* continue 33 + 32 tokens */
++        {32, 2, false, false, false, false, true, 0}, /* aggregate rollback */
++        {32, 2, false, false, false, false, false, 8},
++        {32, 2, false, false, false, false, false, 16},
++        {32, 2, false, false, false, false, false, 32},
+     };
+     const bool inherited_profile = getenv("DS4_METAL_PROFILE_KDA_PREFILL") != NULL;
+     require_ok(norm_offset + D * sizeof(float) <= model_bytes,
+@@ -1270,6 +1274,11 @@
+             snprintf(what, sizeof(what), "KDA n=%u block=%u values=%u last-first=%u profile=%u batch=%u split=%u rollback=%u",
+                      n, block, variants[variant].values, variants[variant].last_first, variants[variant].profile,
+                      variants[variant].batch, variants[variant].split, variants[variant].rollback);
++            if (variants[variant].staged_sgs) {
++                unsetenv("DS4_METAL_DISABLE_GLM53_PREFILL_KDA_STAGED");
++                snprintf(text,sizeof(text),"%u",variants[variant].staged_sgs);
++                setenv("DS4_METAL_GLM53_PREFILL_KDA_STAGED_SGS",text,1);
++            } else setenv("DS4_METAL_DISABLE_GLM53_PREFILL_KDA_STAGED","1",1);
+             if (variants[variant].rollback) setenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING", "1", 1);
+             else unsetenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING");
+             if (block == 0u) {
+@@ -1313,7 +1322,8 @@
+             const uint32_t largest_chunk = chunks == 1 ? n : 33;
+             const uint32_t expected_dispatches = variants[variant].rollback ? 0u :
+                 (block != 0u && largest_chunk > block ? DS4_GPU_GLM53_PREFILL_KDA_PREPARE : 0u) |
+-                (block != 0u && largest_chunk >= 32u ? DS4_GPU_GLM53_PREFILL_KDA_RECURRENCE : 0u);
++                (block != 0u && largest_chunk >= 32u ? DS4_GPU_GLM53_PREFILL_KDA_RECURRENCE : 0u) |
++                (variants[variant].staged_sgs && largest_chunk >= 32u ? DS4_GPU_GLM53_PREFILL_KDA_STAGED : 0u);
+             require_prefill_dispatch(expected_dispatches, true, what);
+             for (unsigned j = 0; j < sizeof(compared) / sizeof(compared[0]); j++) {
+                 const unsigned b = compared[j];
+@@ -1331,6 +1341,8 @@
+         }
+     }
+     unsetenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING");
++    unsetenv("DS4_METAL_DISABLE_GLM53_PREFILL_KDA_STAGED");
++    unsetenv("DS4_METAL_GLM53_PREFILL_KDA_STAGED_SGS");
+     unsetenv("DS4_METAL_GLM53_PREFILL_KDA_PREPARE_BLOCK");
+     unsetenv("DS4_METAL_GLM53_PREFILL_KDA_VALUES_PER_SG");
+     unsetenv("DS4_METAL_DISABLE_GLM53_PREFILL_KDA_PREPARE");

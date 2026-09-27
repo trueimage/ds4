@@ -1,0 +1,80 @@
+{
+  "baseline": {
+    "head": "849e039b4c8048d73423c12cdf201ccbfee8528b",
+    "baseline": "280366e8553da111e0f7b1f63c90755b124ba9ff",
+    "tree": "3719ff99d2ba0d47e54128cbeb03c080aff8acb0",
+    "included_untracked": [
+      "gguf-tools/tests/test_deepseek41_mxfp4.py",
+      "speed-bench/ds41f-m3ultra-perf/mxfp4/README.md",
+      "splash_review_recommendations_2026-09-26.md",
+      "tests/test_deepseek41_dspark.c"
+    ],
+    "created": "2026-09-26T12:53:42.625997"
+  },
+  "screen_commits": {
+    "screen": "5665668c3f033a75a54badefeb384d5458576f40",
+    "core": "4b21e2b4604c1036b62c4ce84274f860f64fa5da",
+    "attn": "e5899bdee8b17fb9b40238dbf9a01a138076b753",
+    "screen-next": "2ec7b06ae3d4f1b7443e97b567ce26b94706ad40",
+    "screen-finalists": "8738db6d33ce33c9b0a325e38da97fda24f9861e",
+    "verify": "8549067c6743537ffccbe2275291a3d986488d71"
+  },
+  "models": [
+    {
+      "path": "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+      "bytes": 518596067328,
+      "first_8_MiB_sha256": "036e61b1fc6b10fbb271d7613bfe34810689cbd0f1cc7862673104aaabf78545"
+    },
+    {
+      "path": "/Users/jw/ds4/gguf/GLM-5.3-Flash-Q4_K.gguf",
+      "bytes": 190875526464,
+      "first_8_MiB_sha256": "14f9273ceeb7b4512684de3cba3fa5b4d97a1a17bd6a5d4e6a6287433ed9351c"
+    }
+  ],
+  "candidate_production_commit": "f768551d842942f5eed4b257f6c997f8eb5ec29e",
+  "candidate_with_fixture_fix": "f768551d842942f5eed4b257f6c997f8eb5ec29e",
+  "context_limit": 32768,
+  "prompt_manifest": {
+    "/tmp/ds4-splash-20260926/prompts-v41/http-08192.txt": {
+      "chat_tokens": 8192,
+      "sha256": "3b76970e40bd10a8831b949478302d8327fe325b99a365a58ae88f63bf111d44"
+    },
+    "/tmp/ds4-splash-20260926/prompts-v41/http-32000.txt": {
+      "chat_tokens": 32000,
+      "sha256": "aa68ce5aefaffe45459c09e21330b3a31c6dcd9ddbb58b4a757f7cd38c285bb3"
+    },
+    "/tmp/ds4-splash-20260926/prompts-glm/http-08192.txt": {
+      "chat_tokens": 8192,
+      "sha256": "495ac7ae9f54bc44412b25a5589f6715782d5e80c577f438bc3322c9b889e697"
+    },
+    "/tmp/ds4-splash-20260926/prompts-glm/http-32000.txt": {
+      "chat_tokens": 32000,
+      "sha256": "ccfc9a29cb67bcd50412596a9f3ffff32ee8c7258f017f948f37e513ea35c8f4"
+    }
+  },
+  "fixture_metadata_correction": {
+    "previous_incomplete_tree": "219e92c3b8e44b86fb7fcc2b9049703446adbcd2",
+    "complete_candidate": "9abd19fcf7e25c10fb91f8b67c0c51c3d3e33e41",
+    "note": "The prior fixture-only commit accidentally omitted the rest of the tree. The working files and binaries were unchanged; their per-run source hashes remain the validation identity."
+  },
+  "atomic_candidate_commit": "9abd19fcf7e25c10fb91f8b67c0c51c3d3e33e41",
+  "coherent_candidate_commit": "f35e1c59361199e5b1e6b2ee4a16b6b50511ba36",
+  "atomic_production_commit": "e01d1c5b130c5a1b98c02323d2c750e529ad597b",
+  "final_commit": "f768551d842942f5eed4b257f6c997f8eb5ec29e",
+  "checkpoint_prompt_manifest": {
+    "v41": {
+      "cli_chat_tokens": 10172,
+      "expected_cold_api_tokens": 10166,
+      "expected_continued_api_tokens": 10240,
+      "sha256": "332923fa5792cc4e5e8cbddedce887611a9c8656d5b6ccd31762963186adfbf7"
+    },
+    "glm": {
+      "cli_chat_tokens": 10172,
+      "expected_cold_api_tokens": 10166,
+      "expected_continued_api_tokens": 10240,
+      "sha256": "2b4ca65ccd01d69296db18eecf3a26d66c3d24713dea683616ebb4ff5c8959f7"
+    }
+  },
+  "corpus_sha256": "f53e0d80cb2d4492d24ebd63c7000c397b16ae70f9bf09b3763e5d8323ec209f",
+  "validation_complete": true
+}

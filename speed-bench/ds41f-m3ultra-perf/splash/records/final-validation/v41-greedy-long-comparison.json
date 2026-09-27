@@ -1,0 +1,18 @@
+{
+  "exact": true,
+  "sha256": "30ca703982fe950a3939dd69a89cd4150eaf243acac65e7e1942ba3e52104517",
+  "argv": [
+    "./ds4",
+    "-m",
+    "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+    "--prompt-file",
+    "/tmp/ds4-splash-20260926/prompts-v41/long.txt",
+    "--temp",
+    "0",
+    "-n",
+    "400",
+    "-c",
+    "32768",
+    "--nothink"
+  ]
+}

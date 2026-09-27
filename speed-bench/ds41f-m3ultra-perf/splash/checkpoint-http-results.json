@@ -1,0 +1,158 @@
+{
+  "v41": {
+    "results": [
+      {
+        "name": "http-10240-cold",
+        "staged_ttft_ms": 17517.33427151339,
+        "direct_ttft_ms": 17494.907228974625,
+        "saved_ms": 22.427042538765818,
+        "runs_ttft_ms": [
+          17463.287709048018,
+          17420.382416981738,
+          17569.432040967513,
+          17571.380833978765
+        ],
+        "output_exact": true,
+        "usage": {
+          "prompt_tokens": 10166,
+          "completion_tokens": 64,
+          "total_tokens": 10230,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 10166
+          }
+        },
+        "staged_itl_p99_ms": 34.8465409479104,
+        "direct_itl_p99_ms": 34.826875024009496
+      },
+      {
+        "name": "http-10240-continued",
+        "staged_ttft_ms": 314.4827494979836,
+        "direct_ttft_ms": 305.714854010148,
+        "saved_ms": 8.76789548783563,
+        "runs_ttft_ms": [
+          315.7929580193013,
+          305.74162502307445,
+          305.6880829972215,
+          313.1725409766659
+        ],
+        "output_exact": true,
+        "usage": {
+          "prompt_tokens": 10240,
+          "completion_tokens": 64,
+          "total_tokens": 10304,
+          "prompt_tokens_details": {
+            "cached_tokens": 10230,
+            "cache_write_tokens": 10
+          }
+        },
+        "staged_itl_p99_ms": 34.88266695057973,
+        "direct_itl_p99_ms": 34.77120801107958,
+        "runs_store_ms": [
+          20.6,
+          9.6,
+          9.5,
+          19.2
+        ],
+        "staged_store_ms": 19.9,
+        "direct_store_ms": 9.55
+      }
+    ],
+    "images_exact": true,
+    "images": [
+      {
+        "name": "04ada007dc0577b4e2d5dee269b04d8dd66494a6.kv",
+        "bytes": 76612944,
+        "masked_sha256": "948eec6e47427b3f15bd83145784c35732ab10ee45538129963171ee5f539947"
+      },
+      {
+        "name": "43043e3a41c0d0559950468c68eeab5bd5bea735.kv",
+        "bytes": 77023081,
+        "masked_sha256": "6d510bb9c561c9a689e197971de1cbefbd5cb88bdc174bcab052078e7f28188f"
+      },
+      {
+        "name": "785dcdced9b106cac1aae0d2c65f631e14c4d5a1.kv",
+        "bytes": 63490674,
+        "masked_sha256": "0f4b7d3f4ccb6fbb8d9a6a015d1d7cb79de4bfb397aabace7a981f203c9da30f"
+      }
+    ]
+  },
+  "glm": {
+    "results": [
+      {
+        "name": "http-10240-cold",
+        "staged_ttft_ms": 22680.798957997467,
+        "direct_ttft_ms": 22636.43904152559,
+        "saved_ms": 44.359916471876204,
+        "runs_ttft_ms": [
+          22675.299958034884,
+          22636.857750010677,
+          22636.020333040506,
+          22686.29795796005
+        ],
+        "output_exact": true,
+        "usage": {
+          "prompt_tokens": 10166,
+          "completion_tokens": 64,
+          "total_tokens": 10230,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 10166
+          }
+        },
+        "staged_itl_p99_ms": 38.519709021784365,
+        "direct_itl_p99_ms": 38.604792032856494
+      },
+      {
+        "name": "http-10240-continued",
+        "staged_ttft_ms": 386.3251875154674,
+        "direct_ttft_ms": 326.737833005609,
+        "saved_ms": 59.587354509858415,
+        "runs_ttft_ms": [
+          381.90516602480784,
+          328.2028330140747,
+          325.27283299714327,
+          390.74520900612697
+        ],
+        "output_exact": true,
+        "usage": {
+          "prompt_tokens": 10240,
+          "completion_tokens": 64,
+          "total_tokens": 10304,
+          "prompt_tokens_details": {
+            "cached_tokens": 10230,
+            "cache_write_tokens": 10
+          }
+        },
+        "staged_itl_p99_ms": 38.45287498552352,
+        "direct_itl_p99_ms": 38.63395901862532,
+        "runs_store_ms": [
+          108.1,
+          57.0,
+          54.8,
+          117.0
+        ],
+        "staged_store_ms": 112.55,
+        "direct_store_ms": 55.9
+      }
+    ],
+    "images_exact": true,
+    "images": [
+      {
+        "name": "31ac67944c242f06354cf17954618b614594a5cf.kv",
+        "bytes": 400009592,
+        "masked_sha256": "2f5382fb12c4bb3f8812e2077864505ca65ceb3d59bcae01a71552d2692641e5"
+      },
+      {
+        "name": "3f5bf94818e06ba920489bddec3e0547e3ede93c.kv",
+        "bytes": 398477156,
+        "masked_sha256": "d019f60a728dd232e5492dbc929f3400244f8be882e26de6dfd03568fa6cd46a"
+      },
+      {
+        "name": "a6bf52d81c9298aa8fdaa8600ba25a4422b212db.kv",
+        "bytes": 349441129,
+        "masked_sha256": "a735ffc4b460f0c116b6eee4659a5c599e384e8fb67ae3260761c6e7c778dea1"
+      }
+    ]
+  }
+}

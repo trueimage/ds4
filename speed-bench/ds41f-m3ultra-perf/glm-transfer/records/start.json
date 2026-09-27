@@ -1,0 +1,13 @@
+{
+  "base": "3c16a1d50b9e8d155f484fa0f1f4cd9540a8d11b",
+  "time": 1789791033.523467,
+  "context_limit": 32768,
+  "model": "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+  "order": [
+    "R router",
+    "H HC",
+    "S shared expert",
+    "P independent projections",
+    "T histogram top-k"
+  ]
+}

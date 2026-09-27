@@ -1,0 +1,92 @@
+ok ds4 --help mentions --gpu-vram
+ok ds4 --help mentions --gpu-devices
+ok ds4 --help mentions --cuda-tensor-parallel
+ok ds4 --help runtime mentions --mtp
+ok ds4 --help runtime mentions --mtp-model
+ok ds4 --help runtime mentions --mtp-exact-sampling
+ok ds4 --help runtime omits --glm-mtp
+ok ds4 --help distributed mentions --tensor-parallel-token-prefill
+ok ds4 --help distributed omits old --tp spellings
+ok ds4-server --help mentions --gpu-vram
+ok ds4-server --help mentions --gpu-devices
+ok ds4-server --help mentions --cuda-tensor-parallel
+ok ds4-server --help runtime mentions --mtp
+ok ds4-server --help runtime mentions --mtp-model
+ok ds4-server --help runtime mentions --mtp-exact-sampling
+ok ds4-server --help runtime omits --glm-mtp
+ok ds4-bench --help mentions --gpu-vram
+ok ds4-bench --help mentions --gpu-devices
+ok ds4-bench --help mentions --cuda-tensor-parallel
+ok ds4-bench --help runtime mentions --mtp-model
+ok ds4-bench --help runtime mentions --dspark
+ok ds4-bench --help runtime mentions --dspark-confidence
+ok ds4-agent --help mentions --gpu-vram
+ok ds4-agent --help mentions --gpu-devices
+ok ds4-agent --help mentions --cuda-tensor-parallel
+ok ds4-agent --help runtime mentions --mtp
+ok ds4-agent --help runtime mentions --mtp-model
+ok ds4-agent --help runtime mentions --mtp-exact-sampling
+ok ds4-agent --help runtime omits --glm-mtp
+ok ds4-eval --help runtime mentions --mtp-model
+ok ds4-eval parses --mtp-model
+ok ds4-eval rejects obsolete --mtp FILE spelling
+ok ds4-eval tensor-parallel coordinator options reach model loading
+ok ds4-eval tensor-parallel worker directs users to ds4
+ok ds4-bench parses basic DSpark options
+ok ds4-bench requires a DSpark support model
+ok ds4 parses --mtp-exact-sampling
+ok ds4-server parses --mtp-exact-sampling
+ok ds4-agent parses --mtp-exact-sampling
+ok ds4 parses --mtp
+ok ds4 parses --mtp-timing
+ok ds4 rejects obsolete --glm-mtp
+ok ds4 rejects obsolete --glm-mtp-timing
+ok ds4-server parses --mtp
+ok ds4-server parses --mtp-timing
+ok ds4-server rejects obsolete --glm-mtp
+ok ds4-server rejects obsolete --glm-mtp-timing
+ok ds4-agent parses --mtp
+ok ds4-agent parses --mtp-timing
+ok ds4-agent rejects obsolete --glm-mtp
+ok ds4-agent rejects obsolete --glm-mtp-timing
+ok ds4 rejects provisional --dspark-exact-sampling
+ok ds4-server rejects provisional --dspark-exact-sampling
+ok ds4-agent rejects provisional --dspark-exact-sampling
+ok ds4 --gpu-vram abc exits non-zero (2)
+ok ds4 --gpu-vram abc reaches shared parser
+ok ds4-server --gpu-vram abc exits non-zero (2)
+ok ds4-server --gpu-vram abc reaches shared parser
+ok ds4-bench --gpu-vram abc exits non-zero (2)
+ok ds4-bench --gpu-vram abc reaches shared parser
+ok ds4-agent --gpu-vram abc exits non-zero (2)
+ok ds4-agent --gpu-vram abc reaches shared parser
+ok ds4 count-mismatch reaches shared parser (2)
+ok ds4-server count-mismatch reaches shared parser (2)
+ok ds4-bench count-mismatch reaches shared parser (2)
+ok ds4-agent count-mismatch reaches shared parser (2)
+ok ds4 --cuda --help still prints help
+ok ds4-server --cuda --help still prints help
+ok ds4-bench --cuda --help still prints help
+ok ds4-agent --cuda --help still prints help
+ok ds4 --gpu-vram 0 exits non-zero (expected: model-load fail)
+ok ds4 --gpu-vram 0 does not print GPU layout (short-circuit reached)
+ok tensor parallel rejects explicit layer slices
+ok tensor-parallel worker requires coordinator address
+ok tensor-parallel common options reach model loading
+ok obsolete --tp-coordinator is rejected
+ok obsolete --tp-lead is rejected
+ok obsolete --tp-coordinator-host is rejected
+ok obsolete --tp-lead-host is rejected
+ok obsolete --tp-worker is rejected
+ok obsolete --tp-transport is rejected
+ok obsolete --tp-debug-hash is rejected
+ok obsolete --tp-token-prefill is rejected
+ok ds4-agent parses advertised --cuda
+ok ds4-agent parses --backend cuda
+ok ds4-agent tensor-parallel coordinator options reach model loading
+ok ds4-agent tensor-parallel worker directs users to ds4
+ok ds4-agent --prompt-file reaches model loading
+ok ds4-agent rejects two initial prompt sources
+ok ds4 --gpu-vram 40,12 prints expected layout line
+
+test_gpu_args_cli: PASS=90 FAIL=0

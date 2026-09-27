@@ -1,0 +1,9 @@
+cc -O3 -g -mcpu=native -Wall -Wextra -std=c99 -Wno-unused-function -DDS4_NO_GPU -I. -c -o tests/test_deepseek41_gguf.o tests/test_deepseek41_gguf.c
+cc -O3 -g -mcpu=native -Wall -Wextra -std=c99 -I. -o tests/test_deepseek41_gguf tests/test_deepseek41_gguf.o ds4_engram.c ds4_image.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o -lm -pthread
+./tests/test_deepseek41_gguf
+ds4: warming mapped tensor pages: 0.00 GiB
+ds4: warmed tensor pages in 0.000s (checksum=0)
+ds4: warming mapped tensor pages: 0.00 GiB
+ds4: warmed tensor pages in 0.000s (checksum=0)
+ds4: V4.1 Engram tables must follow the page-aligned main weights
+V4.1 disk-only GGUF extent: PASS

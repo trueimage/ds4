@@ -1,0 +1,41 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 6.144 ms, residency requested in 2915.133 ms, warmup 7.294 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 294.14 GiB = 302.03 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.787000,"resident_fraction":1.000000,"rep":0,"ms":2.131000,"copy_ms":1.159000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":1.326000,"resident_fraction":0.000000,"rep":1,"ms":4.921000,"copy_ms":0.498000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":1.310000,"resident_fraction":0.000000,"rep":2,"ms":5.582000,"copy_ms":0.508000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.109000,"resident_fraction":1.000000,"rep":3,"ms":1.764000,"copy_ms":0.503000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.098000,"resident_fraction":1.000000,"rep":4,"ms":1.773000,"copy_ms":0.517000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":1.292000,"resident_fraction":0.000000,"rep":5,"ms":5.530000,"copy_ms":0.534000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":false,"load_ms":1.293000,"resident_fraction":0.000000,"rep":6,"ms":5.373000,"copy_ms":0.531000,"bytes":14283479,"exact":true}
+{"pos":512,"staged":false,"cached_io":true,"load_ms":1.177000,"resident_fraction":1.000000,"rep":7,"ms":2.020000,"copy_ms":0.527000,"bytes":14283479,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":2.360000,"resident_fraction":1.000000,"rep":0,"ms":3.479000,"copy_ms":1.809000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":2.268000,"resident_fraction":0.000000,"rep":1,"ms":11.279000,"copy_ms":0.807000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":2.419000,"resident_fraction":0.000000,"rep":2,"ms":12.200000,"copy_ms":0.833000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.902000,"resident_fraction":1.000000,"rep":3,"ms":3.055000,"copy_ms":0.817000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.931000,"resident_fraction":1.000000,"rep":4,"ms":3.028000,"copy_ms":0.804000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":2.187000,"resident_fraction":0.000000,"rep":5,"ms":9.957000,"copy_ms":0.768000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":false,"load_ms":2.353000,"resident_fraction":0.000000,"rep":6,"ms":11.563000,"copy_ms":0.798000,"bytes":24124993,"exact":true}
+{"pos":2048,"staged":false,"cached_io":true,"load_ms":1.847000,"resident_fraction":1.000000,"rep":7,"ms":2.962000,"copy_ms":0.784000,"bytes":24124993,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":7.886000,"resident_fraction":1.000000,"rep":0,"ms":7.752000,"copy_ms":5.125000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":6.434000,"resident_fraction":0.000000,"rep":1,"ms":12.515000,"copy_ms":2.287000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":6.370000,"resident_fraction":0.000000,"rep":2,"ms":12.396000,"copy_ms":2.386000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":5.929000,"resident_fraction":1.000000,"rep":3,"ms":7.875000,"copy_ms":2.316000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":5.829000,"resident_fraction":1.000000,"rep":4,"ms":7.797000,"copy_ms":2.288000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":6.319000,"resident_fraction":0.000000,"rep":5,"ms":12.455000,"copy_ms":2.322000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":false,"load_ms":6.687000,"resident_fraction":0.000000,"rep":6,"ms":12.307000,"copy_ms":2.314000,"bytes":63505480,"exact":true}
+{"pos":8193,"staged":false,"cached_io":true,"load_ms":5.883000,"resident_fraction":1.000000,"rep":7,"ms":7.784000,"copy_ms":2.289000,"bytes":63505480,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":26.301000,"resident_fraction":1.000000,"rep":0,"ms":25.666000,"copy_ms":17.208000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":20.032000,"resident_fraction":0.000000,"rep":1,"ms":41.519000,"copy_ms":7.356000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":19.725000,"resident_fraction":0.000000,"rep":2,"ms":41.630000,"copy_ms":7.313000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":20.618000,"resident_fraction":1.000000,"rep":3,"ms":25.755000,"copy_ms":7.288000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":19.606000,"resident_fraction":1.000000,"rep":4,"ms":25.735000,"copy_ms":7.338000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":19.588000,"resident_fraction":0.000000,"rep":5,"ms":41.880000,"copy_ms":7.330000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":false,"load_ms":19.678000,"resident_fraction":0.000000,"rep":6,"ms":41.399000,"copy_ms":7.327000,"bytes":220543928,"exact":true}
+{"pos":32703,"staged":false,"cached_io":true,"load_ms":20.230000,"resident_fraction":1.000000,"rep":7,"ms":25.715000,"copy_ms":7.367000,"bytes":220543928,"exact":true}

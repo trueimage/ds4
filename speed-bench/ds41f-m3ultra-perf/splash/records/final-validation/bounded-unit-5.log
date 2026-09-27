@@ -1,0 +1,17 @@
+RUN: test_tensor_to_entry
+RUN: test_null_config
+RUN: test_forced_two_tier_no_spill
+RUN: test_cpu_spill
+RUN: test_zero_budget_guard
+ds4: ds4_gpu_config has n_gpus=2 but every vram_bytes[d]==0; caller must populate explicit budgets (auto-detect is the CLI's job, not the engine's)
+RUN: test_placement_ctx_hint_scales
+RUN: test_pertier_overhead_pushes_to_spill
+RUN: test_no_per_layer_scratch_double_count
+RUN: test_glm_per_layer_cache_accounting
+RUN: test_glm_session_count_accounting
+RUN: test_glm_memory_guard_budget
+RUN: test_cuda_tp_prefill_default_accounting
+RUN: test_cuda_tp_output_head_moves_to_lower_half
+RUN: test_qwen4_disk_ngram_accounting
+
+test_engine_mgpu_placement: 114/114 checks passed (0 failed)

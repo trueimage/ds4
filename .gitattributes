@@ -1,3 +1,10 @@
 # Preserve hosted-model continuation bytes exactly; these fixtures may contain
 # model-generated trailing whitespace that is meaningful to tokenizer scoring.
 gguf-tools/quality-testing/data/*/continuations/*.txt -diff
+
+# Preserve the exact benchmark inputs and captured output used by the hashes.
+# Unified-diff context lines also carry a significant leading space when blank.
+speed-bench/ds41f-m3ultra-perf/splash/**/*.patch -text -whitespace
+speed-bench/ds41f-m3ultra-perf/splash/**/*.diff -text -whitespace
+speed-bench/ds41f-m3ultra-perf/splash/*prompts-*/*.txt -text -whitespace
+speed-bench/ds41f-m3ultra-perf/splash/**/trace.log -text -whitespace

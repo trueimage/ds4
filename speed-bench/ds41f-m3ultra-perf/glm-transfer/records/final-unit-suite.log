@@ -1,0 +1,328 @@
+MTL_DEBUG_LAYER=1 ./tests/test_deepseek41_fusions
+2026-09-18 22:34:44.658 test_deepseek41_fusions[40828:506657860] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.052 ms, residency requested in 0.371 ms, warmup 12.263 ms (mapped 23.95 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+router: 240 scalar/batch cases, ids/weights/probabilities/guards exact
+HC: 120 cases, previous-mixer collapse and normalized BF16 outputs exact
+shared: 120 full-shaped Q8 cases, gate/up/mid BF16 bits exact
+MTL_DEBUG_LAYER=1 ./tests/test_deepseek41_topk
+2026-09-18 22:34:45.617 test_deepseek41_topk[40829:506657888] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+V4.1 DSA top-k exact PASS: 600 poisoned draws, recovery, accepted=80 fallback=280 host-skipped=240
+./tests/test_deepseek41_metal
+2026-09-18 22:34:46.462 test_deepseek41_metal[40836:506657938] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.047 ms, residency requested in 0.175 ms, warmup 12.134 ms (mapped 0.02 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+256/384-expert routing, ties/extremes and scalar/batch oracle: PASS
+V4.1 BF16/FP8/FP4 round trips: exact
+V4.1 Engram gate: 13 BF16 boundary differences, relative RMS 1.1265568e-05
+V4.1 strided RoPE: exact row parity through 1M positions, guards PASS
+V4.1 pair pooling: exact across eight chunk sizes
+V4.1 causal candidate blocks and filtering: exact
+V4.1 bounded sparse KV gather: exact
+V4.1 index scores mode=0 range=0 ratio=1 start=1024 rows=1 error=0
+V4.1 index scores mode=0 range=0 ratio=1 start=1018 rows=7 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=1017 rows=8 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=1016 rows=9 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=994 rows=31 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=993 rows=32 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=992 rows=33 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=1 error=0
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=7 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=8 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=9 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=31 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=32 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=1 start=0 rows=33 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2049 rows=1 error=0
+V4.1 index scores mode=0 range=0 ratio=2 start=2043 rows=7 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2042 rows=8 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2041 rows=9 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2019 rows=31 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2018 rows=32 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=2017 rows=33 error=4.72658926e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=1 error=0
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=7 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=8 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=9 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=31 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=32 error=1.55527499e-08
+V4.1 index scores mode=0 range=0 ratio=2 start=0 rows=33 error=1.55527499e-08
+V4.1 index scores mode=0 range=1 ratio=1 start=1024 rows=1 error=1.80278765e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=1018 rows=7 error=2.40488476e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=1017 rows=8 error=2.41878195e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=1016 rows=9 error=2.41878195e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=994 rows=31 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=993 rows=32 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=992 rows=33 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=1 error=6.64401303e-08
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=7 error=1.05153836e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=8 error=1.4528372e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=9 error=1.4528372e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=31 error=1.58137948e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=32 error=1.58137948e-07
+V4.1 index scores mode=0 range=1 ratio=1 start=0 rows=33 error=1.58137948e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2049 rows=1 error=1.80278765e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2043 rows=7 error=2.40488476e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2042 rows=8 error=2.41878195e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2041 rows=9 error=2.41878195e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2019 rows=31 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2018 rows=32 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=2017 rows=33 error=2.80222811e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=1 error=0
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=7 error=9.38345007e-08
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=8 error=9.38345007e-08
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=9 error=9.38345007e-08
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=31 error=1.54975616e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=32 error=1.54975616e-07
+V4.1 index scores mode=0 range=1 ratio=2 start=0 rows=33 error=1.54975616e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=1024 rows=1 error=2.10364297e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=1018 rows=7 error=2.34058873e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=1017 rows=8 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=1016 rows=9 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=994 rows=31 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=993 rows=32 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=992 rows=33 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=1 error=1.38739257e-08
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=7 error=1.15792605e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=8 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=9 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=31 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=32 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=1 start=0 rows=33 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2049 rows=1 error=2.10364297e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2043 rows=7 error=2.34058873e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2042 rows=8 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2041 rows=9 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2019 rows=31 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2018 rows=32 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=2017 rows=33 error=3.5958558e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=1 error=0
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=7 error=8.22988331e-08
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=8 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=9 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=31 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=32 error=1.75442299e-07
+V4.1 index scores mode=0 range=2 ratio=2 start=0 rows=33 error=1.75442299e-07
+ds4: Metal GLM indexer batch scores received undersized buffers
+V4.1 causal batched index scores: double-precision oracle PASS
+ds4: Metal model views created in 0.039 ms, residency requested in 0.073 ms, warmup 0.477 ms (mapped 0.19 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 batched embedding rows=1: exact scalar and independent oracle PASS
+V4.1 batched embedding rows=7: exact scalar and independent oracle PASS
+V4.1 batched embedding rows=127: exact scalar and independent oracle PASS
+V4.1 batched embedding rows=128: exact scalar and independent oracle PASS
+V4.1 batched embedding rows=257: exact scalar and independent oracle PASS
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.032 ms, residency requested in 0.119 ms, warmup 7.364 ms (mapped 10.00 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 exact F16 projection width=1280 output=4096 rows=1 RMS=0 1.485 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=31 RMS=0 0.947 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=64 RMS=0 1.404 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=65 RMS=0 1.428 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=513 RMS=0 5.442 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=2048 RMS=0 20.776 ms
+V4.1 exact F16 projection width=1280 output=4096 rows=4096 RMS=0 41.144 ms
+ds4: Metal F16 tensor matmul range is outside the mapped model
+ds4: Metal F16 tensor matmul received undersized activation buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.031 ms, residency requested in 0.050 ms, warmup 6.521 ms (mapped 0.31 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 exact F16 projection width=5120 output=32 rows=1 RMS=0 0.317 ms
+V4.1 exact F16 projection width=5120 output=32 rows=31 RMS=0 1.020 ms
+V4.1 exact F16 projection width=5120 output=32 rows=64 RMS=0 0.305 ms
+V4.1 exact F16 projection width=5120 output=32 rows=65 RMS=0 0.271 ms
+V4.1 exact F16 projection width=5120 output=32 rows=513 RMS=0 0.334 ms
+V4.1 exact F16 projection width=5120 output=32 rows=2048 RMS=0 1.429 ms
+V4.1 exact F16 projection width=5120 output=32 rows=4096 RMS=0 0.935 ms
+ds4: Metal F16 tensor matmul range is outside the mapped model
+ds4: Metal F16 tensor matmul received undersized activation buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.035 ms, residency requested in 0.071 ms, warmup 6.229 ms (mapped 5.00 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 exact F16 projection width=5120 output=512 rows=1 RMS=0 0.414 ms
+V4.1 exact F16 projection width=5120 output=512 rows=31 RMS=0 1.027 ms
+V4.1 exact F16 projection width=5120 output=512 rows=64 RMS=0 0.414 ms
+V4.1 exact F16 projection width=5120 output=512 rows=65 RMS=0 1.095 ms
+V4.1 exact F16 projection width=5120 output=512 rows=513 RMS=0 1.273 ms
+V4.1 exact F16 projection width=5120 output=512 rows=2048 RMS=0 4.207 ms
+V4.1 exact F16 projection width=5120 output=512 rows=4096 RMS=0 8.258 ms
+ds4: Metal F16 tensor matmul range is outside the mapped model
+ds4: Metal F16 tensor matmul received undersized activation buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.022 ms, residency requested in 0.042 ms, warmup 6.486 ms (mapped 0.12 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 exact F16 projection width=512 output=128 rows=1 RMS=0 0.307 ms
+V4.1 exact F16 projection width=512 output=128 rows=31 RMS=0 0.888 ms
+V4.1 exact F16 projection width=512 output=128 rows=64 RMS=0 0.859 ms
+V4.1 exact F16 projection width=512 output=128 rows=65 RMS=0 0.886 ms
+V4.1 exact F16 projection width=512 output=128 rows=513 RMS=0 0.332 ms
+V4.1 exact F16 projection width=512 output=128 rows=2048 RMS=0 0.591 ms
+V4.1 exact F16 projection width=512 output=128 rows=4096 RMS=0 0.956 ms
+ds4: Metal F16 tensor matmul range is outside the mapped model
+ds4: Metal F16 tensor matmul received undersized activation buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+V4.1 variable-k sort width=1: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=2: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=31: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=127: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=255: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=256: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=257: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=511: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=512: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=513: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=1023: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=1024: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=1025: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=2047: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=2048: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=2049: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=4095: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=4096: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=4097: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=8191: independent sorted-value/unique-ID oracle PASS
+V4.1 variable-k sort width=8192: independent sorted-value/unique-ID oracle PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=1024: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=1025: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=1535: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=2047: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=2048: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=4095: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=16383: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=32767: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=1 visible=65535: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=1024: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=1025: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=1535: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=2047: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=2048: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=4095: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=16383: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=32767: exact IDs including ties PASS
+ds4: Metal graph indexer top-k received undersized buffers
+V4.1 causal top-k ratio=2 visible=65535: exact IDs including ties PASS
+V4.1 compact carry format=0 width=1: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=31: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=32: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=33: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=127: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=128: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=129: exact round-trip and bounds PASS
+V4.1 compact carry format=0 width=20480: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=1: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=31: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=32: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=33: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=127: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=128: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=129: exact round-trip and bounds PASS
+V4.1 compact carry format=1 width=20480: exact round-trip and bounds PASS
+ds4: Metal model views created in 0.020 ms, residency requested in 0.529 ms, warmup 1.152 ms (mapped 76.50 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 batched Q8 output, BF16 boundary, rows=31: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=32: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=63: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=64: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=65: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=257: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=512: PASS
+V4.1 batched Q8 output, BF16 boundary, rows=513: PASS
+ds4: Metal attention output batch weights are outside the mapped model
+ds4: Metal attention output batch received undersized buffers
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=1: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=31: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=32: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=33: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=63: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=64: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=65: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=127: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=128: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=129: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=257: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=512: PASS
+V4.1 TP Q8 output, both ranks, BF16 and double oracle, rows=513: PASS
+ds4: Metal attention output batch weights are outside the mapped model
+ds4: Metal attention output batch received undersized buffers
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.018 ms, residency requested in 0.050 ms, warmup 6.210 ms (mapped 0.02 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+V4.1 TP attention rows=1 ratio=1 max split=0 oracle=9.17783e-09: PASS
+V4.1 TP attention rows=31 ratio=2 max split=0 oracle=2.69163e-08: PASS
+V4.1 TP attention rows=32 ratio=1 max split=0 oracle=4.80859e-08: PASS
+V4.1 TP attention rows=33 ratio=2 max split=0 oracle=3.83804e-08: PASS
+V4.1 TP attention rows=129 ratio=1 max split=0 oracle=1.62363e-08: PASS
+V4.1 TP attention rows=257 ratio=2 max split=0 oracle=4.00953e-08: PASS
+TP indexed attention control=1 13.676 ms
+TP indexed attention control=0 13.651 ms
+TP indexed attention control=0 13.589 ms
+TP indexed attention control=1 13.646 ms
+V4.1 TP attention rows=2048 ratio=1 max split=0 oracle=3.059e-08: PASS
+./tests/test_glm53_router_shared
+2026-09-18 22:34:53.328 test_glm53_router_shared[40838:506658002] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.029 ms, residency requested in 0.227 ms, warmup 7.274 ms (mapped 21.53 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: Metal SSD streaming mode enabled; full model residency and warmup are skipped
+GLM router/shared exact: PASS (240 poisoned draws, failure recovery, counter reuse)
+./tests/test_glm53_topk_fast
+2026-09-18 22:34:54.054 test_glm53_topk_fast[40840:506658025] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+GLM DSA top-k exact PASS: 720 poisoned draws, recovery, accepted=100 fallback=380 host-skipped=240
+./tests/test_glm53_q8_inputs
+2026-09-18 22:34:55.321 test_glm53_q8_inputs[40841:506658037] Metal API Validation Enabled
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 0.037 ms, residency requested in 0.752 ms, warmup 6.710 ms (mapped 104.50 MiB from offset 0.00 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+GLM mixed Q8/BF16 inputs exact PASS: 120 poisoned draws, six complete projections, refusal gates

@@ -1,0 +1,76 @@
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -12,6 +12,7 @@
+ #include <ctype.h>
+ #include <dirent.h>
+ #include <errno.h>
++#include <fcntl.h>
+ #include <math.h>
+ #include <stdarg.h>
+ #include <stdio.h>
+@@ -129,6 +130,18 @@
+     char *p = b->ptr;
+     memset(b, 0, sizeof(*b));
+     return p;
++}
++
++static void kv_cache_uncached_io(FILE *fp) {
++#ifdef __APPLE__
++    if (fp && !getenv("DS4_KVSTORE_CACHED_IO")) {
++        // Streaming checkpoint data need not displace mmap weights or Engram.
++        // Keep read-ahead enabled; distributed staging is read back immediately.
++        if (fcntl(fileno(fp),F_NOCACHE,1) == 0) setvbuf(fp,NULL,_IOFBF,1u<<20);
++    }
++#else
++    (void)fp;
++#endif
+ }
+ 
+ static double kv_now_sec(void) {
+@@ -1141,6 +1154,7 @@
+         return false;
+     }
+ 
++    kv_cache_uncached_io(fp);
+ 
+     const uint64_t now = (uint64_t)time(NULL);
+     uint8_t h[DS4_KVSTORE_FIXED_HEADER];
+@@ -1320,6 +1334,7 @@
+         free(path);
+         return 0;
+     }
++    kv_cache_uncached_io(fp);
+     uint32_t text_bytes = 0;
+     ds4_kvstore_entry hdr = {0};
+     const char *fail_reason = "invalid header";
+--- a/speed-bench/kvstore_write_bench.c
++++ b/speed-bench/kvstore_write_bench.c
+@@ -24,6 +24,7 @@
+ }
+ int main(int argc,char **argv) {
+     char err[256]={0};
++    const bool nocache = getenv("DS4_TEST_KV_NOCACHE") != NULL;
+     CHECK(argc==3 || argc==4);
+     ds4_engine_options opt={.model_path=argv[1],.backend=DS4_BACKEND_METAL,
+         .context_size=32768,.power_percent=100,.ssd_streaming=argc==4,
+@@ -48,7 +49,10 @@
+         uint8_t *reference=NULL;size_t reference_bytes=0;
+         for(unsigned rep=0;rep<8;rep++) {
+             const bool staged=(rep%4==0 || rep%4==3);
+-            if(staged)setenv("DS4_KVSTORE_STAGE_PAYLOAD","1",1);
++            if(nocache) {
++                if(staged)setenv("DS4_KVSTORE_CACHED_IO","1",1);else unsetenv("DS4_KVSTORE_CACHED_IO");
++            }
++            if(staged && !nocache)setenv("DS4_KVSTORE_STAGE_PAYLOAD","1",1);
+             else unsetenv("DS4_KVSTORE_STAGE_PAYLOAD");
+             char dir[]="/tmp/ds4-kv-write.XXXXXX";CHECK(mkdtemp(dir));
+             ds4_kvstore kc={0};ds4_kvstore_options ko=ds4_kvstore_default_options();ko.min_tokens=1;
+@@ -81,7 +85,7 @@
+             CHECK(seed.len==actual.len && !memcmp(seed.ptr,actual.ptr,seed.len));
+             ds4_session_snapshot_free(&actual);ds4_tokens_free(&loaded);ds4_kvstore_load_result_free(&hit);
+             printf("{\"pos\":%d,\"staged\":%s,\"cached_io\":%s,\"load_ms\":%.6f,\"resident_fraction\":%.6f,\"rep\":%u,\"ms\":%.6f,\"copy_ms\":%.6f,\"bytes\":%ld,\"exact\":true}\n",
+-                pos,staged?"true":"false","true",load_ms,residency,rep,ms,copy_ms,n);fflush(stdout);
++                pos,(staged && !nocache)?"true":"false",(nocache&&staged)?"true":"false",load_ms,residency,rep,ms,copy_ms,n);fflush(stdout);
+             CHECK(unlink(path)==0);free(path);ds4_kvstore_close(&kc);CHECK(rmdir(dir)==0);
+         }
+         free(reference);free(text);ds4_session_snapshot_free(&seed);

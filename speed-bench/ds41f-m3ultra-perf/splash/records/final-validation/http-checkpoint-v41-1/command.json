@@ -1,0 +1,25 @@
+{
+  "cwd": "/tmp/ds4-splash-20260926/final",
+  "argv": [
+    "./ds4-server",
+    "-m",
+    "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+    "--ctx",
+    "32768",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "59908",
+    "--kv-disk-dir",
+    "/tmp/ds4-splash-20260926/final-validation/http-checkpoint-v41-1/kv",
+    "--kv-disk-space-mb",
+    "4096",
+    "--kv-cache-min-tokens",
+    "16",
+    "--kv-cache-cold-max-tokens",
+    "32768",
+    "--trace",
+    "/tmp/ds4-splash-20260926/final-validation/http-checkpoint-v41-1/trace.log"
+  ],
+  "staged": true
+}

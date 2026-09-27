@@ -2,6 +2,9 @@
 
 Here we collect prefill and generation speed obtained with different hardware.
 
+- [DeepSeek V4.1 Flash Q4 on M3 Ultra](ds41f-m3ultra-perf/README.md):
+  optimization attempts, exactness checks and measurements through a 32K context.
+
 Run `ds4-bench` as:
 
 ```

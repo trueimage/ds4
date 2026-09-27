@@ -1,0 +1,22 @@
+[
+  {
+    "name": "8a5c7eb9b554df6e89eda1589d56e5c154ef2b01.kv",
+    "bytes": 216877358,
+    "masked_sha256": "dad43d60962c78bb98c669c7042da9b0ffd55f1aa3d72803b8214e750f9dff8f"
+  },
+  {
+    "name": "97c7751e0490069775da4c18ac16f554ff785ded.kv",
+    "bytes": 64336716,
+    "masked_sha256": "aa44267f9cdc654c24a72ae0d352530d691a6b45ffc1936a60e3ada2345a7e2d"
+  },
+  {
+    "name": "c6063413ab686a9b116e883a5bdc398c0e523937.kv",
+    "bytes": 207830192,
+    "masked_sha256": "462413cbccb336e7e4bdd059dfb18119c57faeba782ff811ee32029a74a35360"
+  },
+  {
+    "name": "d2e2fd50deb35bb2c04ab5b11ce68a6168fe4807.kv",
+    "bytes": 50368885,
+    "masked_sha256": "3b83b64bd6494097d25da814bb76b1795f29a9ded00526fa75ebf00e29445932"
+  }
+]

@@ -1,0 +1,33 @@
+ds4: Metal device Apple M3 Ultra, 512.00 GiB RAM
+ds4: Metal 4 tensor API disabled for pre-M5/pre-A19 devices
+ds4: drift-patch flags hc_stable=on norm_unify=on kv_raw_f32=off rope_exp2_log2=off math_safe=off tensor_matmul=off
+ds4: Metal model views created in 5.319 ms, residency requested in 2977.819 ms, warmup 7.831 ms (mapped 301201.05 MiB from offset 5.56 MiB)
+ds4: Metal mapped mmaped model as 1 overlapping shared buffers
+ds4: metal backend initialized for graph diagnostics
+ds4: memory: KV 0.21 GiB (raw 0.01 + compressed 0.20) + buffers 7.68 GiB + resident model 294.14 GiB = 302.03 GiB planned
+ds4: memory detail: ctx=32768 prefill_cap=8192 raw_kv_rows=128 compressed_kv_rows=32769 backend=metal
+0926 16:24:35 ds4-server: context buffers 8073.55 MiB (ctx=32768, backend=metal, prefill_chunk=8192, raw_kv_rows=128, compressed_kv_rows=32769)
+ds4: V4.1 static context buffers 8073.55 MiB (ctx=32768), Engram disk-only
+0926 16:24:35 ds4-server: host reclaimable memory after session allocation 201.01 GiB (pressure=1)
+0926 16:24:35 ds4-server: KV disk cache /tmp/ds4-splash-20260926/final-validation/http-checkpoint-v41-4/kv (budget=4096 MiB, cross-quant=accept, min=16, cold_max=32768, continued=10000, trim=32, align=2048, hit_half_life=21600s)
+0926 16:24:35 ds4-server: tracing session to /tmp/ds4-splash-20260926/final-validation/http-checkpoint-v41-4/trace.log
+0926 16:24:35 ds4-server: listening on http://127.0.0.1:60242
+0926 16:24:36 ds4-server: chat ctx=0..10166:10166 prompt start
+0926 16:24:48 ds4-server: chat ctx=0..10166:10166 prefill chunk 8192/10166 (80.6%) chunk=0.00 t/s avg=681.65 t/s 12.018s
+0926 16:24:48 ds4-server: kv cache stored tokens=8192 trimmed=1974 reason=cold key=token-text size=60.55 MiB save=19.7 ms
+0926 16:24:53 ds4-server: chat ctx=0..10166:10166 prefill chunk 10166/10166 (100.0%) chunk=358.65 t/s avg=580.19 t/s 17.522s
+0926 16:24:53 ds4-server: chat ctx=0..10166:10166 prompt done 17.523s
+0926 16:24:55 ds4-server: chat ctx=10166..10216:50 gen=50 decoding chunk=29.27 t/s avg=29.27 t/s 1.708s
+0926 16:24:55 ds4-server: chat ctx=10216..10230:14 gen=64 decoding chunk=29.05 t/s avg=29.23 t/s 2.190s
+0926 16:24:55 ds4-server: chat ctx=0..10166:10166 gen=64 finish=length 19.713s
+0926 16:24:55 ds4-server: chat ctx=10230..10240:10 prompt start
+0926 16:24:55 ds4-server: chat ctx=10230..10240:10 prefill chunk 10/10 (100.0%) chunk=0.00 t/s avg=40.35 t/s 0.248s
+0926 16:24:55 ds4-server: kv cache skipped tokens=10240 reason=continued because KV payload staging failed: session has no valid checkpoint to stage
+0926 16:24:56 ds4-server: kv cache stored tokens=10240 trimmed=0 reason=continued key=token-text size=73.06 MiB save=19.2 ms
+0926 16:24:56 ds4-server: chat ctx=10230..10240:10 prompt done 0.270s
+0926 16:24:57 ds4-server: chat ctx=10240..10290:50 gen=50 decoding chunk=29.33 t/s avg=29.33 t/s 1.705s
+0926 16:24:58 ds4-server: chat ctx=10290..10304:14 gen=64 decoding chunk=29.06 t/s avg=29.27 t/s 2.186s
+0926 16:24:58 ds4-server: chat ctx=10230..10240:10 gen=64 finish=length 2.457s
+0926 16:24:58 ds4-server: shutdown requested, draining requests
+0926 16:24:58 ds4-server: persisting resident KV cache before shutdown slot=0 tokens=10304
+0926 16:24:58 ds4-server: kv cache stored tokens=10304 trimmed=0 reason=shutdown key=token-text size=73.45 MiB save=19.0 ms

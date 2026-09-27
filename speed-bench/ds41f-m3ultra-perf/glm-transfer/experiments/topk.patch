@@ -1,0 +1,347 @@
+diff --git a/ds4.c b/ds4.c
+index 8444321..95dfd5f 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -40722,2 +40722,9 @@ static bool ds41_attention_pick(ds41_gpu_graph *g, uint32_t il) {
+-    return ds41_attention_candidates(g, il) && (!n_comp || !ds41_index_source(il) ||
+-        ds4_gpu_indexer_topk_tensor(g->selected_comp, g->index_scores, n_comp, 1, top));
++    if (!ds41_attention_candidates(g, il)) return false;
++    if (!n_comp || !ds41_index_source(il)) return true;
++#ifdef __APPLE__
++    /* Later indexer layers contain intentional -Inf masks; the histogram
++     * would reject those rows, so retain their ordinary sort directly. */
++    if (il <= 20u && !g->image_count && !g->imatrix)
++        return ds4_gpu_dsv41_indexer_topk(g->selected_comp, g->index_scores, n_comp, top);
++#endif
++    return ds4_gpu_indexer_topk_tensor(g->selected_comp, g->index_scores, n_comp, 1, top);
+@@ -40794,0 +40802,18 @@ static bool ds41_attention(ds41_gpu_graph *g, const ds4_model *m,
++static bool ds41_shared_mid(ds41_gpu_graph *g, const ds4_model *m,
++                             const ds4_layer_weights *l) {
++#ifdef __APPLE__
++    if (!g->image_count && !g->imatrix && l->ffn_gate_shexp->type == DS4_TENSOR_Q8_0 &&
++        l->ffn_up_shexp->type == DS4_TENSOR_Q8_0) {
++        const int rc = ds4_gpu_dsv41_shared(g->shared_gate, g->shared_up, g->shared_mid,
++            g->norm, m->map, m->size, l->ffn_gate_shexp->abs_offset,
++            l->ffn_up_shexp->abs_offset, DS4_SWIGLU_CLAMP_EXP);
++        if (rc) return rc > 0;
++    }
++#endif
++    return ds41_matmul(g->shared_gate, m, l->ffn_gate_shexp, g->norm, true) &&
++        ds41_matmul(g->shared_up, m, l->ffn_up_shexp, g->norm, true) &&
++        ds4_gpu_swiglu_tensor(g->shared_mid, g->shared_gate, g->shared_up,
++            DS4_N_FF_EXP, DS4_SWIGLU_CLAMP_EXP, 1.0f) &&
++        ds41_bf16(g->shared_mid, DS4_N_FF_EXP);
++}
++
+@@ -40827,6 +40852,2 @@ static bool ds41_moe_partial(ds41_gpu_graph *g, const ds4_model *m,
+-        (!ds41_matmul(g->shared_gate, m, l->ffn_gate_shexp, g->norm, true) ||
+-        !ds41_matmul(g->shared_up, m, l->ffn_up_shexp, g->norm, true) ||
+-        !ds4_gpu_swiglu_tensor(g->shared_mid, g->shared_gate, g->shared_up,
+-                              DS4_N_FF_EXP, DS4_SWIGLU_CLAMP_EXP, 1.0f) ||
+-        !ds41_bf16(g->shared_mid, DS4_N_FF_EXP) ||
+-        !ds41_matmul(g->shared, m, l->ffn_down_shexp, g->shared_mid, true))) return false;
++        (!ds41_shared_mid(g, m, l) ||
++         !ds41_matmul(g->shared, m, l->ffn_down_shexp, g->shared_mid, true))) return false;
+@@ -40888,0 +40910,15 @@ static bool ds41_graph_logits(ds41_gpu_graph *g, const ds4_model *m,
++static bool ds41_hc_collapse_norm(ds41_gpu_graph *g, const ds4_model *m,
++                                  const ds4_tensor *weight,
++                                  const ds4_gpu_tensor *residual,
++                                  const ds4_gpu_tensor *pre) {
++#ifdef __APPLE__
++    if (!g->image_count && !g->imatrix) {
++        const int rc = ds4_gpu_dsv41_hc_norm(g->x, g->norm, residual, pre,
++            m->map, m->size, weight->abs_offset, DS4_RMS_EPS);
++        if (rc) return rc > 0;
++    }
++#endif
++    return ds4_gpu_hc_weighted_sum_tensor(g->x, residual, pre, DS4_N_EMBD, DS4_N_HC) &&
++        ds41_bf16(g->x, DS4_N_EMBD) && ds41_norm(g->norm, g->x, m, weight);
++}
++
+@@ -40899,2 +40935 @@ static bool ds41_graph_before_attention(ds41_gpu_graph *g, const ds4_model *m,
+-        ds4_gpu_hc_weighted_sum_tensor(g->x, g->residual, g->pre, DS4_N_EMBD, DS4_N_HC) &&
+-        ds41_bf16(g->x, DS4_N_EMBD) && ds41_norm(g->norm, g->x, m, l->attn_norm);
++        ds41_hc_collapse_norm(g, m, l->attn_norm, g->residual, g->pre);
+@@ -40908,2 +40943 @@ static bool ds41_graph_after_attention(ds41_gpu_graph *g, const ds4_model *m,
+-        ds4_gpu_hc_weighted_sum_split_tensor(g->x, g->after_attn, g->attn_split, DS4_N_EMBD, DS4_N_HC) &&
+-        ds41_bf16(g->x, DS4_N_EMBD) && ds41_norm(g->norm, g->x, m, l->ffn_norm);
++        ds41_hc_collapse_norm(g, m, l->ffn_norm, g->after_attn, g->attn_split);
+diff --git a/ds4_gpu.h b/ds4_gpu.h
+index 166f3e5..f1d1c5c 100644
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -268,0 +269 @@ enum {
++    DS4_GPU_TEST_V41_FUSIONS = 1u << 10,
+@@ -272,0 +274,12 @@ uint32_t ds4_gpu_test_v41_q4_tail_take_dispatches(void);
++uint32_t ds4_gpu_test_v41_fusions_take_dispatches(void);
++int ds4_gpu_dsv41_indexer_topk(ds4_gpu_tensor *selected,
++    const ds4_gpu_tensor *scores, uint32_t width, uint32_t top_k);
++int ds4_gpu_dsv41_shared(ds4_gpu_tensor *gate, ds4_gpu_tensor *up, ds4_gpu_tensor *mid,
++    const ds4_gpu_tensor *x, const void *model_map, uint64_t model_size,
++    uint64_t gate_offset, uint64_t up_offset, float clamp);
++/* V4.1 decode collapse with the preceding mixer, BF16 boundaries and RMSNorm.
++ * Returns 1 when encoded, 0 when unsupported, -1 on encoding failure. */
++int ds4_gpu_dsv41_hc_norm(ds4_gpu_tensor *collapsed, ds4_gpu_tensor *norm,
++    const ds4_gpu_tensor *residual, const ds4_gpu_tensor *pre,
++    const void *model_map, uint64_t model_size, uint64_t weight_offset, float eps);
++
+diff --git a/ds4_metal.m b/ds4_metal.m
+index b4f2c40..a36ea94 100644
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -425,0 +426,7 @@ static void ds4_gpu_timeline_attach(id<MTLCommandBuffer> cb) {
++static uint32_t g_test_v41_fusions_dispatches;
++
++uint32_t ds4_gpu_test_v41_fusions_take_dispatches(void) {
++    const uint32_t result = g_test_v41_fusions_dispatches;
++    g_test_v41_fusions_dispatches = 0;
++    return result;
++}
+@@ -19220 +19227 @@ static int ds4_gpu_indexer_topk_tensor_impl(
+-        bool                    glm53_fast) {
++        uint32_t fast_policy) {
+@@ -19300 +19307,4 @@ static int ds4_gpu_indexer_topk_tensor_impl(
+-        bool use_fast = glm53_fast && !causal_ratio && getenv("DS4_GLM_ENABLE_TOPK_FAST") &&
++        const bool v41_fast = fast_policy == 41u && !g_quality_mode &&
++            n_comp <= 32768u && !getenv("DS4_METAL_DISABLE_V41_TOPK_FAST");
++        bool use_fast = (v41_fast || (fast_policy == 53u && getenv("DS4_GLM_ENABLE_TOPK_FAST"))) &&
++            !causal_ratio &&
+@@ -19467 +19477,6 @@ int ds4_gpu_glm53_indexer_topk_tensor(ds4_gpu_tensor *selected,
+-    return ds4_gpu_indexer_topk_tensor_impl(selected, scores, n_comp, n_tokens, top_k, 0, 0, true);
++    return ds4_gpu_indexer_topk_tensor_impl(selected, scores, n_comp, n_tokens, top_k, 0, 0, 53u);
++}
++
++int ds4_gpu_dsv41_indexer_topk(ds4_gpu_tensor *selected,
++        const ds4_gpu_tensor *scores, uint32_t width, uint32_t top_k) {
++    return ds4_gpu_indexer_topk_tensor_impl(selected, scores, width, 1, top_k, 0, 0, 41u);
+@@ -20617 +20632 @@ static int ds4_gpu_shared_gate_up_swiglu_q8_0_impl(
+-        int                     store_gate_up) {
++        int                     store_gate_up, bool bf16) {
+@@ -20671 +20686 @@ static int ds4_gpu_shared_gate_up_swiglu_q8_0_impl(
+-        const char *fn_name = store_gate_up ?
++        const char *fn_name = bf16 ? "kernel_dsv41_shared_gate_up" : store_gate_up ?
+@@ -20702,0 +20718 @@ static int ds4_gpu_shared_gate_up_swiglu_q8_0_impl(
++        if (bf16 && (g_test_flags & DS4_GPU_TEST_V41_FUSIONS)) g_test_v41_fusions_dispatches |= 4u;
+@@ -20950 +20966 @@ int ds4_gpu_shared_gate_up_swiglu_q8_0_tensor(
+-                                                   1);
++                                                   1, false);
+@@ -20974 +20990 @@ int ds4_gpu_shared_mid_swiglu_q8_0_tensor(
+-                                                   0);
++                                                   0, false);
+@@ -21000 +21016 @@ int ds4_gpu_shared_gate_up_swiglu_q8_0_model_view_tensor(
+-                                                   1);
++                                                   1, false);
+@@ -34220,0 +34237,23 @@ static int ds4_gpu_encode_router_select(
++    /* V4.1 keeps its 512-wire sorting network and six-lane normalization.
++     * Only the intervening elementwise dispatches and round trips disappear. */
++    if (n_expert == 384u && n_expert_used == 6u && has_bias && !hash_mode &&
++        !mixed_visual && !g_quality_mode && !g_ssd_streaming_mode &&
++        g_tp_split_world == 1 &&
++        (ds4_gpu_device_is_m3_ultra() || (g_test_flags & DS4_GPU_TEST_V41_FUSIONS)) &&
++        !getenv("DS4_METAL_DISABLE_V41_ROUTER_FUSION")) {
++        id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline("kernel_dsv41_router");
++        if (!pipeline || pipeline.maxTotalThreadsPerThreadgroup < 512u || !biasbuf) return 0;
++        id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
++        [enc setComputePipelineState:pipeline];
++        [enc setBytes:&expert_weight_scale length:sizeof(float) atIndex:0];
++        [enc setBuffer:logitsbuf offset:logits_off atIndex:1];
++        [enc setBuffer:biasbuf offset:bias_off atIndex:2];
++        [enc setBuffer:probsbuf offset:probs_off atIndex:3];
++        [enc setBuffer:selectedbuf offset:selected_off atIndex:4];
++        [enc setBuffer:weightsbuf offset:weights_off atIndex:5];
++        [enc dispatchThreadgroups:MTLSizeMake(n_tokens, 1, 1)
++             threadsPerThreadgroup:MTLSizeMake(512, 1, 1)];
++        ds4_gpu_end_compute_encoder(cb, enc);
++        if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) g_test_v41_fusions_dispatches |= 1u;
++        return 1;
++    }
+@@ -51830,0 +51870,45 @@ int ds4_gpu_qwen4_hc_mix_rows_tensor(ds4_gpu_tensor *mixed, const ds4_gpu_tensor
++
++int ds4_gpu_dsv41_hc_norm(ds4_gpu_tensor *collapsed, ds4_gpu_tensor *norm,
++        const ds4_gpu_tensor *residual, const ds4_gpu_tensor *pre,
++        const void *model_map, uint64_t model_size, uint64_t weight_offset, float eps) {
++    if (!g_initialized && !ds4_gpu_init()) return -1;
++    if (g_quality_mode || g_ssd_streaming_mode || g_tp_split_world != 1 ||
++        !(ds4_gpu_device_is_m3_ultra() || (g_test_flags & DS4_GPU_TEST_V41_FUSIONS)) ||
++        getenv("DS4_METAL_DISABLE_V41_HC_NORM")) return 0;
++    const uint64_t bytes = 5120u * sizeof(float);
++    if (!collapsed || !norm || !residual || !pre || !model_map ||
++        ds4_gpu_tensor_bytes(collapsed) < bytes || ds4_gpu_tensor_bytes(norm) < bytes ||
++        ds4_gpu_tensor_bytes(residual) < 4u * bytes || ds4_gpu_tensor_bytes(pre) < 16u ||
++        weight_offset > model_size || bytes > model_size - weight_offset) return -1;
++    uint64_t inner = 0;
++    id<MTLBuffer> wb = ds4_gpu_wrap_model_range(model_map, model_size, weight_offset, bytes, &inner);
++    id<MTLComputePipelineState> pipeline = ds4_gpu_get_pipeline("kernel_dsv41_hc_norm");
++    if (!wb || !pipeline) return -1;
++    if (pipeline.maxTotalThreadsPerThreadgroup < 1024u) return 0;
++    int owned = 0;
++    id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
++    if (!cb) return -1;
++    id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
++    [enc setComputePipelineState:pipeline];
++    [enc setBytes:&eps length:sizeof(eps) atIndex:0];
++    [enc setBuffer:ds4_gpu_tensor_buffer(residual) offset:ds4_gpu_tensor_offset(residual) atIndex:1];
++    [enc setBuffer:ds4_gpu_tensor_buffer(pre) offset:ds4_gpu_tensor_offset(pre) atIndex:2];
++    [enc setBuffer:wb offset:inner atIndex:3];
++    [enc setBuffer:ds4_gpu_tensor_buffer(collapsed) offset:ds4_gpu_tensor_offset(collapsed) atIndex:4];
++    [enc setBuffer:ds4_gpu_tensor_buffer(norm) offset:ds4_gpu_tensor_offset(norm) atIndex:5];
++    [enc dispatchThreadgroups:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(1024,1,1)];
++    ds4_gpu_end_compute_encoder(cb,enc);
++    if (g_test_flags & DS4_GPU_TEST_V41_FUSIONS) g_test_v41_fusions_dispatches |= 2u;
++    return ds4_gpu_finish_command_buffer(cb,owned,"V4.1 HC norm") ? 1 : -1;
++}
++
++int ds4_gpu_dsv41_shared(ds4_gpu_tensor *gate, ds4_gpu_tensor *up, ds4_gpu_tensor *mid,
++        const ds4_gpu_tensor *x, const void *model_map, uint64_t model_size,
++        uint64_t gate_offset, uint64_t up_offset, float clamp) {
++    if (!g_initialized && !ds4_gpu_init()) return -1;
++    if (g_quality_mode || g_ssd_streaming_mode || g_tp_split_world != 1 ||
++        !(ds4_gpu_device_is_m3_ultra() || (g_test_flags & DS4_GPU_TEST_V41_FUSIONS)) ||
++        getenv("DS4_METAL_DISABLE_V41_SHARED_FUSION")) return 0;
++    return ds4_gpu_shared_gate_up_swiglu_q8_0_impl(gate, up, mid, model_map, model_size,
++        gate_offset, up_offset, 5120u, 2304u, x, clamp, 1, true) ? 1 : -1;
++}
+diff --git a/metal/dense.metal b/metal/dense.metal
+index d974722..9767fe5 100644
+--- a/metal/dense.metal
++++ b/metal/dense.metal
+@@ -481 +481,7 @@ kernel void kernel_mul_mv_q8_0_f32_pair(
+-template<short NR0, bool STORE_GATE_UP, short NSG_OVERRIDE = 0>
++static inline float ds4_shared_bf16(float x) {
++    uint bits = as_type<uint>(x);
++    if ((bits & 0x7f800000u) != 0x7f800000u) bits += 0x7fffu + ((bits >> 16u) & 1u);
++    return as_type<float>(bits & 0xffff0000u);
++}
++
++template<short NR0, bool STORE_GATE_UP, short NSG_OVERRIDE = 0, bool BF16 = false>
+@@ -584,2 +590,4 @@ void kernel_dsv4_shared_gate_up_swiglu_q8_0_impl(
+-        const float gate = simd_sum(sh_gate[row][tiisg]);
+-        const float up = simd_sum(sh_up[row][tiisg]);
++        const float gate_sum = simd_sum(sh_gate[row][tiisg]);
++        const float up_sum = simd_sum(sh_up[row][tiisg]);
++        const float gate = BF16 ? ds4_shared_bf16(gate_sum) : gate_sum;
++        const float up = BF16 ? ds4_shared_bf16(up_sum) : up_sum;
+@@ -599 +607,4 @@ void kernel_dsv4_shared_gate_up_swiglu_q8_0_impl(
+-            mid_f32[out_row] = silu * u;
++            if (BF16) {
++                volatile float result = silu * u;
++                mid_f32[out_row] = ds4_shared_bf16(result);
++            } else mid_f32[out_row] = silu * u;
+@@ -622,0 +634,19 @@ kernel void kernel_dsv4_shared_gate_up_swiglu_q8_0(
++[[host_name("kernel_dsv41_shared_gate_up")]]
++kernel void kernel_dsv41_shared_gate_up(
++        constant ds4_metal_args_mul_mv & args,
++        device const char * src0_gate,
++        device const char * src0_up,
++        device const char * src1,
++        device       char * dst_gate,
++        device       char * dst_up,
++        device       char * dst_mid,
++        constant     float &clamp_value,
++        threadgroup  char * shmem [[threadgroup(0)]],
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_dsv4_shared_gate_up_swiglu_q8_0_impl<N_R0_Q8_0, true, 0, true>(
++            args, src0_gate, src0_up, src1, dst_gate, dst_up, dst_mid,
++            clamp_value, shmem, tgpig, tiisg, sgitg);
++}
++
+diff --git a/metal/dsv41.metal b/metal/dsv41.metal
+index 03afd31..816d48a 100644
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -293,0 +294,93 @@ kernel void kernel_dsv41_indexer_scores_packed(
++
++// Fuse the reference 384-expert router without changing its sorting network,
++// active-lane sum or the stored F32 boundaries between normalization stages.
++kernel void kernel_dsv41_router(
++        constant float &scale, device const float *logits,
++        device const float *bias, device float *probs,
++        device int *selected, device float *weights,
++        uint row [[threadgroup_position_in_grid]],
++        uint tid [[thread_index_in_threadgroup]]) {
++    threadgroup int ids[512];
++    threadgroup volatile float scores[512];
++    threadgroup volatile float scratch[40];
++    ids[tid] = int(tid);
++    if (tid < 384u) {
++        const float x = logits[row * 384u + tid];
++        scores[tid] = x > 20.0f ? x : log(1.0f + exp(x));
++        const float p = sqrt(scores[tid]);
++        probs[row * 384u + tid] = p;
++        scores[tid] = p + bias[tid];
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
++    // Match kernel_argsort_f32_i32_desc, including padding and unordered ties.
++    for (uint k = 2; k <= 512u; k <<= 1u) {
++        for (uint j = k >> 1u; j; j >>= 1u) {
++            const uint other = tid ^ j;
++            if (other > tid) {
++                const int a = ids[tid], b = ids[other];
++                const bool swap = (tid & k) == 0u ?
++                    (a >= 384 || (b < 384 && scores[a] < scores[b])) :
++                    (b >= 384 || (a < 384 && scores[a] > scores[b]));
++                if (swap) { ids[tid] = b; ids[other] = a; }
++            }
++            threadgroup_barrier(mem_flags::mem_threadgroup);
++        }
++    }
++    float p = 0.0f, sum = 0.0f;
++    if (tid < 6u) {
++        selected[row * 6u + tid] = ids[tid];
++        p = probs[row * 384u + uint(ids[tid])];
++        scratch[tid] = 0.0f;
++        sum += p;
++        sum = simd_sum(sum);
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (tid == 0u) scratch[0] = sum;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (tid < 6u) {
++        sum = scratch[tid];
++        sum = simd_sum(sum);
++        if (tid == 0u) scratch[32] = clamp(sum, 6.103515625e-5f, INFINITY);
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (tid < 6u) scratch[33u + tid] = p / scratch[32];
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (tid < 6u) weights[row * 6u + tid] = scratch[33u + tid] * scale;
++}
++
++// Collapse consumes the previous mixer. Preserve the four ordered FMAs, both
++// BF16 stores and the weighted RMSNorm's original 1024-thread reduction.
++kernel void kernel_dsv41_hc_norm(
++        constant float &eps, device const float *residual,
++        device const float *pre, device const float4 *weight,
++        device float4 *collapsed, device float4 *normalized,
++        uint tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]) {
++    threadgroup float4 values[1280];
++    threadgroup float sums[32];
++    float sum = 0.0f;
++    for (uint i = tid; i < 1280u; i += 1024u) {
++        float4 v;
++        for (uint c = 0; c < 4; c++) {
++            volatile float acc = 0.0f;
++            for (uint h = 0; h < 4; h++) acc += residual[h * 5120u + i * 4u + c] * pre[h];
++            v[c] = dsv41_bf16(acc);
++        }
++        values[i] = v;
++        collapsed[i] = v;
++        sum += dot(v, v);
++    }
++    sum = simd_sum(sum);
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (lane == 0) sums[sg] = sum;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    sum = simd_sum(sums[lane]);
++    const float mean = sum / 5120.0f;
++    const float scale = 1.0f / sqrt(mean + eps);
++    for (uint i = tid; i < 1280u; i += 1024u) {
++        volatile float4 v = (values[i] * scale) * weight[i];
++        normalized[i] = float4(dsv41_bf16(v.x), dsv41_bf16(v.y),
++                               dsv41_bf16(v.z), dsv41_bf16(v.w));
++    }
++}

@@ -1,0 +1,25 @@
+{
+  "cwd": "/Users/jw/.cache/ds4-bench/wt-849e039b4c80",
+  "argv": [
+    "./ds4-server",
+    "-m",
+    "/Users/jw/ds4/gguf/GLM-5.3-Flash-Q4_K.gguf",
+    "--ctx",
+    "32768",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "61744",
+    "--kv-disk-dir",
+    "/Users/jw/ds4-bench-results/splash-vs-849e039-20260926/http-glm-4-base/kv",
+    "--kv-disk-space-mb",
+    "4096",
+    "--kv-cache-min-tokens",
+    "16",
+    "--kv-cache-cold-max-tokens",
+    "32768",
+    "--trace",
+    "/Users/jw/ds4-bench-results/splash-vs-849e039-20260926/http-glm-4-base/trace.log"
+  ],
+  "staged": false
+}

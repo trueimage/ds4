@@ -1,0 +1,26 @@
+{
+  "base": "3c16a1d50b9e8d155f484fa0f1f4cd9540a8d11b",
+  "source_sha256": {
+    ".gitignore": "8e99bb7247a5f09b2e3b7bdb77857f09f92dc95b2f0d86584e3f3c97d956a445",
+    "Makefile": "2658f988bb719953df6ea971f0f918f3ae4cb44ec337e808ed63e53bfc8b3f9d",
+    "ds4.c": "bf9821ef209b18b5358cc1b28b9ea86906296bca0eb780c705ead3c7a068ed49",
+    "ds4_deepseek41_gpu.h": "06b963248b923fd1403cd24a5441a16ca3bfa9c6d16c81b9e8f370d9c69b9c9e",
+    "ds4_gpu.h": "93ee9b5fa2319a14c002b9050acb41d22fdcf8ea33ced07666b55aee19059bd5",
+    "ds4_metal.m": "6e24b9b45070fe4d3ab57b5e9a3b6ffe869882ab09468212823490d5bf556bbe",
+    "metal/dense.metal": "e823bd37c3e887214fa8f876f18baf5a802dbc45eddd6fa6152fd5899f84b249",
+    "metal/dsv41.metal": "96d7c9875c1c2bb12c6f45436b342f739fbd877d23a624d335dbae2e5fbed7b9",
+    "tests/test_deepseek41_fusions.c": "3ea0484a772b6e70223d35cb90efe3591977d5fd4472abc349c20915327aa3f4",
+    "tests/test_deepseek41_topk.c": "002a2be3f5da44837b096ed12d9703073e80f4c6b8a3674e6248f3f2fb6af435"
+  },
+  "binaries_sha256": {
+    "ds4-bench": "b5a1a30477878a6e06704ba60810f1cd1be0ade81c7a52307a2367948ec287d6",
+    "tests/test_deepseek41_fusions": "9d8d428afc1f8578d4ea489913dac702cc4fe06d36dfe5e3bae0560796c907db",
+    "tests/test_deepseek41_topk": "ec9277864b1cead0a4c56d14d716b6018ab7deb9b596fc0d1a5c16902cc39c51"
+  },
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.5.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+  "model": "/Users/jw/ds4/gguf/DeepSeek-V4.1-Flash-Q4.gguf",
+  "model_bytes": 518596067328,
+  "context_allocation": 32768,
+  "max_tested_model_position": 32767,
+  "single_model_process": true
+}

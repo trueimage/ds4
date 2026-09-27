@@ -1,0 +1,32 @@
+[
+  {
+    "frontier": 16384,
+    "main_sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+    "final_sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+    "bytes": 545531292
+  },
+  {
+    "frontier": 2048,
+    "main_sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+    "final_sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+    "bytes": 202327452
+  },
+  {
+    "frontier": 32639,
+    "main_sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+    "final_sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+    "bytes": 934671768
+  },
+  {
+    "frontier": 4096,
+    "main_sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+    "final_sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+    "bytes": 251356572
+  },
+  {
+    "frontier": 8192,
+    "main_sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+    "final_sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+    "bytes": 349414812
+  }
+]

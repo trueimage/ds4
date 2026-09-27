@@ -1,0 +1,165 @@
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -90,6 +90,49 @@
+     threadgroup_barrier(mem_flags::mem_device);
+     dsv41_attention_epilogue(rope, (device float *)dst, head, tid,
+                              32u * FC_flash_attn_ext_vec_reduce_NWG);
++}
++
++kernel void kernel_dsv41_flash_attn_vec_packed32_epilogue_f16_dk512_dv512(
++        constant ds4_metal_args_flash_attn_ext_vec & args [[buffer(0)]],
++        device const char * q                         [[buffer(1)]],
++        device const char * k                         [[buffer(2)]],
++        device const char * v                         [[buffer(3)]],
++        device const char * mask                      [[buffer(4)]],
++        device const char * sinks                     [[buffer(5)]],
++        device const char * pad                       [[buffer(6)]],
++        device       char * dst                       [[buffer(7)]],
++        constant ds4_metal_args_dsv41_rope & rope
++                                                        [[buffer(8)]],
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint head       [[threadgroup_position_in_grid]],
++        ushort tiitg    [[thread_index_in_threadgroup]],
++        ushort tiisg    [[thread_index_in_simdgroup]],
++        ushort sgitg    [[simdgroup_index_in_threadgroup]]) {
++    /* Uniform specialization guard; host applies the same eligibility gate. */
++    if (!FC_flash_attn_ext_vec_has_mask ||
++        !FC_flash_attn_ext_vec_has_sinks ||
++         FC_flash_attn_ext_vec_has_bias ||
++         FC_flash_attn_ext_vec_has_scap ||
++         FC_flash_attn_ext_vec_nsg != 1 ||
++         FC_flash_attn_ext_vec_nwg != 32 ||
++         FC_flash_attn_ext_vec_ns10 != 512 ||
++         FC_flash_attn_ext_vec_ns20 != 512 ||
++         args.ne01 != 1 || args.ne02 != 64 || args.ne03 != 1 ||
++         args.ne_12_2 != 1 || args.ne_12_3 != 1 ||
++         args.ne31 != 1 || args.ne32 != 1 || args.ne33 != 1 ||
++         args.ne11 <= 0 || args.ne11 > 1024 || head >= (uint)args.ne02 ||
++         args.nb02 != 2048 || args.nb11 != 1024 || args.nb21 != 1024) {
++        return;
++    }
++
++    ds4_flash_attn_vec_packed8_reduce_f16_512(
++        args, q, k, v, mask, sinks, pad, dst, shmem,
++        head, tiisg, sgitg);
++
++    /* Same producer/consumer boundary as the current reduce+RoPE kernel. */
++    threadgroup_barrier(mem_flags::mem_device);
++
++    dsv41_attention_epilogue(rope, (device float *)dst, head, tiitg, 256u);
+ }
+ 
+ kernel void kernel_dsv41_quantize(
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -28246,6 +28246,43 @@
+     return 1;
+ }
+ 
++/* Both V4.1 decode encoders already staged identical half K/V and padding.
++ * Time-slice their same 32 splits without writing the device partial plane. */
++static bool ds4_gpu_encode_dsv41_packed_attention(id<MTLCommandBuffer> cb,
++        ds4_gpu_tensor *heads, const ds4_gpu_tensor *q, id<MTLBuffer> sinks,
++        NSUInteger sinks_offset, id<MTLBuffer> mask,
++        const ds4_gpu_flash_attn_vec_args *args, uint32_t nsg, uint32_t nwg,
++        bool has_pad, bool shared_pad, uint32_t use_mask) {
++    if (!g_v41_attention_armed || use_mask || args->ne02 != 64 || args->ns10 != 512 ||
++        nsg != 1 || nwg != 32 || args->ne11 > 1024 ||
++        !ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                      "DS4_METAL_DISABLE_V41_PACKED_ATTN")) return false;
++    id<MTLComputePipelineState> pipeline = ds4_gpu_get_flash_attn_vec_pipeline(
++        "kernel_dsv41_flash_attn_vec_packed32_epilogue_f16_dk512_dv512",
++        true, true, false, false, has_pad, shared_pad, 512, 512, 1, 32);
++    const NSUInteger shared_bytes = 512u*2u + 8u*128u*2u +
++        (32u*32u + 2u*32u + 32u)*4u + 32u*33u*4u*4u;
++    if (!pipeline || pipeline.threadExecutionWidth != 32u ||
++        pipeline.maxTotalThreadsPerThreadgroup < 256u ||
++        g_device.maxThreadgroupMemoryLength < shared_bytes) return false;
++    id<MTLComputeCommandEncoder> enc = ds4_gpu_compute_encoder(cb);
++    [enc setComputePipelineState:pipeline];
++    [enc setBytes:args length:sizeof(*args) atIndex:0];
++    [enc setBuffer:ds4_gpu_tensor_buffer(q) offset:ds4_gpu_tensor_offset(q) atIndex:1];
++    [enc setBuffer:g_flash_attn_kv_buffer offset:0 atIndex:2];
++    [enc setBuffer:g_flash_attn_kv_buffer offset:0 atIndex:3];
++    [enc setBuffer:mask offset:0 atIndex:4];
++    [enc setBuffer:sinks offset:sinks_offset atIndex:5];
++    [enc setBuffer:g_flash_attn_pad_buffer offset:0 atIndex:6];
++    [enc setBuffer:ds4_gpu_tensor_buffer(heads) offset:ds4_gpu_tensor_offset(heads) atIndex:7];
++    [enc setBytes:&g_v41_attention_rope length:sizeof(g_v41_attention_rope) atIndex:8];
++    [enc setThreadgroupMemoryLength:shared_bytes atIndex:0];
++    [enc dispatchThreadgroups:MTLSizeMake(64,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];
++    ds4_gpu_end_compute_encoder(cb,enc);
++    g_v41_attention_used = 2;
++    return true;
++}
++
+ static int ds4_gpu_encode_flash_attention_raw_heads(
+         id<MTLCommandBuffer>  cb,
+         ds4_gpu_tensor     *heads,
+@@ -28413,6 +28450,10 @@
+         .n_head_log2 = 0,
+         .logit_softcap = 0.0f,
+     };
++
++    if (ds4_gpu_encode_dsv41_packed_attention(cb, heads, q, sinks_buf,
++            sinks_offset, mask_buffer, &vec_args, nsg, nwg,
++            (n_raw % ncpsg) != 0, false, 0)) return 1;
+ 
+     const NSUInteger shared_elems = (ds4_gpu_align_up_ns(head_dim, 128u) +
+                                      4u * ncpsg +
+@@ -30119,6 +30160,10 @@
+         .n_head_log2 = 0,
+         .logit_softcap = 0.0f,
+     };
++
++    if (ds4_gpu_encode_dsv41_packed_attention(cb, heads, q, sinks_buf,
++            sinks_offset, flash_mask_buffer, &vec_args, nsg, nwg,
++            has_kvpad, use_shared_kvpad, use_mask)) return 1;
+ 
+     const NSUInteger shared_elems = (ds4_gpu_align_up_ns(head_dim, 128u) +
+                                      4u * ncpsg +
+--- a/tests/test_deepseek41_attention.c
++++ b/tests/test_deepseek41_attention.c
+@@ -1,4 +1,4 @@
+-/* Exact executable oracle for the V4.1 attention reduce epilogue. */
++/* Exact executable oracle for the V4.1 attention reduce and packed epilogues. */
+ #include "ds4_gpu.h"
+ #include <float.h>
+ #include <stdint.h>
+@@ -29,7 +29,7 @@
+  const uint32_t positions[]={0,1,127,128,32767,1048575};
+  const uint32_t raw_counts[]={1,5,127,128},comp_counts[]={0,1,31,32,33,511,512};
+  const uint32_t exceptional[]={0x7f800000,0xff800000,0x80000000,1,0x80000001,0x7f800001,0x7fc00123,0x33800000};
+- unsigned reduced=0;
++ unsigned packed=0,reduced=0;
+  for(unsigned draw=0;draw<384;draw++){
+   const uint32_t nr=draw<160?(draw<128?draw+1:128):raw_counts[draw%4];
+   const uint32_t nc=draw<160?(draw<128?0:draw+1-128):comp_counts[(draw/4)%7];
+@@ -45,8 +45,9 @@
+    if(draw%11==0)memcpy(sink+draw%H,&exceptional[6],4);
+    if(draw%13==0)for(unsigned i=0;i<H*D;i++)v[0][i]*=1e30f;
+   }
+-  for(unsigned arm=0;arm<2;arm++){
++  for(unsigned arm=0;arm<3;arm++){
+    if(arm==0)setenv("DS4_METAL_DISABLE_V41_ATTN_EPILOGUE","1",1);else unsetenv("DS4_METAL_DISABLE_V41_ATTN_EPILOGUE");
++   if(arm==2)unsetenv("DS4_METAL_DISABLE_V41_PACKED_ATTN");else setenv("DS4_METAL_DISABLE_V41_PACKED_ATTN","1",1);
+    memset(ds4_gpu_tensor_contents(storage),0xa5,bytes+2*G);
+    ds4_gpu_dsv41_arm_attention_epilogue(pos,compressed,true);
+    CHECK(ds4_gpu_begin_commands());
+@@ -56,7 +57,7 @@
+    CHECK(ds4_gpu_end_commands());
+    unsigned char *p=ds4_gpu_tensor_contents(storage);for(unsigned i=0;i<G;i++){CHECK(p[i]==0xa5);CHECK(p[G+bytes+i]==0xa5);}
+    if(!arm)memcpy(ref,p+G,bytes);else same(ref,p+G,bytes,draw,arm);
+-   if(arm==1)reduced++;
++   if(arm==1)reduced++;if(arm==2)packed++;
+   }
+  }
+  ds4_gpu_tensor *index_store=ds4_gpu_tensor_alloc_managed(128u*32u*4u+2*G);
+@@ -82,6 +83,6 @@
+  puts("index Q prepare: 240 cases, exact bits and guards");
+  ds4_gpu_set_quality(true);ds4_gpu_dsv41_arm_attention_epilogue(1,false,true);CHECK(!ds4_gpu_dsv41_attention_epilogue_used());ds4_gpu_set_quality(false);
+  ds4_gpu_set_ssd_streaming(true);ds4_gpu_dsv41_arm_attention_epilogue(1,false,true);CHECK(!ds4_gpu_dsv41_attention_epilogue_used());ds4_gpu_set_ssd_streaming(false);
+- printf("attention: %u reduce cases, every head bit and guard exact\n",reduced);
++ printf("attention: %u reduce and %u packed cases, every head bit and guard exact\n",reduced,packed);
+  ds4_gpu_tensor_free(out);ds4_gpu_tensor_free(storage);ds4_gpu_tensor_free(q);ds4_gpu_tensor_free(raw);ds4_gpu_tensor_free(comp);free(ref);ds4_gpu_cleanup();free(model);return 0;
+ }

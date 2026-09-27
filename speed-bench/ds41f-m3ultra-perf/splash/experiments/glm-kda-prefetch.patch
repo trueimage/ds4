@@ -1,0 +1,313 @@
+--- a/metal/glm53_kda.metal
++++ b/metal/glm53_kda.metal
+@@ -455,6 +455,200 @@
+         ushort lane [[thread_index_in_simdgroup]],
+         ushort sg [[simdgroup_index_in_threadgroup]]);
+ 
++// Prefetch twin; keep the reference VALUES kernels unchanged.
++kernel void kernel_glm53_kda_decode_v4p(
++        constant glm53_kda_args &args,
++        device const float   *q_in,
++        device const float   *k_in,
++        device const float   *v_in,
++        device const float   *raw_gate,
++        device const float   *raw_beta,
++        device const float   *output_gate,
++        device const float   *q_conv,
++        device const float   *k_conv,
++        device const float   *v_conv,
++        device const float   *a_log,
++        device const float   *dt_bias,
++        device const float   *output_norm,
++        device float         *conv_state,
++        device float         *state,
++        device float         *out,
++        threadgroup float    *scratch [[threadgroup(0)]],
++        uint2 tgpig [[threadgroup_position_in_grid]],
++        ushort tid [[thread_index_in_threadgroup]],
++        ushort lane [[thread_index_in_simdgroup]],
++        ushort sg [[simdgroup_index_in_threadgroup]]) {
++    constexpr uint VALUES = 4u;
++    constexpr uint D = 128u;
++    constexpr uint HISTORY = 3u;
++    const uint row = tgpig.x;
++    const uint head = tgpig.y;
++    if (row >= args.n_rows || head >= args.n_heads) return;
++
++    threadgroup float *sq = scratch;
++    threadgroup float *sk = sq + D;
++    threadgroup float *sd = sk + D;
++    threadgroup float *sv = sd + D;
++    threadgroup float *so = sv + D;
++    threadgroup float *reduce_q = so + D;
++    threadgroup float *reduce_k = reduce_q + 4u;
++    threadgroup float *reduce_o = reduce_k + 4u;
++    threadgroup float *beta_shared = reduce_o + 4u;
++    threadgroup float *a_decay_shared = beta_shared + 1u;
++
++    const uint projection = args.n_heads * D;
++    const uint channel = head * D + tid;
++    const ulong input_base = (ulong)row * projection + head * D;
++    const ulong conv_row_stride = 3ul * HISTORY * projection;
++
++    if (tid < D) {
++        float q_acc = 0.0f;
++        float k_acc = 0.0f;
++        float v_acc = 0.0f;
++        device float *q_state = conv_state +
++            (ulong)row * conv_row_stride;
++        device float *k_state = q_state + HISTORY * projection;
++        device float *v_state = k_state + HISTORY * projection;
++        for (uint w = 0; w < HISTORY; w++) {
++            q_acc = fma(q_state[(ulong)w * projection + channel],
++                        q_conv[(ulong)channel * 4u + w], q_acc);
++            k_acc = fma(k_state[(ulong)w * projection + channel],
++                        k_conv[(ulong)channel * 4u + w], k_acc);
++            v_acc = fma(v_state[(ulong)w * projection + channel],
++                        v_conv[(ulong)channel * 4u + w], v_acc);
++        }
++        const float q_new = q_in[input_base + tid];
++        const float k_new = k_in[input_base + tid];
++        const float v_new = v_in[input_base + tid];
++        q_acc = fma(q_new, q_conv[(ulong)channel * 4u + 3u], q_acc);
++        k_acc = fma(k_new, k_conv[(ulong)channel * 4u + 3u], k_acc);
++        v_acc = fma(v_new, v_conv[(ulong)channel * 4u + 3u], v_acc);
++
++        q_state[channel] = q_state[projection + channel];
++        q_state[projection + channel] = q_state[2ul * projection + channel];
++        q_state[2ul * projection + channel] = q_new;
++        k_state[channel] = k_state[projection + channel];
++        k_state[projection + channel] = k_state[2ul * projection + channel];
++        k_state[2ul * projection + channel] = k_new;
++        v_state[channel] = v_state[projection + channel];
++        v_state[projection + channel] = v_state[2ul * projection + channel];
++        v_state[2ul * projection + channel] = v_new;
++
++        sq[tid] = q_acc / (1.0f + exp(-q_acc));
++        sk[tid] = k_acc / (1.0f + exp(-k_acc));
++        sv[tid] = v_acc / (1.0f + exp(-v_acc));
++    }
++    if (tid == 0u) {
++        beta_shared[0] =
++            1.0f / (1.0f + exp(-raw_beta[(ulong)row * args.n_heads + head]));
++        /* head is uniform over the threadgroup, so exp(a_log[head]) is a
++         * single value; every one of the D channels used to recompute it. */
++        a_decay_shared[0] = exp(a_log[head]);
++    }
++    /* Only threadgroup memory is shared between threads here: the conv-state
++     * writes above are each thread's own channel and no thread reads another's,
++     * so the barrier does not need device scope. */
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    float q_sumsq = sq[tid] * sq[tid];
++    float k_sumsq = sk[tid] * sk[tid];
++    q_sumsq = simd_sum(q_sumsq);
++    k_sumsq = simd_sum(k_sumsq);
++    if (lane == 0u) {
++        reduce_q[sg] = q_sumsq;
++        reduce_k[sg] = k_sumsq;
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float q_total = lane < 4u ? reduce_q[lane] : 0.0f;
++    float k_total = lane < 4u ? reduce_k[lane] : 0.0f;
++    q_total = simd_sum(q_total);
++    k_total = simd_sum(k_total);
++    const float q_scale = rsqrt(q_total + 1.0e-6f) * 0x1.6a09e6p-4f;
++    const float k_scale = rsqrt(k_total + 1.0e-6f);
++    if (tid < D) {
++        sq[tid] *= q_scale;
++        sk[tid] *= k_scale;
++        const float gate = raw_gate[input_base + tid] + dt_bias[channel];
++        sd[tid] = exp(args.lower_bound *
++                      (1.0f / (1.0f + exp(-a_decay_shared[0] * gate))));
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    const uint k0 = lane * 4u;
++    const float4 q4 = *((threadgroup float4 *)(sq + k0));
++    const float4 k4 = *((threadgroup float4 *)(sk + k0));
++    const float4 decay4 = *((threadgroup float4 *)(sd + k0));
++    const ulong state_head =
++        ((ulong)row * args.n_heads + head) * D * D;
++
++    /* Interleave independent value rows to hide load/reduction latency.
++     * Every row retains its original SIMDgroup, dot/FMA sequence, and stores;
++     * normalization still uses the same four-SIMDgroup reduction tree. */
++    if (VALUES == 1u) {
++        for (uint value = sg; value < D; value += 4u) {
++            device float4 *hptr =
++                (device float4 *)(state + state_head + (ulong)value * D + k0);
++            float4 h = *hptr * decay4;
++            float hk = dot(h, k4);
++            hk = simd_sum(hk);
++            const float delta_v = (sv[value] - hk) * beta_shared[0];
++            h = fma(k4, float4(delta_v), h);
++            *hptr = h;
++            float hq = simd_sum(dot(h, q4));
++            if (lane == 0u) so[value] = hq;
++        }
++    } else {
++        float4 next[VALUES];
++        FOR_UNROLL (uint i = 0; i < VALUES; i++)
++            next[i] = *((device float4 *)(state + state_head + (ulong)(sg + i * 4u) * D + k0));
++        for (uint value = sg; value < D; value += 4u * VALUES) {
++            device float4 *hptr[VALUES];
++            float4 h[VALUES];
++            float hk[VALUES];
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                hptr[i] = (device float4 *)(state + state_head + (ulong)(value + i * 4u) * D + k0);
++                h[i] = next[i] * decay4;
++            }
++            // Rows owned by this SIMDgroup are disjoint. Fetch the following
++            // tile before this tile's state stores, retaining each row's math.
++            if (value + 4u * VALUES < D) FOR_UNROLL (uint i = 0; i < VALUES; i++)
++                next[i] = *((device float4 *)(state + state_head +
++                    (ulong)(value + 4u * VALUES + i * 4u) * D + k0));
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                hk[i] = dot(h[i], k4);
++                hk[i] = simd_sum(hk[i]);
++            }
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                const float delta_v = (sv[value + i * 4u] - hk[i]) * beta_shared[0];
++                h[i] = fma(k4, float4(delta_v), h[i]);
++                *hptr[i] = h[i];
++            }
++            FOR_UNROLL (uint i = 0; i < VALUES; i++) {
++                const float hq = simd_sum(dot(h[i], q4));
++                if (lane == 0u) so[value + i * 4u] = hq;
++            }
++        }
++    }
++    /* Likewise: the state writes above are not re-read in this kernel, only
++     * so[] crosses simdgroups. */
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    float o_sumsq = so[tid] * so[tid];
++    o_sumsq = simd_sum(o_sumsq);
++    if (lane == 0u) reduce_o[sg] = o_sumsq;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float o_total = lane < 4u ? reduce_o[lane] : 0.0f;
++    o_total = simd_sum(o_total);
++    const float o_scale = rsqrt(o_total / (float)D + args.norm_eps);
++    if (tid < D) {
++        const ulong index = input_base + tid;
++        const float gate =
++            1.0f / (1.0f + exp(-output_gate[index]));
++        out[index] = so[tid] * o_scale * output_norm[tid] * gate;
++    }
++}
++
++typedef decltype(kernel_glm53_kda_decode_values<1u>) glm53_kda_decode_values_t;
+ template [[host_name("kernel_glm53_kda_decode")]]
+ kernel glm53_kda_decode_values_t kernel_glm53_kda_decode_values<1u>;
+ template [[host_name("kernel_glm53_kda_decode_v4")]]
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -49026,11 +49026,14 @@
+             if (g_glm53_kda_arrivals) memset(g_glm53_kda_arrivals.contents,0,64u*sizeof(uint32_t));
+         }
+         if (!split_pipeline || !g_glm53_kda_arrivals || !g_glm53_kda_partials) split = 1u;
++        const bool prefetch = split == 1u && disjoint &&
++            !getenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_PREFETCH");
+         /* The reference kernel predates the shared decay term and the narrower
+          * barriers; it is both their rollback and their exactness oracle. */
+         id<MTLComputePipelineState> pipeline = split > 1u ? split_pipeline :
+             ds4_gpu_get_pipeline(getenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE") ?
+                                      "kernel_glm53_kda_decode_reference" :
++                                 prefetch ? "kernel_glm53_kda_decode_v4p" :
+                                  values4 ? "kernel_glm53_kda_decode_v4" :
+                                            "kernel_glm53_kda_decode");
+         if (!qw || !kw || !vw || !a_log || !dt_bias || !output_norm ||
+@@ -49045,6 +49048,7 @@
+             .norm_eps = norm_eps,
+         };
+         if (split > 1u) ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_SPLIT);
++        if (prefetch) ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_PREFETCH);
+         if (values4) ds4_gpu_note_glm53_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_VALUES4);
+         int owned = 0;
+         id<MTLCommandBuffer> cb = ds4_gpu_command_buffer(&owned);
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -289,6 +289,7 @@
+     DS4_GPU_GLM53_DSA_SCORE_TILE = 1u << 8,
+     DS4_GPU_GLM53_DECODE_KDA_VALUES4 = 1u << 9,
+     DS4_GPU_GLM53_KDA_INPUTS = 1u << 10,
++    DS4_GPU_GLM53_DECODE_KDA_PREFETCH = 1u << 12,
+     DS4_GPU_GLM53_DECODE_KDA_SPLIT = 1u << 11,
+ };
+ /* Returns and clears GLM tuning coverage recorded only in the test mode. */
+--- a/tests/test_glm53_kda.c
++++ b/tests/test_glm53_kda.c
+@@ -1518,7 +1518,7 @@
+         const uint64_t sizes[] = {n * sizeof(float), (uint64_t)n * 9 * sizeof(float),
+                                   (uint64_t)n * D * sizeof(float)};
+         float *actual = malloc(sizes[2]), *reference = malloc(sizes[2]);
+-        ds4_gpu_tensor *input[6], *out[6][3], *storage[6][3];
++        ds4_gpu_tensor *input[6], *out[7][3], *storage[7][3];
+         require_ok(actual && reference, "KDA decode values host buffers");
+         for (unsigned i = 0; i < 6; i++) {
+             input[i] = ds4_gpu_tensor_alloc(sizes[0]);
+@@ -1527,7 +1527,7 @@
+         for (unsigned b = 0; b < 3; b++) {
+             for (uint64_t j = 0; j < sizes[b] / sizeof(float); j++)
+                 actual[j] = (float)((int)((j * 1664525u + 1013904223u) % 2047u) - 1023) * 0.0005f;
+-            for (unsigned arm = 0; arm < 6; arm++) {
++            for (unsigned arm = 0; arm < 7; arm++) {
+                 storage[arm][b] = ds4_gpu_tensor_alloc_managed(sizes[b]+32u);
+                 require_ok(storage[arm][b] != NULL, "KDA decode guard buffer");
+                 memset(ds4_gpu_tensor_contents(storage[arm][b]),0xa5,sizes[b]+32u);
+@@ -1553,12 +1553,14 @@
+             /* Arm 0 is the kernel as it was before the shared decay term and
+              * the narrower barriers; arms 1-3 are today's one-row, four-row and
+              * untuned dispatches. */
+-            for (unsigned arm = 0; arm < 6; arm++) {
+-                if (arm >= 4) {
++            for (unsigned arm = 0; arm < 7; arm++) {
++                if (arm >= 5) {
+                     unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT");
+-                    setenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT",arm == 4 ? "2" : "4",1);
++                    setenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT",arm == 5 ? "2" : "4",1);
+                     require_ok(ds4_gpu_test_glm53_kda_handoff(), "KDA split counters reset/poison partials");
+                 } else setenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT","1",1);
++                if (arm == 4) unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_PREFETCH");
++                else setenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_PREFETCH","1",1);
+                 if (arm == 0) setenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE", "1", 1);
+                 else unsetenv("DS4_METAL_GLM53_KDA_DECODE_REFERENCE");
+                 if (arm == 1) setenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_VALUES4", "1", 1);
+@@ -1572,18 +1574,18 @@
+                     offset + V, offset + A, offset + DT, offset + NORM,
+                     heads, rows, -5.0f, 1e-6f), "KDA decode values dispatch");
+                 require_prefill_dispatch(DS4_GPU_GLM53_DECODE_KDA_VALUES4 |
+-                    (arm >= 4 ? DS4_GPU_GLM53_DECODE_KDA_SPLIT : 0u),
++                    (arm == 4 ? DS4_GPU_GLM53_DECODE_KDA_PREFETCH : arm >= 5 ? DS4_GPU_GLM53_DECODE_KDA_SPLIT : 0u),
+                     (arm == 2 || arm >= 4) && shape == 0, "KDA decode values coverage");
+                 unsetenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING");
+             }
+             for (unsigned b = 0; b < 3; b++) {
+-                for (unsigned arm=0;arm<6;arm++) {
++                for (unsigned arm=0;arm<7;arm++) {
+                     const uint8_t *guard=ds4_gpu_tensor_contents(storage[arm][b]);
+                     for(unsigned g=0;g<16;g++) require_ok(guard[g]==0xa5 && guard[16u+sizes[b]+g]==0xa5,"KDA decode guards");
+                 }
+                 require_ok(ds4_gpu_tensor_read(out[0][b], 0, reference, sizes[b]),
+                            "KDA decode values reference read");
+-                for (unsigned arm = 1; arm < 6; arm++) {
++                for (unsigned arm = 1; arm < 7; arm++) {
+                     require_ok(ds4_gpu_tensor_read(out[arm][b], 0, actual, sizes[b]),
+                                "KDA decode values candidate read");
+                     require_ok(memcmp(reference, actual, sizes[b]) == 0,
+@@ -1592,11 +1594,12 @@
+             }
+         }
+         for (unsigned i = 0; i < 6; i++) ds4_gpu_tensor_free(input[i]);
+-        for (unsigned arm = 0; arm < 6; arm++)
++        for (unsigned arm = 0; arm < 7; arm++)
+             for (unsigned b = 0; b < 3; b++) {ds4_gpu_tensor_free(out[arm][b]);ds4_gpu_tensor_free(storage[arm][b]);}
+         free(actual); free(reference);
+     }
+-    puts("KDA values/split2/split4: all output/history/state bits, guards and arrival counters exact");
++    puts("KDA values/prefetch/split2/split4: all output/history/state bits, guards and arrival counters exact");
++    unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_PREFETCH");
+     unsetenv("DS4_METAL_DISABLE_GLM53_DECODE_KDA_SPLIT");
+     unsetenv("DS4_METAL_GLM53_DECODE_KDA_SPLIT");
+ }

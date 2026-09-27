@@ -1,0 +1,41 @@
+{
+  "logits": {
+    "exact": true,
+    "rows": 645,
+    "floats": 99897600,
+    "max_position": 32767,
+    "logits_sha256": "6b8700c52a925bcfc4d393416b56be9a49c58ee2d363b23844cafdf406f6933c"
+  },
+  "snapshots": [
+    {
+      "frontier": 16384,
+      "bytes": 545531292,
+      "sha256": "bb9acdab674966c84ce3d6e128cde8163d31ac8003b73e14317ffcff31836da6",
+      "bit_identical": true
+    },
+    {
+      "frontier": 2048,
+      "bytes": 202327452,
+      "sha256": "b1c7abb5d8ac7f7b2c55b1d8ae93866478441d5b72c52136f6c5b6c0d37569ec",
+      "bit_identical": true
+    },
+    {
+      "frontier": 32639,
+      "bytes": 934671768,
+      "sha256": "a79e1922e2869374a850d0b0c39fb9bb5198a4c6f7bb1bb62d4b3d86045deb9e",
+      "bit_identical": true
+    },
+    {
+      "frontier": 4096,
+      "bytes": 251356572,
+      "sha256": "27a8eefe4553ec2aab5504bf4d795257f6d264f66b04da7417cfae547442c238",
+      "bit_identical": true
+    },
+    {
+      "frontier": 8192,
+      "bytes": 349414812,
+      "sha256": "8cf66447d05359d86033c42f2345dca92a0f39feb1d6c1740b750682fa9d18e7",
+      "bit_identical": true
+    }
+  ]
+}

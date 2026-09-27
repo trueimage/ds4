@@ -1,0 +1,32 @@
+{
+  "requests": 16,
+  "output_usage_finish_identical": true,
+  "checkpoint_images_identical_except_header_timestamps": true,
+  "images_per_round": [
+    {
+      "name": "31ac67944c242f06354cf17954618b614594a5cf.kv",
+      "bytes": 400009592,
+      "masked_sha256": "d4c4cda76ab9769df43ed569bab64191b624e0ebf0a4f09bb473c0179bba6f94"
+    },
+    {
+      "name": "3f5bf94818e06ba920489bddec3e0547e3ede93c.kv",
+      "bytes": 398477156,
+      "masked_sha256": "d019f60a728dd232e5492dbc929f3400244f8be882e26de6dfd03568fa6cd46a"
+    },
+    {
+      "name": "a6bf52d81c9298aa8fdaa8600ba25a4422b212db.kv",
+      "bytes": 349441129,
+      "masked_sha256": "a735ffc4b460f0c116b6eee4659a5c599e384e8fb67ae3260761c6e7c778dea1"
+    },
+    {
+      "name": "aa11a5550c60aca1f92808d7fb73fc89994336ea.kv",
+      "bytes": 922641037,
+      "masked_sha256": "2877cf2156c603a087dc9620bb79776f14c201ec1640a7e0ffdf8d554c796e49"
+    },
+    {
+      "name": "c93793eeff8407b63ed477d0696844c49e895580.kv",
+      "bytes": 888833090,
+      "masked_sha256": "6c26ad7eab0f668f1ea6d8c16c100ec828b889363570fb2f6763e2d41fc06aef"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "frontier": 1024,
+    "main_sha256": "e9a5bdd8122953c0a2de6809b486eb26ea57ddc1ca1e2eb4da7fe3fa474359f1",
+    "final_sha256": "e9a5bdd8122953c0a2de6809b486eb26ea57ddc1ca1e2eb4da7fe3fa474359f1",
+    "bytes": 17560628
+  },
+  {
+    "frontier": 16384,
+    "main_sha256": "cf5e65709dda08bf08c3022bb5d9c1bea4758ebca180b3188630ef3d6d452992",
+    "final_sha256": "cf5e65709dda08bf08c3022bb5d9c1bea4758ebca180b3188630ef3d6d452992",
+    "bytes": 115926068
+  },
+  {
+    "frontier": 2048,
+    "main_sha256": "92af296c2a2c210ea864f5d8ae7516cabd44b11b58ac977cdc011f0823b31ad7",
+    "final_sha256": "92af296c2a2c210ea864f5d8ae7516cabd44b11b58ac977cdc011f0823b31ad7",
+    "bytes": 24118324
+  },
+  {
+    "frontier": 32639,
+    "main_sha256": "ab665dd215137cdb91044d4076f745e22612518649cb4460db1f2352e5d8fd37",
+    "final_sha256": "ab665dd215137cdb91044d4076f745e22612518649cb4460db1f2352e5d8fd37",
+    "bytes": 220031536
+  },
+  {
+    "frontier": 4096,
+    "main_sha256": "50e00ab81fcf55441ee57e2d6d7785b312a1f29eb50a06e4844d89552dfc6efc",
+    "final_sha256": "50e00ab81fcf55441ee57e2d6d7785b312a1f29eb50a06e4844d89552dfc6efc",
+    "bytes": 37233716
+  },
+  {
+    "frontier": 512,
+    "main_sha256": "a5fafcb43bf89634543846736cbaacd942103a03b43900cc4c546bb67418d5cb",
+    "final_sha256": "a5fafcb43bf89634543846736cbaacd942103a03b43900cc4c546bb67418d5cb",
+    "bytes": 14281780
+  },
+  {
+    "frontier": 8192,
+    "main_sha256": "2246a22451eac7e60293f88178890a5d18c556668af11d1785e151ca3da7b79b",
+    "final_sha256": "2246a22451eac7e60293f88178890a5d18c556668af11d1785e151ca3da7b79b",
+    "bytes": 63464500
+  }
+]

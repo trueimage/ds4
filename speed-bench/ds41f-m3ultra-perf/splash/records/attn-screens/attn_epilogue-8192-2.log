@@ -1,0 +1,15 @@
+metal-decode-schedule-bench: unknown option: --control-env
+usage: ./speed-bench/metal_decode_schedule_bench [options]
+
+  -m, --model PATH       GGUF path (default: ds4flash.gguf)
+  --prompt-file PATH     token source (default: ds4.c)
+  --prefix-tokens N      prefill length (default: 2048)
+  --ctx N                session allocation (default: 4096)
+  --warmup N             untimed steps per variant (default: 16)
+  --tokens N             measured steps per variant (default: 512)
+  --control-first N      control first split (default: 2)
+  --control-second N     control second split (default: 32)
+  --candidate-first N    candidate first split (default: 1; control with --candidate-env)
+  --candidate-second N   candidate second split (default: 32; control with --candidate-env)
+  --candidate-env NAME   unset NAME for control, set NAME=1 for candidate
+  --include-selection    include one non-EOS argmax in each timed step

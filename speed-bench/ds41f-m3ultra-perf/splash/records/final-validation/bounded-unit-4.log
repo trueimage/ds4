@@ -1,0 +1,22 @@
+RUN: test_all_fit_n1
+  ok
+RUN: test_all_fit_n2
+  ok
+RUN: test_partial_spill_n2
+  ok
+RUN: test_zero_budget_one_gpu_n2
+  ok
+RUN: test_oversized_entry_n2
+  ok
+RUN: test_mixed_n8
+  ok
+RUN: test_n16_stress
+  ok
+RUN: test_pseudo_layers
+  ok
+RUN: test_null_inputs
+  ok
+RUN: test_print_golden
+  ok
+
+test_layer_pack: 97/97 checks passed (0 failed)

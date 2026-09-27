@@ -1,0 +1,25 @@
+{
+ "reference_commit": "c1c5a4a",
+ "snapshots": {
+  "2048.bin": {
+   "bytes": 24118324,
+   "identical": true,
+   "sha256": "0d5bb5cb749a841d2852a6ca3426224539fa3e6ddcfd046070d9e4a441bd98be"
+  },
+  "32703.bin": {
+   "bytes": 220441392,
+   "identical": true,
+   "sha256": "44cfcf7226ed6ecf11c12cdf9b96718840d4c0e1aa878288c7673995aa5fa8c7"
+  },
+  "512.bin": {
+   "bytes": 14281780,
+   "identical": true,
+   "sha256": "93cc54cbfd94b06dd6f419c77ac4af1a80375410e28b26ca3d73e9eacbe27697"
+  },
+  "8192.bin": {
+   "bytes": 63464500,
+   "identical": true,
+   "sha256": "8bf6be8f62cf4fbb3a8b2a6e2a1652fb2384fd50b8c4ab21dd644bfc73efaf58"
+  }
+ }
+}

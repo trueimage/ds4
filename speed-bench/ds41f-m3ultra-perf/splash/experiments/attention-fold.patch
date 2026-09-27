@@ -1,0 +1,639 @@
+--- a/metal/dsv41.metal
++++ b/metal/dsv41.metal
+@@ -91,6 +91,491 @@
+     dsv41_attention_epilogue(rope, (device float *)dst, head, tid,
+                              32u * FC_flash_attn_ext_vec_reduce_NWG);
+ }
++
++#if __METAL_VERSION__ >= 320
++// Isolated twin: the original vector and reduce kernels remain unchanged.
++static __attribute__((noinline)) void dsv41_flash_attn_coherent_reduce_row(
++        constant ds4_metal_args_flash_attn_ext_vec_reduce & args,
++        device coherent(device) const char * htmp,
++        device        char * dst,
++        uint   tgpig,
++        ushort tiisg,
++        ushort sgitg,
++        short  NWG_,
++        short  DV_) {
++    const uint64_t rid = tgpig;
++
++    const short iwg = tiisg;
++
++    device coherent(device) const float  * ss    = (device coherent(device) const float  *) htmp + (uint64_t)args.nrows*DV_*NWG_;
++
++    float S = ss[rid*(2*NWG_) + 2*iwg + 0];
++    float M = ss[rid*(2*NWG_) + 2*iwg + 1];
++
++    const float m  = simd_max(M);
++    const float ms = exp(M - m);
++
++    S = simd_sum(S*ms);
++    S = S == 0.0f ? 0.0f : 1.0f/S;
++
++    const short DV4 = DV_/4;
++
++    device coherent(device) const float4 * htmp4 = (device coherent(device) const float4 *) htmp + rid*DV4*NWG_;
++    device       float4 * dst4  = (device       float4 *) dst  + rid*DV4;
++
++    for (short i = sgitg; i < DV4; i += NWG_) {
++        const float4 v = simd_sum(htmp4[i*NWG_ + iwg]*ms);
++
++        if (iwg == 0) {
++            dst4[i] = v*S;
++        }
++    }
++}
++
++template<
++    typename q4_t,
++    typename k4_t,
++    typename v4_t,
++    typename qk_t,
++    typename s_t,
++    typename s4_t,
++    typename o4_t,
++    typename kd4_t,
++    short nl_k,
++    void (*deq_k_t4)(device const kd4_t *, short, thread k4_t &),
++    typename vd4_t,
++    short nl_v,
++    void (*deq_v_t4)(device const vd4_t *, short, thread v4_t &),
++    short DK,
++    short DV,
++    short NE = 4,
++    short Q  = OP_FLASH_ATTN_EXT_VEC_NQPSG,
++    short C  = OP_FLASH_ATTN_EXT_VEC_NCPSG>
++kernel void kernel_dsv41_flash_attn_vec_fold(
++        constant ds4_metal_args_flash_attn_ext_vec & args,
++        device const char * q,
++        device const char * k,
++        device const char * v,
++        device const char * mask,
++        device const char * sinks,
++        device const char * pad,
++        device coherent(device) char * dst,
++        device atomic_uint *arrivals,
++        device char *heads,
++        constant ds4_metal_args_dsv41_rope &rope,
++        constant ds4_metal_args_flash_attn_ext_vec_reduce &reduce_args,
++        threadgroup  half * shmem_f16 [[threadgroup(0)]],
++        uint3   tgpig[[threadgroup_position_in_grid]],
++        ushort  tiisg[[thread_index_in_simdgroup]],
++        ushort  sgitg[[simdgroup_index_in_threadgroup]]) {
++    static_assert(DK % 32 == 0, "DK must be divisible by 32");
++    static_assert(DV % 32 == 0, "DV must be divisible by 32");
++
++#define NWG  (FC_flash_attn_ext_vec_nwg)
++#define NSG  (FC_flash_attn_ext_vec_nsg)
++#define NS10 (FC_flash_attn_ext_vec_ns10)
++#define NS20 (FC_flash_attn_ext_vec_ns20)
++
++    const short iwg = tgpig[2]%NWG;
++
++    const ushort iq3 = tgpig[2]/NWG;
++    const ushort iq2 = tgpig[1];
++    const ushort iq1 = tgpig[0];
++
++    constexpr short DK4 = DK/4;
++    constexpr short DV4 = DV/4;
++    constexpr short PK  = PAD2(DK, 128);
++    constexpr short PK4 = PK/4;
++    constexpr short PV  = PAD2(DV, 128);
++    constexpr short PV4 = PV/4;
++    constexpr short NW  = N_SIMDWIDTH;
++    constexpr short NL  = NW/NE;
++    constexpr short SH  = 4*C;
++
++    static_assert(DK4 % NL == 0, "DK4 must be divisible by NL");
++    static_assert(DV4 % NL == 0, "DV4 must be divisible by NL");
++
++    threadgroup q4_t  * sq4 = (threadgroup q4_t  *) (shmem_f16 +                      0*PK);
++    threadgroup s_t   * ss  = (threadgroup s_t   *) (shmem_f16 +   sgitg*SH       + NSG*PK);
++    threadgroup s4_t  * ss4 = (threadgroup s4_t  *) (shmem_f16 +   sgitg*SH       + NSG*PK);
++    threadgroup half  * sm  = (threadgroup half  *) (shmem_f16 +   sgitg*SH + 2*C + NSG*PK);
++    threadgroup o4_t  * so4 = (threadgroup o4_t  *) (shmem_f16 + 2*sgitg*PV       + NSG*PK + NSG*SH);
++
++    so4 += tiisg;
++
++    {
++        q += iq1*args.nb01 + iq2*args.nb02 + iq3*args.nb03;
++
++        const short ikv2 = iq2/(args.ne02/args.ne_12_2);
++        const short ikv3 = iq3/(args.ne03/args.ne_12_3);
++
++        k += ikv2*args.nb12 + ikv3*args.nb13;
++        v += ikv2*args.nb22 + ikv3*args.nb23;
++    }
++
++    device const float4 * q4 = (device const float4 *) ((device const char *) q);
++
++    if (iq1 < args.ne01) {
++        for (short i = tiisg; i < PK4; i += NW) {
++            if (i < DK4) {
++                sq4[i] = (q4_t) q4[i];
++            } else {
++                sq4[i] = (q4_t) 0.0f;
++            }
++        }
++    }
++
++    for (short i = 0; i < DV4/NL; ++i) {
++        so4[i*NL] = (o4_t) 0.0f;
++    }
++
++    for (short i = tiisg; i < SH/4; i += NW) {
++        ss4[i] = (s4_t) 0.0f;
++    }
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    {
++        float S = 0.0f;
++        float M = -FLT_MAX/2;
++
++        const short tx = tiisg%NL;
++        const short ty = tiisg/NL;
++
++        device const half * pm = (device const half *) (mask + iq1*args.nb31 + (iq2%args.ne32)*args.nb32 + (iq3%args.ne33)*args.nb33);
++
++        float slope = 1.0f;
++
++        if (FC_flash_attn_ext_vec_has_bias) {
++            const short h = iq2;
++
++            const float base = h < args.n_head_log2 ? args.m0 : args.m1;
++            const short exph = h < args.n_head_log2 ? h + 1 : 2*(h - args.n_head_log2) + 1;
++
++            slope = pow(base, exph);
++        }
++
++        for (int ic0 = iwg*NSG + sgitg; ; ic0 += NWG*NSG) {
++            int ic = ic0*C;
++            if (ic >= args.ne11) {
++                break;
++            }
++
++            if (FC_flash_attn_ext_vec_has_kvpad && ic + C > args.ne11) {
++                k    = pad;
++                if (FC_flash_attn_ext_vec_shared_kvpad) {
++                    v = k;
++                    mask = k + args.nb11*C*args.ne_12_2*args.ne_12_3 +
++                        args.nb21*C*args.ne_12_2*args.ne_12_3;
++                } else {
++                    v = k + args.nb11*C*args.ne_12_2*args.ne_12_3;
++                    mask = v + args.nb21*C*args.ne_12_2*args.ne_12_3;
++                }
++
++                const short ikv2 = iq2/(args.ne02/args.ne_12_2);
++                const short ikv3 = iq3/(args.ne03/args.ne_12_3);
++
++                k += (ikv2 + ikv3*args.ne_12_2)*args.nb11*C;
++                v += (ikv2 + ikv3*args.ne_12_2)*args.nb21*C;
++
++                if (!FC_flash_attn_ext_vec_has_mask) {
++                    if (ic + tiisg >= args.ne11) {
++                        sm[tiisg] = -MAXHALF;
++                    }
++                } else {
++                    pm = (device const half *) (mask) +
++                        iq1*C +
++                        (iq2%args.ne32)*(C*args.ne31) +
++                        (iq3%args.ne33)*(C*args.ne31*args.ne32);
++                }
++
++                ic = 0;
++            }
++
++            if (FC_flash_attn_ext_vec_has_mask) {
++                sm[tiisg] = pm[ic + tiisg];
++            }
++
++            if (simd_max(sm[tiisg]) <= -MAXHALF) {
++                continue;
++            }
++
++            {
++                device      const k4_t * pk4 = (device const k4_t *) (k + ic*args.nb11);
++                threadgroup const q4_t * pq4 = sq4;
++
++                pk4 += ty*NS10/4 + tx;
++                pq4 += tx;
++
++                qk_t mqk[C/NE] = { [ 0 ... C/NE - 1] = 0.0f };
++
++                FOR_UNROLL (short cc = 0; cc < C/NE; ++cc) {
++                    if (is_same<kd4_t, k4_t>::value) {
++                        FOR_UNROLL (short ii = 0; ii < DK4/NL; ++ii) {
++                            mqk[cc] += dot((float4) pk4[cc*NE*NS10/4 +  ii*NL], (float4) pq4[ii*NL]);
++                        }
++                    } else {
++                        device const kd4_t * pk = (device const kd4_t *) (k + ((ic + NE*cc + ty)*args.nb11));
++
++                        k4_t mk;
++
++                        FOR_UNROLL (short ii = 0; ii < DK4/NL; ++ii) {
++                            const short i = ii*NL + tx;
++
++                            deq_k_t4(pk + i/nl_k, i%nl_k, mk);
++
++                            mqk[cc] += dot((float4) mk, (float4) sq4[i]);
++                        }
++                    }
++
++                    if (NE == 1) {
++                        mqk[cc] = simd_sum(mqk[cc]);
++                    } else {
++                        if (NE <= 1) {
++                            mqk[cc] += simd_shuffle_down(mqk[cc], 16);
++                        }
++                        if (NE <= 2) {
++                            mqk[cc] += simd_shuffle_down(mqk[cc],  8);
++                        }
++                        if (NE <= 4) {
++                            mqk[cc] += simd_shuffle_down(mqk[cc],  4);
++                        }
++                        if (NE <= 8) {
++                            mqk[cc] += simd_shuffle_down(mqk[cc],  2);
++                        }
++                        if (NE <= 16) {
++                            mqk[cc] += simd_shuffle_down(mqk[cc],  1);
++                        }
++
++                        mqk[cc] = simd_shuffle(mqk[cc], NL*ty);
++                    }
++                }
++
++                if (FC_flash_attn_ext_vec_has_mask &&
++                   !FC_flash_attn_ext_vec_has_scap &&
++                   !FC_flash_attn_ext_vec_has_bias) {
++                    ss[NE*tx + ty] = fma(mqk[tx], args.scale, (qk_t) sm[NE*tx + ty]);
++                } else {
++                    mqk[tx] *= args.scale;
++
++                    if (FC_flash_attn_ext_vec_has_scap) {
++                        mqk[tx] = args.logit_softcap*precise::tanh(mqk[tx]);
++                    }
++
++                    if (FC_flash_attn_ext_vec_has_bias) {
++                        mqk[tx] += (qk_t) sm[NE*tx + ty]*slope;
++                    } else {
++                        mqk[tx] += (qk_t) sm[NE*tx + ty];
++                    }
++
++                    ss[NE*tx + ty] = mqk[tx];
++                }
++            }
++
++            simdgroup_barrier(mem_flags::mem_threadgroup);
++
++            {
++                const float m = M;
++                const float s = ss[tiisg];
++
++                M = simd_max(max(M, s));
++
++                const float ms = exp(m - M);
++                const float vs = exp(s - M);
++
++                S = S*ms + simd_sum(vs);
++
++                ss[tiisg] = vs;
++
++                if ((DV4/NL % NW == 0) || ty == 0) {
++                    FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                        so4[ii*NL] *= ms;
++                    }
++                }
++            }
++
++            simdgroup_barrier(mem_flags::mem_threadgroup);
++
++            {
++                o4_t lo[DV4/NL];
++                FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                    lo[ii] = 0.0f;
++                }
++
++                if (is_same<vd4_t, v4_t>::value) {
++                    device const v4_t * pv4 = (device const v4_t *) (v + ic*args.nb21);
++
++                    pv4 += ty*NS20/4 + tx;
++
++                    const auto sst = ss + ty;
++
++                    FOR_UNROLL (short cc = 0; cc < C/NE; ++cc) {
++                        FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                            lo[ii] += o4_t(float4(pv4[cc*NE*NS20/4 + ii*NL])*float4(sst[cc*NE]));
++                        }
++                    }
++                } else {
++                    FOR_UNROLL (short cc = 0; cc < C/NE; ++cc) {
++                        device const vd4_t * pv4 = (device const vd4_t *) (v + ((ic + NE*cc + ty)*args.nb21));
++
++                        FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                            const short i = ii*NL + tx;
++
++                            v4_t mv;
++                            deq_v_t4(pv4 + i/nl_v, i%nl_v, mv);
++
++                            lo[ii] += o4_t(float4(mv)*float4(ss[NE*cc + ty]));
++                        }
++                    }
++                }
++
++                FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                    if (NE > 1) {
++                        lo[ii][0] += simd_shuffle_down(lo[ii][0], 16);
++                        lo[ii][1] += simd_shuffle_down(lo[ii][1], 16);
++                        lo[ii][2] += simd_shuffle_down(lo[ii][2], 16);
++                        lo[ii][3] += simd_shuffle_down(lo[ii][3], 16);
++                    }
++
++                    if (NE > 2) {
++                        lo[ii][0] += simd_shuffle_down(lo[ii][0],  8);
++                        lo[ii][1] += simd_shuffle_down(lo[ii][1],  8);
++                        lo[ii][2] += simd_shuffle_down(lo[ii][2],  8);
++                        lo[ii][3] += simd_shuffle_down(lo[ii][3],  8);
++                    }
++
++                    if (NE > 4) {
++                        lo[ii][0] += simd_shuffle_down(lo[ii][0],  4);
++                        lo[ii][1] += simd_shuffle_down(lo[ii][1],  4);
++                        lo[ii][2] += simd_shuffle_down(lo[ii][2],  4);
++                        lo[ii][3] += simd_shuffle_down(lo[ii][3],  4);
++                    }
++
++                    if (NE > 8) {
++                        lo[ii][0] += simd_shuffle_down(lo[ii][0],  2);
++                        lo[ii][1] += simd_shuffle_down(lo[ii][1],  2);
++                        lo[ii][2] += simd_shuffle_down(lo[ii][2],  2);
++                        lo[ii][3] += simd_shuffle_down(lo[ii][3],  2);
++                    }
++
++                    if (NE > 16) {
++                        lo[ii][0] += simd_shuffle_down(lo[ii][0],  1);
++                        lo[ii][1] += simd_shuffle_down(lo[ii][1],  1);
++                        lo[ii][2] += simd_shuffle_down(lo[ii][2],  1);
++                        lo[ii][3] += simd_shuffle_down(lo[ii][3],  1);
++                    }
++                }
++
++                if ((DV4/NL % NW == 0) || ty == 0) {
++                    FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                        so4[ii*NL] += lo[ii];
++                    }
++                }
++            }
++        }
++
++        if (FC_flash_attn_ext_vec_has_sinks && sgitg == 0 && iwg == 0) {
++            const float m = M;
++            const float s = tiisg == 0 ? ((device const float *) sinks)[iq2] : -FLT_MAX/2;
++
++            M = simd_max(max(M, s));
++
++            const float ms = exp(m - M);
++            const float vs = exp(s - M);
++
++            S = S*ms + simd_sum(vs);
++
++            if ((DV4/NL % NW == 0) || ty == 0) {
++                FOR_UNROLL (short ii = 0; ii < DV4/NL; ++ii) {
++                    so4[ii*NL] *= ms;
++                }
++            }
++        }
++
++        if (tiisg == 0) {
++            ss[0] = (s_t) S;
++            ss[1] = (s_t) M;
++        }
++    }
++
++    so4 -= tiisg;
++
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++
++    for (short r = NSG/2; r > 0; r >>= 1) {
++        if (sgitg < r) {
++            const float S0 = ss[           0];
++            const float S1 = ss[r*(SH/2) + 0];
++
++            const float M0 = ss[           1];
++            const float M1 = ss[r*(SH/2) + 1];
++
++            const float M = max(M0, M1);
++
++            const float ms0 = exp(M0 - M);
++            const float ms1 = exp(M1 - M);
++
++            const float S = S0*ms0 + S1*ms1;
++
++            if (tiisg == 0) {
++                ss[0] = S;
++                ss[1] = M;
++            }
++
++            for (short i = tiisg; i < DV4; i += NW) {
++                so4[i] = so4[i]*ms0 + so4[i + r*PV4]*ms1;
++            }
++        }
++
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++    }
++
++    if (sgitg == 0) {
++        const int64_t nrows = args.ne3*args.ne2*args.ne1;
++        const int64_t rid   = iq3*args.ne2*args.ne1 + iq2 + iq1*args.ne1;
++
++        device coherent(device) float4 * dst4 = (device coherent(device) float4 *) dst;
++        device coherent(device) float  * dst1 = (device coherent(device) float  *) dst + nrows*DV*NWG;
++
++        const float S = NWG == 1 ? (ss[0] == 0.0f ? 0.0f : 1.0f/ss[0]) : 1.0f;
++
++        for (short i = tiisg; i < DV4; i += NW) {
++            dst4[rid*DV4*NWG + NWG*i + iwg] = (float4) so4[i]*S;
++        }
++
++        if (NWG > 1) {
++            if (tiisg == 0) {
++                dst1[rid*(2*NWG) + 2*iwg + 0] = ss[0];
++                dst1[rid*(2*NWG) + 2*iwg + 1] = ss[1];
++            }
++        }
++    }
++
++    threadgroup_barrier(mem_flags::mem_device);
++    threadgroup uint ticket;
++    if (tiisg == 0) {
++        atomic_thread_fence(mem_flags::mem_device,memory_order_seq_cst,thread_scope_device);
++        ticket = atomic_fetch_add_explicit(arrivals+iq2,1u,memory_order_relaxed);
++        atomic_thread_fence(mem_flags::mem_device,memory_order_seq_cst,thread_scope_device);
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (ticket != 31u) return;
++    for (ushort virtual_sg=0;virtual_sg<32u;virtual_sg++)
++        dsv41_flash_attn_coherent_reduce_row(reduce_args,dst,heads,iq2,tiisg,virtual_sg,32,512);
++    threadgroup_barrier(mem_flags::mem_device);
++    dsv41_attention_epilogue(rope,(device float *)heads,iq2,tiisg,32);
++    if (tiisg == 0) atomic_store_explicit(arrivals+iq2,0u,memory_order_relaxed);
++
++#undef NWG
++#undef NSG
++#undef NS10
++#undef NS20
++}
++
++typedef decltype(kernel_dsv41_flash_attn_vec_fold<half4,half4,half4,float,float,float4,float4,half4,1,dequantize_f16_t4,half4,1,dequantize_f16_t4,512,512,1>) dsv41_flash_attn_fold_t;
++template [[host_name("kernel_dsv41_flash_attn_vec_fold_f16_dk512_dv512")]]
++kernel dsv41_flash_attn_fold_t kernel_dsv41_flash_attn_vec_fold<half4,half4,half4,float,float,float4,float4,half4,1,dequantize_f16_t4,half4,1,dequantize_f16_t4,512,512,1>;
++#endif
+ 
+ kernel void kernel_dsv41_quantize(
+         constant ds4_metal_args_dsv41_quantize &args,
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -728,6 +728,14 @@
+ static id<MTLBuffer> g_router_weight_sum_buffer;
+ static id<MTLBuffer> g_indexer_head_scores_buffer;
+ static id<MTLBuffer> g_indexer_topk_buffer;
++static id<MTLBuffer> g_v41_attn_arrivals;
++int ds4_gpu_test_dsv41_attention_counters(bool poison) {
++    if (!g_v41_attn_arrivals) return 1;
++    uint32_t *c=g_v41_attn_arrivals.contents;
++    for(unsigned i=0;i<64;i++) if(c[i]) return 0;
++    if(poison) for(unsigned i=0;i<64;i++) c[i]=17u;
++    return 1;
++}
+ static id<MTLBuffer> g_glm53_topk_scratch;
+ enum {
+     DS4_GLM53_TOPK_FAST_HIST_OFFSET = 256u,
+@@ -1476,6 +1484,10 @@
+             *((uint32_t *)((uint8_t *)[fresh contents] + counter.offset)) = 0u;
+         }
+     }
++    if (g_v41_attn_arrivals) {
++        [g_transient_buffers addObject:g_v41_attn_arrivals];
++        g_v41_attn_arrivals=nil;
++    }
+     if (g_glm53_topk_scratch) {
+         [g_transient_buffers addObject:g_glm53_topk_scratch];
+         g_glm53_topk_scratch = nil;
+@@ -4489,7 +4501,7 @@
+         (uint64_t)g_router_weight_sum_bytes +
+         (uint64_t)g_indexer_head_scores_bytes +
+         (uint64_t)g_indexer_topk_bytes +
+-        (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_router_top6_coverage.length +
++        (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_attn_arrivals.length + (uint64_t)g_v41_router_top6_coverage.length +
+         (uint64_t)g_indexed_topk_bytes +
+         (uint64_t)g_f16_round_scratch_bytes +
+         (uint64_t)g_q8_prefill_scratch_bytes + (uint64_t)g_qwen4_conv_halo_bytes +
+@@ -4780,7 +4792,7 @@
+                           (uint64_t)g_router_weight_sum_bytes),
+             ds4_gpu_mib((uint64_t)g_indexer_head_scores_bytes +
+                           (uint64_t)g_indexer_topk_bytes +
+-        (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_router_top6_coverage.length +
++        (uint64_t)g_glm53_topk_scratch.length + (uint64_t)g_v41_attn_arrivals.length + (uint64_t)g_v41_router_top6_coverage.length +
+                           (uint64_t)g_indexed_topk_bytes),
+             ds4_gpu_mib((uint64_t)g_moe_gate_scratch_bytes +
+                           (uint64_t)g_moe_down_scratch_bytes +
+@@ -12143,6 +12155,7 @@
+         }
+         g_glm53_router_shared_calls = g_glm53_q8_inputs_calls = 0;
+         ds4_glm53_topk_report();
++        g_v41_attn_arrivals = nil;
+         g_glm53_topk_scratch = nil;
+         g_v41_router_top6_coverage = nil;
+         g_indexed_topk_buffer = nil;
+@@ -28270,6 +28283,45 @@
+     return 1;
+ }
+ 
++static bool ds4_gpu_encode_dsv41_fold_attention(id<MTLCommandBuffer> cb,
++        ds4_gpu_tensor *heads, const ds4_gpu_tensor *q, id<MTLBuffer> sinks,
++        NSUInteger sinks_offset, id<MTLBuffer> mask,
++        const ds4_gpu_flash_attn_vec_args *args, uint32_t nsg, uint32_t nwg,
++        bool has_pad, bool shared_pad, uint32_t use_mask) {
++    if (!g_v41_attention_armed || g_batch_encoder_concurrent || use_mask ||
++        args->ne02!=64 || args->ns10!=512 || nsg!=1 || nwg!=32 || args->ne11>1024 ||
++        !ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_FUSIONS,
++                                     "DS4_METAL_DISABLE_V41_ATTN_FOLD")) return false;
++    id<MTLComputePipelineState> pipeline=ds4_gpu_get_flash_attn_vec_pipeline(
++        "kernel_dsv41_flash_attn_vec_fold_f16_dk512_dv512",true,true,false,false,has_pad,shared_pad,512,512,1,32);
++    if (!pipeline || pipeline.threadExecutionWidth!=32u || pipeline.maxTotalThreadsPerThreadgroup<32u) return false;
++    if (!g_v41_attn_arrivals) {
++        g_v41_attn_arrivals=[g_device newBufferWithLength:64u*sizeof(uint32_t) options:MTLResourceStorageModeShared];
++        if (!g_v41_attn_arrivals) return false;
++        memset(g_v41_attn_arrivals.contents,0,64u*sizeof(uint32_t));
++    }
++    const ds4_gpu_flash_attn_reduce_args reduce={.nrows=64};
++    id<MTLComputeCommandEncoder> enc=ds4_gpu_compute_encoder(cb);
++    [enc setComputePipelineState:pipeline];
++    [enc setBytes:args length:sizeof(*args) atIndex:0];
++    [enc setBuffer:ds4_gpu_tensor_buffer(q) offset:ds4_gpu_tensor_offset(q) atIndex:1];
++    [enc setBuffer:g_flash_attn_kv_buffer offset:0 atIndex:2];
++    [enc setBuffer:g_flash_attn_kv_buffer offset:0 atIndex:3];
++    [enc setBuffer:mask offset:0 atIndex:4];
++    [enc setBuffer:sinks offset:sinks_offset atIndex:5];
++    [enc setBuffer:g_flash_attn_pad_buffer offset:0 atIndex:6];
++    [enc setBuffer:g_flash_attn_tmp_buffer offset:0 atIndex:7];
++    [enc setBuffer:g_v41_attn_arrivals offset:0 atIndex:8];
++    [enc setBuffer:ds4_gpu_tensor_buffer(heads) offset:ds4_gpu_tensor_offset(heads) atIndex:9];
++    [enc setBytes:&g_v41_attention_rope length:sizeof(g_v41_attention_rope) atIndex:10];
++    [enc setBytes:&reduce length:sizeof(reduce) atIndex:11];
++    [enc setThreadgroupMemoryLength:(512u+4u*32u+2u*512u)*2u atIndex:0];
++    [enc dispatchThreadgroups:MTLSizeMake(1u,64u,32u) threadsPerThreadgroup:MTLSizeMake(32u,1u,1u)];
++    ds4_gpu_end_compute_encoder(cb,enc);
++    g_v41_attention_used=2;
++    return true;
++}
++
+ static int ds4_gpu_encode_flash_attention_raw_heads(
+         id<MTLCommandBuffer>  cb,
+         ds4_gpu_tensor     *heads,
+@@ -28437,6 +28489,9 @@
+         .n_head_log2 = 0,
+         .logit_softcap = 0.0f,
+     };
++
++    if (ds4_gpu_encode_dsv41_fold_attention(cb,heads,q,sinks_buf,sinks_offset,
++            mask_buffer,&vec_args,nsg,nwg,(n_raw % ncpsg) != 0,false,0)) return 1;
+ 
+     const NSUInteger shared_elems = (ds4_gpu_align_up_ns(head_dim, 128u) +
+                                      4u * ncpsg +
+@@ -30143,6 +30198,9 @@
+         .n_head_log2 = 0,
+         .logit_softcap = 0.0f,
+     };
++
++    if (ds4_gpu_encode_dsv41_fold_attention(cb,heads,q,sinks_buf,sinks_offset,
++            flash_mask_buffer,&vec_args,nsg,nwg,has_kvpad,use_shared_kvpad,use_mask)) return 1;
+ 
+     const NSUInteger shared_elems = (ds4_gpu_align_up_ns(head_dim, 128u) +
+                                      4u * ncpsg +
+--- a/ds4_deepseek41_gpu.h
++++ b/ds4_deepseek41_gpu.h
+@@ -103,6 +103,7 @@
+                                       uint32_t packed_rows, uint32_t offset);
+ #ifdef __APPLE__
+ /* Only the one-token graph sweep may reuse a previous layer's gathered KV. */
++int ds4_gpu_test_dsv41_attention_counters(bool poison);
+ void ds4_gpu_dsv41_arm_attention_epilogue(uint32_t pos, bool compressed, bool enable);
+ int ds4_gpu_dsv41_attention_epilogue_used(void);
+ int ds4_gpu_dsv41_verify_head_rows_admitted(void);
+--- a/tests/test_deepseek41_attention.c
++++ b/tests/test_deepseek41_attention.c
+@@ -45,8 +45,11 @@
+    if(draw%11==0)memcpy(sink+draw%H,&exceptional[6],4);
+    if(draw%13==0)for(unsigned i=0;i<H*D;i++)v[0][i]*=1e30f;
+   }
+-  for(unsigned arm=0;arm<2;arm++){
++  for(unsigned arm=0;arm<3;arm++){
+    if(arm==0)setenv("DS4_METAL_DISABLE_V41_ATTN_EPILOGUE","1",1);else unsetenv("DS4_METAL_DISABLE_V41_ATTN_EPILOGUE");
++   if(arm==2)unsetenv("DS4_METAL_DISABLE_V41_ATTN_FOLD");else setenv("DS4_METAL_DISABLE_V41_ATTN_FOLD","1",1);
++   CHECK(ds4_gpu_test_dsv41_attention_counters(arm==2 && draw%257u==0));
++   if(arm==2 && draw%257u==0)ds4_gpu_test_invalidate_completion_counters();
+    memset(ds4_gpu_tensor_contents(storage),0xa5,bytes+2*G);
+    ds4_gpu_dsv41_arm_attention_epilogue(pos,compressed,true);
+    CHECK(ds4_gpu_begin_commands());

@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "completed_run_records": 23,
+  "bit_identical_logit_values": 216637440,
+  "bit_identical_complete_snapshots": 12,
+  "matching_http_requests": 32,
+  "matching_http_cache_images_with_only_timestamps_masked": 40,
+  "maximum_allocated_context": 32768,
+  "maximum_captured_position": 32767,
+  "clean_source_and_binary_identities_verified": true,
+  "working_branch_head": "849e039b4c8048d73423c12cdf201ccbfee8528b",
+  "working_tree_status_unchanged": true,
+  "current_27_splash_files_still_match_tested_snapshot": true
+}

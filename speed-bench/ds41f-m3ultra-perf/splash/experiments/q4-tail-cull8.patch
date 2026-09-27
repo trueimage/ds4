@@ -1,0 +1,194 @@
+--- a/metal/moe.metal
++++ b/metal/moe.metal
+@@ -7920,7 +7920,7 @@
+ // Batched routed-expert matmul. It reads the expert-major map produced above,
+ // loads selected expert weights, and writes results back to token-major slots
+ // so the DS4 FFN can apply SwiGLU, weighting, and the down projection.
+-template<short NR1, typename S0, typename S0_4x4, typename S0_8x8, typename S1, typename S1_2x4, typename S1_8x8, typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread S0_4x4 &), typename T0, typename T0_4x4, typename T1, typename T1_2x4, bool CULL_TAIL_SIMDGROUPS = false, bool EXPERT_ADDRESSES = false>
++template<short NR1, typename S0, typename S0_4x4, typename S0_8x8, typename S1, typename S1_2x4, typename S1_8x8, typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread S0_4x4 &), typename T0, typename T0_4x4, typename T1, typename T1_2x4, bool CULL_TAIL_SIMDGROUPS = false, bool EXPERT_ADDRESSES = false, bool CULL_TAIL_8 = false>
+ kernel void kernel_mul_mm_id(
+         constant ds4_metal_args_mul_mm_id & args,
+         device const char * src0,
+@@ -7972,6 +7972,7 @@
+     // but let the second row-half skip MMA on short final expert tiles.
+     const bool mma_active =
+         !CULL_TAIL_SIMDGROUPS || 16*(short)(sgitg/2) < nr1;
++    const bool mma_hi = !CULL_TAIL_8 || nr1 - 16*(short)(sgitg/2) > 8;
+ 
+     if (!ds4_tp_owns_expert(im, args.ne02, args.tp_rank, args.tp_world)) {
+         /* Unowned expert under the TP split: zero this tile's output rows so
+@@ -8110,13 +8111,13 @@
+                 simdgroup_barrier(mem_flags::mem_none);
+ 
+                 FOR_UNROLL (short i = 0; i < 2; i++) {
+-                    simdgroup_load(mb[i], lsmb + 64*i, 8, 0, false);
++                    if (i == 0 || mma_hi) simdgroup_load(mb[i], lsmb + 64*i, 8, 0, false);
+                 }
+ 
+                 simdgroup_barrier(mem_flags::mem_none);
+ 
+                 FOR_UNROLL (short i = 0; i < 8; i++){
+-                    simdgroup_multiply_accumulate(mc[i], mb[i/4], ma[i%4], mc[i]);
++                    if (i < 4 || mma_hi) simdgroup_multiply_accumulate(mc[i], mb[i/4], ma[i%4], mc[i]);
+                 }
+ 
+                 lsma += 8*64;
+@@ -8131,7 +8132,7 @@
+ 
+     if (mma_active) {
+         for (short i = 0; i < 8; i++) {
+-            simdgroup_store(mc[i], temp_str + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
++            if (i < 4 || mma_hi) simdgroup_store(mc[i], temp_str + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
+         }
+     }
+ 
+@@ -8374,7 +8375,7 @@
+ // each output keeps the exact MMA accumulation order of the separate GEMMs,
+ // and the epilogue matches kernel_dsv4_moe_swiglu_weight_f16, so the fused
+ // result is bit-identical to the unfused path.
+-template<typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread half4x4 &), bool CULL_TAIL_SIMDGROUPS = false>
++template<typename block_q, short nl, void (*dequantize_func)(device const block_q *, short, thread half4x4 &), bool CULL_TAIL_SIMDGROUPS = false, bool CULL_TAIL_8 = false>
+ kernel void kernel_mul_mm_id_pair_swiglu_f16_impl(
+         constant ds4_metal_args_mul_mm_id & args,
+         constant ds4_metal_dsv4_moe_swiglu_weight_args & act,
+@@ -8428,6 +8429,7 @@
+     // but let the second row-half skip MMA on short final expert tiles.
+     const bool mma_active =
+         !CULL_TAIL_SIMDGROUPS || 16*(short)(sgitg/2) < nr1;
++    const bool mma_hi = !CULL_TAIL_8 || nr1 - 16*(short)(sgitg/2) > 8;
+ 
+     const short lr0 = ((short)tiitg/NL0) < nr0 ? ((short)tiitg/NL0) : nr0 - 1;
+     const short lr1 = ((short)tiitg/NL1) < nr1 ? ((short)tiitg/NL1) : nr1 - 1;
+@@ -8513,14 +8515,14 @@
+                     simdgroup_load(ma_u[i], lsma_up   + 64*i, 8, 0, false);
+                 }
+                 FOR_UNROLL (short i = 0; i < 2; i++) {
+-                    simdgroup_load(mb[i], lsmb + 64*i, 8, 0, false);
++                    if (i == 0 || mma_hi) simdgroup_load(mb[i], lsmb + 64*i, 8, 0, false);
+                 }
+ 
+                 simdgroup_barrier(mem_flags::mem_none);
+ 
+                 FOR_UNROLL (short i = 0; i < 8; i++) {
+-                    simdgroup_multiply_accumulate(mc_gate[i], mb[i/4], ma_g[i%4], mc_gate[i]);
+-                    simdgroup_multiply_accumulate(mc_up[i],   mb[i/4], ma_u[i%4], mc_up[i]);
++                    if (i < 4 || mma_hi) simdgroup_multiply_accumulate(mc_gate[i], mb[i/4], ma_g[i%4], mc_gate[i]);
++                    if (i < 4 || mma_hi) simdgroup_multiply_accumulate(mc_up[i],   mb[i/4], ma_u[i%4], mc_up[i]);
+                 }
+ 
+                 lsma_gate += 8*64;
+@@ -8546,8 +8548,8 @@
+ 
+     if (mma_active) {
+         for (short i = 0; i < 8; i++) {
+-            simdgroup_store(mc_gate[i], temp_gate_str + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
+-            simdgroup_store(mc_up[i],   temp_up_str   + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
++            if (i < 4 || mma_hi) simdgroup_store(mc_gate[i], temp_gate_str + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
++            if (i < 4 || mma_hi) simdgroup_store(mc_up[i],   temp_up_str   + 8*(i%4) + 8*NR0*(i/4), NR0, 0, false);
+         }
+     }
+ 
+@@ -8817,6 +8819,7 @@
+ template [[host_name("kernel_mul_mm_id_iq2_xxs_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_iq2 kernel_mul_mm_id_pair_swiglu_f16_impl<block_iq2_xxs, QK_NL, dequantize_iq2_xxs>;
+ template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_q4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K>;
+ template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull")]] kernel mul_mm_id_pair_swiglu_f16_q4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true>;
++template [[host_name("kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull8")]] kernel mul_mm_id_pair_swiglu_f16_q4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_q4_K, QK_NL, dequantize_q4_K, true, true>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16_half_scale")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4 kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4_half_scale>;
+ template [[host_name("kernel_mul_mm_id_mxfp4_pair_swiglu_f16_tail_cull_half_scale")]] kernel mul_mm_id_pair_swiglu_f16_mxfp4_tail_cull kernel_mul_mm_id_pair_swiglu_f16_impl<block_mxfp4, 2, dequantize_mxfp4_half_scale, true>;
+@@ -8847,6 +8850,7 @@
+ template [[host_name("kernel_mul_mm_id_q2_K_f16")]]         kernel mul_mm_id_f16_rhs kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q2_K,    QK_NL, dequantize_q2_K,    half, half4x4, half, half2x4>;
+ template [[host_name("kernel_mul_mm_id_q4_K_f16")]]         kernel mul_mm_id_f16_rhs kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K,    QK_NL, dequantize_q4_K,    half, half4x4, half, half2x4>;
+ template [[host_name("kernel_mul_mm_id_q4_K_f16_tail_cull")]] kernel mul_mm_id_q4_K_f16_rhs_tail_cull kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, half, half4x4, half, half2x4, true>;
++template [[host_name("kernel_mul_mm_id_q4_K_f16_tail_cull8")]] kernel mul_mm_id_q4_K_f16_rhs_tail_cull kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, half, half4x4, half, half2x4, true, false, true>;
+ template [[host_name("kernel_mul_mm_id_q5_K_f16")]]         kernel mul_mm_id_f16_rhs kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q5_K,    QK_NL, dequantize_q5_K,    half, half4x4, half, half2x4>;
+ template [[host_name("kernel_mul_mm_id_q6_K_f16")]]         kernel mul_mm_id_f16_rhs kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q6_K,    QK_NL, dequantize_q6_K,    half, half4x4, half, half2x4>;
+ template [[host_name("kernel_mul_mm_id_iq2_xxs_f16")]]      kernel mul_mm_id_f16_rhs kernel_mul_mm_id<32, half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_iq2_xxs, QK_NL, dequantize_iq2_xxs, half, half4x4, half, half2x4>;
+--- a/ds4_metal.m
++++ b/ds4_metal.m
+@@ -44336,6 +44336,12 @@
+                                          "DS4_METAL_DISABLE_V41_Q4_TAIL_CULL");
+         if (use_v41_q4_tail_cull && (g_test_flags & DS4_GPU_TEST_V41_Q4_TAIL_CULL))
+             g_test_v41_q4_tail_dispatches++;
++        const bool use_v41_tail_cull8 = use_v41_q4_tail_cull &&
++            ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_TAIL_CULL8,
++                                         "DS4_METAL_DISABLE_V41_TAIL_CULL8");
++        if (use_v41_tail_cull8 && (g_test_flags & DS4_GPU_TEST_V41_TAIL_CULL8))
++            g_test_v41_q4_tail_dispatches |= 2u;
++
+         /*
+          * The MXFP4 32x32 specialization uses two SIMDgroups and 8 KiB of
+          * threadgroup memory, and exactly culls SIMDgroup 1 on at-most-16-row
+@@ -44449,7 +44455,8 @@
+             gate_mm_pipeline = ds4_gpu_routed_mm_pipeline(gate_type);
+             up_mm_pipeline = ds4_gpu_routed_mm_pipeline(gate_type);
+             down_mm_pipeline = use_v41_q4_tail_cull ?
+-                ds4_gpu_get_mul_mm_id_pipeline("kernel_mul_mm_id_q4_K_f16_tail_cull", false) :
++                ds4_gpu_get_mul_mm_id_pipeline(use_v41_tail_cull8 ?
++                    "kernel_mul_mm_id_q4_K_f16_tail_cull8" : "kernel_mul_mm_id_q4_K_f16_tail_cull", false) :
+                 use_mxfp4_mm_id_down_half_lut ?
+                 ds4_gpu_get_mul_mm_id_pipeline(
+                     use_mxfp4_mm_id_down_tail_simdgroup_cull ?
+@@ -44556,7 +44563,8 @@
+                 pair_swiglu_mm_pipeline =
+                     ds4_gpu_get_pipeline(
+                         gate_type == DS4_METAL_TENSOR_Q4_K ?
+-                            (use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
++                            (use_v41_tail_cull8 ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull8" :
++                             use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
+                              "kernel_mul_mm_id_q4_K_pair_swiglu_f16") :
+                         gate_type == DS4_METAL_TENSOR_MXFP4 ?
+                             (use_mxfp4_mm_id_pair_swiglu_compact_tile ?
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -269,6 +269,7 @@
+     DS4_GPU_TEST_V41_FUSIONS = 1u << 10,
+     /* One weight read for all rows of a small V4.1 batch. */
+     DS4_GPU_TEST_V41_SHARED_ROWS = 1u << 11,
++    DS4_GPU_TEST_V41_TAIL_CULL8 = 1u << 12,
+ };
+ void ds4_gpu_test_set_flags(uint32_t flags);
+ /* Count V4.1 Q4 tail-cull calls only while its test flag is enabled. */
+--- a/tests/test_deepseek41_q4_tail.c
++++ b/tests/test_deepseek41_q4_tail.c
+@@ -34,7 +34,7 @@
+         }
+     }
+     CHECK(ds4_gpu_init() && ds4_gpu_set_model_map(model, bytes));
+-    ds4_gpu_test_set_flags(DS4_GPU_TEST_V41_Q4_TAIL_CULL);
++    ds4_gpu_test_set_flags(DS4_GPU_TEST_V41_Q4_TAIL_CULL | DS4_GPU_TEST_V41_TAIL_CULL8);
+     ds4_gpu_set_quality(false);
+     ds4_gpu_set_ssd_streaming(false);
+     ds4_gpu_tensor *x = ds4_gpu_tensor_alloc_managed(N * D * 4ull);
+@@ -50,8 +50,8 @@
+     int32_t *route_ids = ds4_gpu_tensor_contents(ids);
+     CHECK(input && route_weights && route_ids);
+     for (unsigned i = 0; i < N * D; i++) input[i] = ((int)(random_u32() % 101) - 50) / 256.0f;
+-    const unsigned sizes[] = {32, 33, 47, 48, 49, 63, 64, 65, 127, 128, 129, 511, 512, 513};
+-    const unsigned order[] = {0, 1, 1, 0};
++    const unsigned sizes[] = {32, 33, 40, 41, 56, 57, 47, 48, 49, 63, 64, 65, 127, 128, 129, 511, 512, 513};
++    const unsigned order[] = {0, 1, 3, 3, 1, 0};
+     void *ref_mid = malloc(N * K * H * 2ull), *ref_out = malloc(N * D * 4ull);
+     CHECK(ref_mid && ref_out);
+     for (unsigned pattern = 0; pattern < 3; pattern++) {
+@@ -66,9 +66,11 @@
+         for (unsigned shape = 0; shape < sizeof(sizes) / sizeof(*sizes); shape++) {
+             const uint32_t n = sizes[shape];
+             const size_t mid_bytes = n * K * H * 2ull, out_bytes = n * D * 4ull;
+-            for (unsigned pass = 0; pass < 4; pass++) {
++            for (unsigned pass = 0; pass < 6; pass++) {
+                 if (order[pass]) CHECK(unsetenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL") == 0);
+                 else CHECK(setenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL", "1", 1) == 0);
++                if (order[pass] == 3) unsetenv("DS4_METAL_DISABLE_V41_TAIL_CULL8");
++                else setenv("DS4_METAL_DISABLE_V41_TAIL_CULL8", "1", 1);
+                 CHECK(ds4_gpu_test_v41_q4_tail_take_dispatches() == 0);
+                 uint8_t *m = ds4_gpu_tensor_contents(mid), *o = ds4_gpu_tensor_contents(out);
+                 CHECK(m && o);
+@@ -96,6 +98,7 @@
+     ds4_gpu_test_set_flags(0);
+     ds4_gpu_set_ssd_streaming(false);
+     unsetenv("DS4_METAL_DISABLE_V41_Q4_TAIL_CULL");
++    unsetenv("DS4_METAL_DISABLE_V41_TAIL_CULL8");
+     ds4_gpu_cleanup(); free(ref_mid); free(ref_out); free(model);
+     return 0;
+ }

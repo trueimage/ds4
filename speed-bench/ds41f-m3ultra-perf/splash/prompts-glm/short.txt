@@ -1,0 +1,1 @@
+Write a portable C function that implements an open-addressing hash table lookup. Explain how it handles collisions and missing keys.

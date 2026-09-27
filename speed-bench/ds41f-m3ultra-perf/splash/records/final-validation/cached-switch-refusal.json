@@ -1,0 +1,110 @@
+[
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_FLASH_TUNING",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_FLASH_TUNING is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_GATE_TRIO",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_GATE_TRIO is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_OUT_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_OUT_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_ATTN_OUT_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_ATTN_OUT_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_SHARED_DOWN_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_SHARED_DOWN_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_decode_schedule_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_DSA_EXACT",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_DSA_EXACT is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_FLASH_TUNING",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_FLASH_TUNING is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_HC_PRODUCER_FUSE is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_GATE_PAIR is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_GATE_TRIO",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_GATE_TRIO is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_KDA_OUT_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_KDA_OUT_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_ATTN_OUT_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_ATTN_OUT_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_FFN_HC_EXPAND_ADD is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_SHARED_DOWN_HC_EXPAND",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_SHARED_DOWN_HC_EXPAND is cached at engine startup; use separate processes to compare it\n"
+  },
+  {
+    "binary": "speed-bench/metal_prefill_variant_bench",
+    "switch": "DS4_METAL_DISABLE_GLM53_DSA_EXACT",
+    "exit": 2,
+    "stderr": "benchmark: DS4_METAL_DISABLE_GLM53_DSA_EXACT is cached at engine startup; use separate processes to compare it\n"
+  }
+]
