@@ -9,6 +9,7 @@
 /ds4_test
 /ds4flash.gguf
 /TODO.md
+glm53flash_prefill*.md
 /gguf
 /core
 /core.*
@@ -114,3 +115,8 @@ __pycache__/
 
 /tests/test_qwen4_conv_parallel
 /tests/test_q8_prefill_variants
+
+/tests/test_glm53_router_shared
+/tests/test_glm53_topk_fast
+/tests/test_glm53_q8_inputs
+/tests/test_glm53_hc_pre_repeat
