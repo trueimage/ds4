@@ -275,3 +275,14 @@ kernel void kernel_cpy_tile_rows_f32_f32(
     const uint r = (args.pos0 + t) % args.ratio;
     dst[gid] = src[r * args.width + e];
 }
+
+// A raw copy that stays inside the running compute encoder. Integer loads and
+// stores move every bit pattern unchanged, NaN payloads and signed zeros
+// included, exactly as the blit it replaces does.
+kernel void kernel_ds4_copy_words(
+        constant uint     & n_words,
+        device const uint * src,
+        device       uint * dst,
+        uint gid [[thread_position_in_grid]]) {
+    if (gid < n_words) dst[gid] = src[gid];
+}

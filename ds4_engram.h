@@ -59,5 +59,30 @@ bool ds4_engram_read(const ds4_engram_table *table, const uint32_t *rows,
  * On macOS, large batches use bounded concurrent pread readers. */
 bool ds4_engram_read_batch(const ds4_engram_table *table, const uint32_t *rows,
                            size_t tokens, size_t stride, float *out);
+/* One decode token: COLS rows from each table into out[table][COLS][DIM]. The
+ * same reads and per-row decoding as ds4_engram_read, so the values are
+ * identical; on macOS the uncached reads are issued together, so a step waits
+ * for about one random read instead of all of them in turn. Row IDs are
+ * validated before any output is written. */
+bool ds4_engram_read_step(const ds4_engram_table tables[DS4_ENGRAM_LAYERS],
+                          const uint32_t rows[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS],
+                          float *out[DS4_ENGRAM_LAYERS]);
+/* The same read, split so the caller can work while it is in flight. begin
+ * validates and starts it; the tables, row IDs and outputs must stay valid and
+ * untouched until end, which must be called exactly once after a successful
+ * begin and reports the read's result. Elsewhere than macOS begin reads
+ * synchronously. */
+typedef struct {
+    const ds4_engram_table *tables;
+    const uint32_t (*rows)[DS4_ENGRAM_COLS];
+    float *out[DS4_ENGRAM_LAYERS];
+    int error[DS4_ENGRAM_LAYERS * DS4_ENGRAM_COLS];
+    void *group;
+} ds4_engram_step;
+bool ds4_engram_read_step_begin(ds4_engram_step *step,
+                                const ds4_engram_table tables[DS4_ENGRAM_LAYERS],
+                                const uint32_t rows[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS],
+                                float *out[DS4_ENGRAM_LAYERS]);
+bool ds4_engram_read_step_end(ds4_engram_step *step);
 
 #endif

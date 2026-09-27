@@ -159,6 +159,76 @@ static void test_rows(void) {
         assert(batch[count * WIDTH] == 123456.0f);
     }
     assert(ds4_engram_read_batch(&t, NULL, 0, 0, NULL));
+    /* The per-step reader returns exactly what the ordinary reader does for
+     * both tables, duplicates included, and validates before it writes. */
+    {
+        enum { STEP = DS4_ENGRAM_COLS * DS4_ENGRAM_DIM };
+        /* A second table with different rows and row IDs that differ between
+         * the tables: a table, ID or output mix-up cannot pass. */
+        const uint64_t offset2 = offset + (1ull << 20);
+        uint8_t raw2[5][DS4_ENGRAM_ROW_BYTES];
+        for (int r = 0; r < 5; r++) {
+            for (int i = 0; i < 256; i++) raw2[r][i] = (uint8_t)((i * 7 + r * 13 + 1) & 0x7e);
+            for (int i = 0; i < 8; i++) raw2[r][256 + i] = (uint8_t)(120 + r + i);
+        }
+        assert(pwrite(fd, raw2, sizeof(raw2), offset2) == sizeof(raw2));
+        ds4_engram_table t2;
+        assert(ds4_engram_table_open(&t2, path, offset2, 5));
+        const ds4_engram_table tables[DS4_ENGRAM_LAYERS] = {t, t2};
+        uint32_t step_ids[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS];
+        static float step_out[DS4_ENGRAM_LAYERS][STEP + 1], step_ref[DS4_ENGRAM_LAYERS][STEP];
+        float *step_ptr[DS4_ENGRAM_LAYERS] = {step_out[0], step_out[1]};
+        for (int round = 0; round < 64; round++) {
+            for (int l = 0; l < DS4_ENGRAM_LAYERS; l++) {
+                for (int j = 0; j < DS4_ENGRAM_COLS; j++)
+                    step_ids[l][j] = (uint32_t)(round * 5 + j * (l ? 3 : 7) + l) % (l ? 5u : 3u);
+                assert(ds4_engram_read(&tables[l], step_ids[l], DS4_ENGRAM_COLS, step_ref[l]));
+                memset(step_out[l], 0xa5, STEP * sizeof(float));
+                step_out[l][STEP] = 123456.0f;
+            }
+            ds4_engram_step pending;
+            if (round & 1) {
+                assert(ds4_engram_read_step_begin(&pending, tables,
+                    (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr));
+                assert(ds4_engram_read_step_end(&pending));
+                errno = 0;
+                assert(!ds4_engram_read_step_end(&pending) && errno == EINVAL);
+            } else assert(ds4_engram_read_step(tables,
+                (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr));
+            for (int l = 0; l < DS4_ENGRAM_LAYERS; l++) {
+                assert(memcmp(step_out[l], step_ref[l], sizeof(step_ref[l])) == 0);
+                assert(step_out[l][STEP] == 123456.0f);
+            }
+            assert(memcmp(step_ref[0], step_ref[1], sizeof(step_ref[0])) != 0);
+        }
+        step_ids[1][DS4_ENGRAM_COLS - 1] = 5;
+        step_out[0][0] = 123456.0f;
+        errno = 0;
+        assert(!ds4_engram_read_step(tables,
+            (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr) && errno == EINVAL);
+        assert(step_out[0][0] == 123456.0f);
+        step_ids[1][DS4_ENGRAM_COLS - 1] = 0;
+        step_ptr[1] = NULL;
+        assert(!ds4_engram_read_step(tables,
+            (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr) && errno == EINVAL);
+        step_ptr[1] = step_out[1];
+        uint8_t poison = 127;
+        assert(pwrite(fd, &poison, 1, offset) == 1);
+        assert(!ds4_engram_read_step(tables,
+            (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr) && errno == EDOM);
+        ds4_engram_step failing;
+        assert(ds4_engram_read_step_begin(&failing, tables,
+            (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr));
+        errno = 0;
+        assert(!ds4_engram_read_step_end(&failing) && errno == EDOM);
+        step_ids[0][0] = 3;
+        errno = 0;
+        assert(!ds4_engram_read_step_begin(&failing, tables,
+            (const uint32_t (*)[DS4_ENGRAM_COLS])step_ids, step_ptr) && errno == EINVAL);
+        step_ids[0][0] = 0;
+        assert(pwrite(fd, raw, sizeof(raw), offset) == sizeof(raw));
+        ds4_engram_table_close(&t2);
+    }
     assert(!ds4_engram_read_batch(&t, batch_ids, 1, 23, batch) && errno == EINVAL);
     assert(!ds4_engram_read_batch(&t, batch_ids, 2, SIZE_MAX, batch) && errno == EINVAL);
     assert(!ds4_engram_read_batch(&t, batch_ids, SIZE_MAX, STRIDE, batch) && errno == EINVAL);

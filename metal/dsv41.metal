@@ -59,6 +59,39 @@ kernel void kernel_dsv41_rope(
     x[i + 1u] = dsv41_bf16(re * s + im * c);
 }
 
+// The reduce writes F32 first, just as the unfused chain does. Its noinline
+// body is shared with the reference; materialize BF16 before the RoPE pair.
+static inline void dsv41_attention_epilogue(
+        constant ds4_metal_args_dsv41_rope &args, device float *x,
+        uint head, uint tid, uint threads) {
+    device float *row = x + (ulong)head * 512u;
+    for (uint i = tid; i < 448u; i += threads) row[i] = dsv41_bf16(row[i]);
+    if (tid < 32u) {
+        const float theta = float(args.start) * args.frequencies[tid];
+        const float c = precise::cos(theta);
+        const float s = args.inverse ? -precise::sin(theta) : precise::sin(theta);
+        const uint i = 448u + 2u * tid;
+        const float re = dsv41_bf16(row[i]), im = dsv41_bf16(row[i + 1u]);
+        row[i] = dsv41_bf16(re * c - im * s);
+        row[i + 1u] = dsv41_bf16(re * s + im * c);
+    }
+}
+
+kernel void kernel_flash_attn_ext_vec_reduce_dsv41(
+        constant ds4_metal_args_flash_attn_ext_vec_reduce &args,
+        device const char *htmp, device char *dst,
+        constant ds4_metal_args_dsv41_rope &rope,
+        uint head [[threadgroup_position_in_grid]],
+        ushort tid [[thread_index_in_threadgroup]],
+        ushort lane [[thread_index_in_simdgroup]],
+        ushort sg [[simdgroup_index_in_threadgroup]]) {
+    ds4_flash_attn_vec_reduce_row(args, htmp, dst, head, lane, sg,
+        (short)FC_flash_attn_ext_vec_reduce_NWG, (short)FC_flash_attn_ext_vec_reduce_DV);
+    threadgroup_barrier(mem_flags::mem_device);
+    dsv41_attention_epilogue(rope, (device float *)dst, head, tid,
+                             32u * FC_flash_attn_ext_vec_reduce_NWG);
+}
+
 kernel void kernel_dsv41_quantize(
         constant ds4_metal_args_dsv41_quantize &args,
         device float *x,
@@ -291,3 +324,203 @@ kernel void kernel_dsv41_indexer_scores_packed(
     }
 }
 #endif
+
+// Fuse the reference 384-expert router without changing its sorting network,
+// active-lane sum or the stored F32 boundaries between normalization stages.
+// The clamp bounds arrive as runtime arguments, as they do in the unary clamp
+// this replaces: a compile-time INFINITY invites fast-math to fold the clamp.
+kernel void kernel_dsv41_router(
+        constant float &scale, device const float *logits,
+        device const float *bias, device float *probs,
+        device int *selected, device float *weights,
+        constant float2 &sum_bounds,
+        uint row [[threadgroup_position_in_grid]],
+        uint tid [[thread_index_in_threadgroup]]) {
+    threadgroup int ids[512];
+    threadgroup volatile float scores[512];
+    threadgroup volatile float scratch[40];
+    ids[tid] = int(tid);
+    if (tid < 384u) {
+        const float x = logits[row * 384u + tid];
+        // Match the reference softplus, including its small-exp polynomial.
+        const float ex = exp(x);
+        const float em = min(ex, 0.03125f);
+        const float poly = em*(1.0f - em*(0.5f - em*(1.0f/3.0f - 0.25f*em)));
+        scores[tid] = select(select(log(1.0f + ex), poly, ex < 0.03125f), x, x > 20.0f);
+        const float p = sqrt(scores[tid]);
+        probs[row * 384u + tid] = p;
+        scores[tid] = p + bias[tid];
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
+    // Match kernel_argsort_f32_i32_desc, including padding and unordered ties.
+    for (uint k = 2; k <= 512u; k <<= 1u) {
+        for (uint j = k >> 1u; j; j >>= 1u) {
+            const uint other = tid ^ j;
+            if (other > tid) {
+                const int a = ids[tid], b = ids[other];
+                const bool swap = (tid & k) == 0u ?
+                    (a >= 384 || (b < 384 && scores[a] < scores[b])) :
+                    (b >= 384 || (a < 384 && scores[a] > scores[b]));
+                if (swap) { ids[tid] = b; ids[other] = a; }
+            }
+            threadgroup_barrier(mem_flags::mem_threadgroup);
+        }
+    }
+    float p = 0.0f, sum = 0.0f;
+    if (tid < 6u) {
+        selected[row * 6u + tid] = ids[tid];
+        p = probs[row * 384u + uint(ids[tid])];
+        scratch[tid] = 0.0f;
+        sum += p;
+        sum = simd_sum(sum);
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid == 0u) scratch[0] = sum;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) {
+        sum = scratch[tid];
+        sum = simd_sum(sum);
+        if (tid == 0u) scratch[32] = clamp(sum, sum_bounds.x, sum_bounds.y);
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) scratch[33u + tid] = p / scratch[32];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) weights[row * 6u + tid] = scratch[33u + tid] * scale;
+}
+
+kernel void kernel_dsv41_router_top6(
+        constant float &scale, device const float *logits,
+        device const float *bias, device float *probs,
+        device int *selected, device float *weights,
+        constant float2 &sum_bounds,
+        device atomic_uint *coverage, constant uint &record,
+        uint row [[threadgroup_position_in_grid]],
+        uint tid [[thread_index_in_threadgroup]]) {
+    threadgroup uint network;
+    threadgroup int winners[6];
+    threadgroup int ids[512];
+    threadgroup volatile float scores[512];
+    threadgroup volatile float scratch[40];
+    ids[tid] = int(tid);
+    if (tid < 384u) {
+        const float x = logits[row * 384u + tid];
+        // Match the reference softplus, including its small-exp polynomial.
+        const float ex = exp(x);
+        const float em = min(ex, 0.03125f);
+        const float poly = em*(1.0f - em*(0.5f - em*(1.0f/3.0f - 0.25f*em)));
+        scores[tid] = select(select(log(1.0f + ex), poly, ex < 0.03125f), x, x > 20.0f);
+        const float p = sqrt(scores[tid]);
+        probs[row * 384u + tid] = p;
+        scores[tid] = p + bias[tid];
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
+    // Unique finite winners have the same order in any correct sort. Reject
+    // ties and exceptional stored scores before considering that shortcut.
+    if (tid < 32u) {
+        float values[12];
+        uint bad = 0u;
+        for (uint i = 0; i < 12u; i++) {
+            values[i] = scores[tid + i * 32u];
+            const uint bits = as_type<uint>(values[i]) & 0x7fffffffu;
+            bad |= (bits >= 0x7f800000u || (bits != 0u && bits < 0x00800000u));
+        }
+        bad = simd_max(bad);
+        float previous = INFINITY;
+        for (uint rank = 0u; rank < 7u; rank++) {
+            float best = -INFINITY;
+            for (uint i = 0; i < 12u; i++) best = max(best,values[i]);
+            best = simd_max(best);
+            uint id = 512u, count = 0u;
+            for (uint i = 0; i < 12u; i++) if (values[i] == best) {
+                id = min(id,tid + i * 32u); count++;
+            }
+            id = simd_min(id); count = simd_sum(count);
+            bad |= count != 1u || !(best < previous);
+            if (tid == 0u && rank < 6u) winners[rank] = int(id);
+            for (uint i = 0; i < 12u; i++) if (tid + i * 32u == id) values[i] = -INFINITY;
+            previous = best;
+        }
+        if (tid == 0u) {
+            network = bad;
+            if (!bad && record) atomic_fetch_or_explicit(coverage,32u,memory_order_relaxed);
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (network) {
+    // Match kernel_argsort_f32_i32_desc, including padding and unordered ties.
+    for (uint k = 2; k <= 512u; k <<= 1u) {
+        for (uint j = k >> 1u; j; j >>= 1u) {
+            const uint other = tid ^ j;
+            if (other > tid) {
+                const int a = ids[tid], b = ids[other];
+                const bool swap = (tid & k) == 0u ?
+                    (a >= 384 || (b < 384 && scores[a] < scores[b])) :
+                    (b >= 384 || (a < 384 && scores[a] > scores[b]));
+                if (swap) { ids[tid] = b; ids[other] = a; }
+            }
+            threadgroup_barrier(mem_flags::mem_threadgroup);
+        }
+    }
+    } else if (tid < 6u) ids[tid] = winners[tid];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    float p = 0.0f, sum = 0.0f;
+    if (tid < 6u) {
+        selected[row * 6u + tid] = ids[tid];
+        p = probs[row * 384u + uint(ids[tid])];
+        scratch[tid] = 0.0f;
+        sum += p;
+        sum = simd_sum(sum);
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid == 0u) scratch[0] = sum;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) {
+        sum = scratch[tid];
+        sum = simd_sum(sum);
+        if (tid == 0u) scratch[32] = clamp(sum, sum_bounds.x, sum_bounds.y);
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) scratch[33u + tid] = p / scratch[32];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < 6u) weights[row * 6u + tid] = scratch[33u + tid] * scale;
+}
+
+// Collapse consumes the previous mixer. Preserve the four ordered FMAs, both
+// BF16 stores and the weighted RMSNorm's original 1024-thread reduction.
+// The width arrives as the same runtime int32 the reference RMSNorm divides
+// by: a compile-time 5120.0f invites fast-math to multiply by a reciprocal.
+kernel void kernel_dsv41_hc_norm(
+        constant float &eps, device const float *residual,
+        device const float *pre, device const float4 *weight,
+        device float4 *collapsed, device float4 *normalized,
+        constant int32_t &width,
+        uint tid [[thread_index_in_threadgroup]],
+        ushort lane [[thread_index_in_simdgroup]],
+        ushort sg [[simdgroup_index_in_threadgroup]]) {
+    threadgroup float4 values[1280];
+    threadgroup float sums[32];
+    float sum = 0.0f;
+    for (uint i = tid; i < 1280u; i += 1024u) {
+        float4 v;
+        for (uint c = 0; c < 4; c++) {
+            volatile float acc = 0.0f;
+            for (uint h = 0; h < 4; h++) acc += residual[h * 5120u + i * 4u + c] * pre[h];
+            v[c] = dsv41_bf16(acc);
+        }
+        values[i] = v;
+        collapsed[i] = v;
+        sum += dot(v, v);
+    }
+    sum = simd_sum(sum);
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (lane == 0) sums[sg] = sum;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    sum = simd_sum(sums[lane]);
+    const float mean = sum / width;
+    const float scale = 1.0f / sqrt(mean + eps);
+    for (uint i = tid; i < 1280u; i += 1024u) {
+        volatile float4 v = (values[i] * scale) * weight[i];
+        normalized[i] = float4(dsv41_bf16(v.x), dsv41_bf16(v.y),
+                               dsv41_bf16(v.z), dsv41_bf16(v.w));
+    }
+}

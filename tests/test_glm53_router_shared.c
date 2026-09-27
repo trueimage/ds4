@@ -57,9 +57,14 @@ int main(void) {
             uint32_t inf=0x7f800000; memcpy(model+BIAS+4*219,&inf,4);
         }
         require(ds4_gpu_tensor_write(x,0,input,sizeof(input)),"input write");
+        /* The reference is the untuned chain: with the tuning on, its selector
+         * is the top-eight kernel and the fused stage would only ever be
+         * compared with another tuned one. */
+        require(setenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING","1",1)==0,"reference rollback");
         require(ds4_gpu_matmul_f32_tensor(out[0],model,BYTES,ROUTER,WIDTH,EXPERTS,x,1),"reference projection");
         require(ds4_gpu_glm_router_select_tensor(out[1],out[2],out[3],model,BYTES,BIAS,out[0],EXPERTS,USED,1.0f),"reference selection");
         require(ds4_gpu_shared_mid_swiglu_q8_0_tensor(out[5],model,BYTES,GATE,UP,WIDTH,MID,x,10.0f),"reference shared mid");
+        require(unsetenv("DS4_METAL_DISABLE_GLM53_FLASH_TUNING")==0,"reference rollback clear");
         for (int i=0;i<6;i++) {
             require(ds4_gpu_tensor_read(out[i],0,expected[i],sizes[i]),"reference read");
             if (i!=4) {

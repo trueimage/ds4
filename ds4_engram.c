@@ -194,6 +194,105 @@ bool ds4_engram_read(const ds4_engram_table *t, const uint32_t *rows,
     return true;
 }
 
+enum { ENGRAM_STEP_ROWS = DS4_ENGRAM_LAYERS * DS4_ENGRAM_COLS };
+
+static void read_step_row(void *context, size_t i) {
+    ds4_engram_step *step = context;
+    const size_t table = i / DS4_ENGRAM_COLS, col = i % DS4_ENGRAM_COLS;
+    if (!ds4_engram_read(&step->tables[table], &step->rows[table][col], 1,
+                         step->out[table] + col * DS4_ENGRAM_DIM))
+        step->error[i] = errno ? errno : EIO;
+}
+
+static void read_step_rows(void *context) {
+#ifdef __APPLE__
+    /* Every row owns its output slice. */
+    dispatch_apply_f(ENGRAM_STEP_ROWS,
+        dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), context, read_step_row);
+#else
+    for (size_t i = 0; i < ENGRAM_STEP_ROWS; i++) read_step_row(context, i);
+#endif
+}
+
+static bool read_step_prepare(ds4_engram_step *step,
+                              const ds4_engram_table tables[DS4_ENGRAM_LAYERS],
+                              const uint32_t rows[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS],
+                              float *out[DS4_ENGRAM_LAYERS]) {
+    if (!step || !tables || !rows || !out) {
+        errno = EINVAL;
+        return false;
+    }
+    for (size_t t = 0; t < DS4_ENGRAM_LAYERS; t++) {
+        if (tables[t].fd < 0 || !out[t]) {
+            errno = EINVAL;
+            return false;
+        }
+        for (size_t j = 0; j < DS4_ENGRAM_COLS; j++) {
+            if (rows[t][j] >= tables[t].rows) {
+                errno = EINVAL;
+                return false;
+            }
+        }
+    }
+    *step = (ds4_engram_step){.tables = tables, .rows = rows};
+    for (size_t t = 0; t < DS4_ENGRAM_LAYERS; t++) step->out[t] = out[t];
+    return true;
+}
+
+static bool read_step_result(const ds4_engram_step *step) {
+    for (size_t i = 0; i < ENGRAM_STEP_ROWS; i++) {
+        if (step->error[i]) {
+            errno = step->error[i];
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ds4_engram_read_step(const ds4_engram_table tables[DS4_ENGRAM_LAYERS],
+                          const uint32_t rows[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS],
+                          float *out[DS4_ENGRAM_LAYERS]) {
+    ds4_engram_step step;
+    if (!read_step_prepare(&step, tables, rows, out)) return false;
+    read_step_rows(&step);
+    return read_step_result(&step);
+}
+
+bool ds4_engram_read_step_begin(ds4_engram_step *step,
+                                const ds4_engram_table tables[DS4_ENGRAM_LAYERS],
+                                const uint32_t rows[DS4_ENGRAM_LAYERS][DS4_ENGRAM_COLS],
+                                float *out[DS4_ENGRAM_LAYERS]) {
+    if (!read_step_prepare(step, tables, rows, out)) return false;
+#ifdef __APPLE__
+    dispatch_group_t group = dispatch_group_create();
+    if (group) {
+        step->group = (void *)group;
+        dispatch_group_async_f(group,
+            dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), step, read_step_rows);
+        return true;
+    }
+#endif
+    read_step_rows(step);
+    return true;
+}
+
+bool ds4_engram_read_step_end(ds4_engram_step *step) {
+    if (!step || !step->tables) {
+        errno = EINVAL;
+        return false;
+    }
+#ifdef __APPLE__
+    if (step->group) {
+        dispatch_group_t group = (dispatch_group_t)step->group;
+        dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+        dispatch_release(group);
+        step->group = NULL;
+    }
+#endif
+    step->tables = NULL;
+    return read_step_result(step);
+}
+
 typedef struct {
     uint32_t row, output;
 } engram_request;

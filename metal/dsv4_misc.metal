@@ -3524,9 +3524,12 @@ kernel void kernel_glm_attention_indexed_decode_exact_lora(
         } else { \
             kvq[slot] = uint4(0u); \
         } \
+        /* The generic kernel does not accumulate an invalid row at all. Its \
+         * weight is exp(-inf - max): zero, except NaN when no row is valid. \
+         * Stage zero for it, as for a row past the end. */ \
         const uint sw_ = s0_ + w_r; \
         const uint hh_ = head0 + w_h; \
-        wq[slot] = (sw_ < n && hh_ < args.n_head) \
+        wq[slot] = (sw_ < n && hh_ < args.n_head && selected[sw_] < args.cache_cap) \
             ? weights[(uint64_t)hh_ * n + sw_] : 0.0f; \
     } while (0)
 

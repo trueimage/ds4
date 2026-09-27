@@ -10,9 +10,21 @@ static void need(int ok,const char *why) { if(!ok){fprintf(stderr,"TOPK FAIL %s\
 static uint32_t seed=0xb719325e;
 static uint32_t rnd(void){seed^=seed<<13;seed^=seed>>17;seed^=seed<<5;return seed;}
 static float bits(uint32_t b){float f;memcpy(&f,&b,4);return f;}
-int main(void) {
+int main(int argc, char **argv) {
+    const bool bounded = argc == 2 && !strcmp(argv[1], "--32k");
+    if (argc != 1 && !bounded) {
+        fprintf(stderr, "usage: %s [--32k]\n", argv[0]);
+        return 2;
+    }
     enum { MAX=131073, K=512 };
-    const uint32_t widths[]={8192,12288,15543,37500,75000,131073};
+    uint32_t widths[]={8192,12288,15543,37500,75000,131073};
+    if (bounded) {
+        /* Keep the legacy wide cases for unrestricted runs. The last width
+         * exceeds the selector's host limit and only verifies refusal. */
+        widths[3] = 24576;
+        widths[4] = 32768;
+        puts("GLM top-k --32k: admitted widths <=32768; 131073 verifies host refusal only");
+    }
     float *x=malloc(MAX*4); uint32_t a[K],b[K],stats[15]={0},before[15]={0};
     need(x!=NULL,"CPU allocation"); need(ds4_gpu_init(),"init");
     ds4_gpu_tensor *scores=ds4_gpu_tensor_alloc(MAX*4),*out=ds4_gpu_tensor_alloc(K*4);
@@ -46,7 +58,7 @@ int main(void) {
         if(memcmp(a,b,sizeof(a))){unsigned i=0;while(i<K&&a[i]==b[i])i++;fprintf(stderr,"n=%u draw=%u kind=%u rank=%u ref=%u got=%u\n",n,draw,kind,i,a[i],b[i]);return 1;}
         ds4_gpu_test_glm53_topk_stats(stats,15);
         if(stats[4]==before[4]){skips++;need(n==8192||n==131073,"unexpected skip");}
-        else {need(stats[4]==before[4]+1,"call count");if(stats[5]>before[5]){accepts++;need(kind==0||kind==1||kind==2||kind==10||kind==11,"unsafe accept");}else rejects++;}
+        else {need(!bounded || n<=32768,"bounded admission");need(stats[4]==before[4]+1,"call count");if(stats[5]>before[5]){accepts++;need(kind==0||kind==1||kind==2||kind==10||kind==11,"unsafe accept");}else rejects++;}
     }
     const uint32_t recovery_n=12288u;
     for(uint32_t i=0;i<recovery_n;i++) x[i]=-1.0f;

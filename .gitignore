@@ -89,6 +89,7 @@ glm53flash_prefill*.md
 /tests/test_deepseek4_vision_image
 /tests/test_image_decode
 /tests/test_deepseek41_metal
+/tests/test_deepseek41_q4_tail
 /tests/test_deepseek41_cuda
 /tests/test_cuda_q8_rows
 /tests/test_cuda_reductions
@@ -100,6 +101,7 @@ glm53flash_prefill*.md
 /tests/test_qwen4_ngrams
 /tests/test_qwen4_ngram_state
 /tests/test_deepseek41_graph
+/tests/test_deepseek41_dspark
 /tests/test_deepseek41_prefill
 /tests/test_deepseek41_cli
 /tests/test_engram
@@ -120,3 +122,16 @@ __pycache__/
 /tests/test_glm53_topk_fast
 /tests/test_glm53_q8_inputs
 /tests/test_glm53_hc_pre_repeat
+
+/tests/test_deepseek41_fusions
+/tests/test_deepseek41_engram_admission
+/tests/test_deepseek41_topk
+/tests/test_deepseek41_live_edges
+
+/tests/test_deepseek41_attention
+/tests/test_metal_coherence
+/tests/test_metal_half_conversion
+/tests/test_host_memory
+/speed-bench/kvstore_write_bench
+/tests/test_glm_full_metal
+/tests/test_prompt_prefix

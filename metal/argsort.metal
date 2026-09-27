@@ -550,9 +550,9 @@ kernel void kernel_glm53_topk_fast_finish(
     const uint count = atomic_load_explicit(&ctrl[1], memory_order_relaxed);
     const uint have  = min(count, args.cand_cap);
 
-    /* Register-resident bitonic sort, descending by (key, index).  Exactly the
-     * structure of kernel_argsort_f32_i32_desc_pair above: every stage with
-     * j < 32 is a simd_shuffle_xor and the rest use double-buffered threadgroup
+    /* Register-resident bitonic sort, descending by (key, index).  Every stage
+     * with j < 32 is a simd_shuffle_xor, as in the shuffle variant of
+     * kernel_argsort_f32_i32 above, and the rest use double-buffered threadgroup
      * staging, so 55 stages cost 15 barriers instead of 55.  (key, index) is a
      * total order, so the result does not depend on the order in which the
      * gather's atomic counter handed out candidate slots. */
@@ -580,9 +580,13 @@ kernel void kernel_glm53_topk_fast_finish(
             if (cur_greater != want_greater) cur = other;
         }
     }
-    buf0[tid] = cur;
+    /* Publish into the buffer the LAST staged stage did not use.  A lane's
+     * final j < 32 stages synchronise only inside its SIMD group, so a lane in
+     * another group may still be reading that stage's buffer; the other one was
+     * last read before that stage's barrier and is quiescent. */
+    threadgroup uint2 *s = use_buf1 ? buf1 : buf0;
+    s[tid] = cur;
     threadgroup_barrier(mem_flags::mem_threadgroup);
-    threadgroup uint2 *s = buf0;
 
     /* Acceptance predicate over the ordered candidates.
      *
