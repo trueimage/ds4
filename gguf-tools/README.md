@@ -1,13 +1,16 @@
 # DS4 GGUF Tools
 
 This directory contains the offline tools used to build and evaluate DeepSeek
-V4 Flash GGUF files for `ds4`.
+V4 Flash GGUF files and to requantize selected GLM 5.3 Flash tensors for
+`ds4`.
 
 The important pieces are:
 
 - `deepseek4-quantize.c`: C HF-safetensors to GGUF quantizer.
+- `glm53_requant_bf16.c`: separate-file converter for selected BF16 KDA,
+  output-head, and embedding tensors in an existing GLM 5.3 Flash GGUF.
 - `quants.[ch]`: the deliberately small local quantization implementation used
-  by the quantizer.  It implements the DS4 output formats we actually ship:
+  by the converters.  It implements the DS4 output formats we actually ship:
   `q8_0`, `q8_K`, `q4_K`, `q2_K`, and `iq2_xxs`.
 - `imatrix/`: dataset and instructions for collecting routed-MoE activation
   importance with `ds4`.
@@ -110,9 +113,29 @@ is lost, and the main-model quantization is unchanged.
 make -C gguf-tools
 ```
 
-The quantizer is plain C and does not link GGML.  GGUF metadata handling,
+The converters are plain C and do not link GGML.  GGUF metadata handling,
 safetensors loading, FP4/FP8 dequantization, and the quantizers used by our Q2
 and Q4 recipes live in this directory.
+
+## Requantize GLM 5.3 BF16 Tensors
+
+Build and run the existing-GGUF converter with a distinct output path:
+
+```sh
+make -C gguf-tools glm53-requant-bf16
+gguf-tools/glm53-requant-bf16 in.gguf out.gguf \
+  --type q8_0 --tensors kda
+```
+
+The target type is `q8_0` by default; `q4_K` is also accepted. `--tensors`
+takes a comma-separated list of `kda`, `head`, `embd`, or `all`, and defaults
+to `kda`. Only matching BF16 tensors are converted. The tool has no in-place
+mode and rejects an output path, hard link, or symlink that resolves to the
+input. It writes beside the destination and replaces the destination only
+after the complete output is ready.
+
+See the [GLM 5.3 decode findings](../speed-bench/glm53_decode_findings.md) for
+the historical performance and quality measurements that motivated the tool.
 
 ## Generate An Imatrix
 
@@ -236,6 +259,25 @@ For Q4, add `--quant q4` and use `DeepSeek-V4.1-Flash-Q4.gguf` as the output.
 This changes only the routed experts to Q4_K; the other tensor formats and
 disk-only Engram layout stay the same. The same imatrix works for both recipes.
 
+For the native expert weights, use `--quant mxfp4` and omit `--imatrix`. The
+released routed experts are already MXFP4 (E2M1 codes with one UE8M0 scale per
+32 weights), so this recipe moves their codes into GGUF blocks without passing
+through floating point. The experts are exact and need 268.9 GiB instead of
+Q4_K's 284.8 GiB; every other tensor matches the Q4 recipe.
+
+The checkpoint's DSpark draft module (`mtp.*`) is a separate support GGUF:
+
+```sh
+python3 gguf-tools/deepseek41_quantize.py \
+  --hf models/DeepSeek-V4.1-Flash \
+  --source-revision df42c109f1defefcbfcedbe7d905718a12266e40 \
+  --dspark-support --out gguf/DeepSeek-V4.1-Flash-DSpark-support.gguf
+```
+
+Its three stages keep their 128 native MXFP4 experts exactly; attention, shared
+experts and `main_proj` use Q8_0, and the Markov head F16. The file is 7.4 GiB.
+Audit it with `deepseek41_validate_gguf.py --dspark-support --payload`.
+
 Check the finished artifact against the pinned source before running it:
 
 ```sh
@@ -246,7 +288,9 @@ python3 gguf-tools/deepseek41_validate_gguf.py \
 ```
 
 For a calibrated file, pass the same `--imatrix FILE` used during conversion.
-Pass `--quant q4` to the audit as well when checking a Q4 file.
+Pass `--quant q4` to the audit as well when checking a Q4 file. With
+`--quant mxfp4` the audit compares every expert byte for byte and decodes
+samples the way the runtime reads them.
 The audit checks the complete layout, all non-expert tensors, sampled experts
 and native Engram rows. It does not replace [inference quality tests](quality-testing/deepseek-v4.1-flash-20260910/README.md).
 

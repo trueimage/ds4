@@ -37,6 +37,31 @@ model must be resident; external DSpark is not supported with SSD streaming.
 DSpark replaces the legacy one-stage MTP drafter for that run; the two are
 not stacked.
 
+## DeepSeek V4.1 Flash: DSpark
+
+V4.1's checkpoint carries its own three-stage DSpark module. Build the support
+GGUF with the [converter](../gguf-tools/README.md#convert-deepseek-v41-flash),
+then run resident, single-device Metal with greedy decoding:
+
+```sh
+./ds4 -m gguf/DeepSeek-V4.1-Flash-MXFP4.gguf --temp 0 \
+  --dspark --mtp-model gguf/DeepSeek-V4.1-Flash-DSpark-support.gguf
+```
+
+Unlike V4 Flash, verification here equals one-token decode: every verified row
+keeps the decode kernels' arithmetic, so the tokens, logits and saved session
+state are those of ordinary greedy decode, byte for byte. Sampled generation,
+SSD streaming, tensor parallelism, images and `--quality` keep ordinary decode.
+
+That exactness currently costs the speedup. On an M3 Ultra a verified row
+costs about 0.8 of a decoded token, because the decode kernels are bound by
+arithmetic per row rather than by reading weights, so sharing the reads saves
+little. With 80-86% of proposed drafts accepted, generation measured 29.3 t/s
+against 30.3 t/s on code and 24.6 against 30.2 on prose. Treat it as a correct
+foundation rather than an optimization; see the
+[measurements](../speed-bench/ds41f-m3ultra-perf/mxfp4/README.md).
+`DS4_DSPARK_STATS=1` prints acceptance counters.
+
 Resident M5 paths batch supported verifier expert rows, including two-Mac TP.
 On DGX Spark, resident Flash 0731 Q2 and two-Spark MXFP4 also batch the seed
 with longer drafts and use small-batch Q8 and expert kernels. No extra flags

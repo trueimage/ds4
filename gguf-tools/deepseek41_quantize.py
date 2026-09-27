@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Convert DeepSeek V4.1 Flash to DwarfStar's Q2 or Q4_K GGUF.
+"""Convert DeepSeek V4.1 Flash to DwarfStar's Q2, Q4_K or native MXFP4 GGUF.
 
-Uses the project's C quantizers. Engram FP8 rows and their scales are packed
+Uses the project's C quantizers. The released routed experts are already
+MXFP4; that recipe moves their codes and scales without touching a float.
+Engram FP8 rows and their scales are packed
 losslessly at the end of the file, outside the main model's resident extent.
-Vision and DSpark are separate models and are not part of this text GGUF.
+Vision and DSpark are separate models and are not part of this text GGUF;
+--dspark-support writes the checkpoint's draft module as its own support GGUF.
 """
 
 import argparse
@@ -19,9 +22,10 @@ import sys
 import time
 
 from deepseek41_metadata import GGUF_ALIGNMENT, metadata
+from glm53_quantize import kv_u32, kv_u32_array
 from glm53_quantize import (
     SourceDB, TensorPlan, Quantizer, Imatrix, QTYPE_F32, QTYPE_F16,
-    QTYPE_Q8_0, QTYPE_Q2_K, QTYPE_Q4_K, QTYPE_IQ2_XXS, QTYPE_I8, align,
+    QTYPE_Q8_0, QTYPE_Q2_K, QTYPE_Q4_K, QTYPE_IQ2_XXS, QTYPE_I8, QTYPE_MXFP4, align,
     conversion_signature, kv_string, load_resume_state, print_plan,
     qtype_nbytes, save_resume_state, tensor_header,
 )
@@ -29,7 +33,17 @@ from glm53_quantize import (
 QUANTIZATION = {
     "q2": "IQ2_XXS gate/up; Q2_K down; Q8_0 attention/shared/head",
     "q4": "Q4_K gate/up/down; Q8_0 attention/shared/head",
+    "mxfp4": "native MXFP4 gate/up/down; Q8_0 attention/shared/head",
 }
+EXPERT_QTYPE = {"q4": QTYPE_Q4_K, "mxfp4": QTYPE_MXFP4}
+
+
+def calibration(quant, imatrix):
+    if quant == "mxfp4":
+        if imatrix:
+            raise ValueError("native MXFP4 experts are copied, not calibrated; omit --imatrix")
+        return "native"
+    return "imatrix" if imatrix else "weight-energy bootstrap"
 
 
 def scale_name(name):
@@ -38,7 +52,7 @@ def scale_name(name):
 
 def validate_scales(tensors):
     for name, info in tensors.items():
-        if not name.startswith(("layers.", "embed.", "head.", "norm.")):
+        if not name.startswith(("layers.", "mtp.", "embed.", "head.", "norm.")):
             continue
         dtype, shape = info["dtype"], info["shape"]
         if dtype not in ("F8_E4M3", "I8") or not name.endswith(".weight"):
@@ -132,7 +146,7 @@ def build_plan(db, config, quant="q2"):
             for expert in range(experts):
                 claim(pattern.format(expert=expert), (shape[0], shape[1] // 2), "I8")
             plan.append(TensorPlan(f"{dst}.ffn_{part}_exps.weight", (*reversed(shape), experts),
-                                   QTYPE_Q4_K if quant == "q4" else qt,
+                                   EXPERT_QTYPE.get(quant, qt),
                                    "experts", source=pattern, expert_layer=layer,
                                    expert_part=part, expert_count=experts))
         if layer in c["engram_layer_ids"]:
@@ -155,6 +169,107 @@ def build_plan(db, config, quant="q2"):
         item.nbytes = qtype_nbytes(item.qtype, item.shape)
         offset += align(item.nbytes, GGUF_ALIGNMENT)
     return plan + disk
+
+
+def build_dspark_plan(db, config):
+    """The draft stages are V4.1 blocks without compression, indexing or Engram.
+
+    Names follow the V4 support file: mtp.<stage>.<block tensor>. Drafts are
+    text, so the visual routing bias stays behind."""
+    c = config["text_config"]
+    dim, inter, vocab = c["hidden_size"], c["moe_intermediate_size"], c["vocab_size"]
+    heads, hd, hc = c["num_attention_heads"], c["head_dim"], c["hc_mult"]
+    qrank, orank, groups = c["q_lora_rank"], c["o_lora_rank"], c["o_groups"]
+    stages, experts = c["num_nextn_predict_layers"], c["dspark_n_routed_experts"]
+    rank, targets = c["dspark_markov_rank"], len(c["dspark_target_layer_ids"])
+    if not c["dspark_block_size"] or stages < 1 or not targets:
+        raise ValueError("checkpoint has no DSpark draft module")
+    plan, consumed = [], set()
+
+    def regular(name, source, shape, qtype, role):
+        info = db.info(source)
+        if info["shape"] != list(shape):
+            raise ValueError(f"{source}: unexpected shape {info['shape']}, expected {list(shape)}")
+        consumed.add(source)
+        if info["dtype"] == "F8_E4M3":
+            consumed.add(scale_name(source))
+        plan.append(TensorPlan(name, tuple(reversed(shape)), qtype, role, source=source))
+
+    for stage in range(stages):
+        t = f"mtp.{stage}"
+        for site in ("attn", "ffn"):
+            for part, shape, qt in (("fn", (hc * (hc + 2), hc * dim), QTYPE_F16),
+                                    ("base", (hc * (hc + 2),), QTYPE_F32),
+                                    ("scale", (3,), QTYPE_F32)):
+                regular(f"{t}.hc_{site}_{part}.weight", f"{t}.hc_{site}_{part}", shape, qt, "mhc")
+            regular(f"{t}.{site}_norm.weight", f"{t}.{site}_norm.weight", (dim,), QTYPE_F32, "norm")
+        for target, source, shape, qt in (
+            ("attn_sinks.weight", "attn_sink", (heads,), QTYPE_F32),
+            ("attn_q_a.weight", "wq_a.weight", (qrank, dim), QTYPE_Q8_0),
+            ("attn_q_b.weight", "wq_b.weight", (heads * hd, qrank), QTYPE_Q8_0),
+            ("attn_q_a_norm.weight", "q_norm.weight", (qrank,), QTYPE_F32),
+            ("attn_kv.weight", "wkv.weight", (hd, dim), QTYPE_Q8_0),
+            ("attn_kv_a_norm.weight", "kv_norm.weight", (hd,), QTYPE_F32),
+            ("attn_output_a.weight", "wo_a.weight", (groups * orank, heads * hd // groups), QTYPE_Q8_0),
+            ("attn_output_b.weight", "wo_b.weight", (dim, groups * orank), QTYPE_Q8_0),
+        ):
+            regular(f"{t}.{target}", f"{t}.attn.{source}", shape, qt, "attention")
+        regular(f"{t}.ffn_gate_inp.weight", f"{t}.ffn.gate.weight", (experts, dim), QTYPE_F32, "router")
+        regular(f"{t}.exp_probs_b.bias", f"{t}.ffn.gate.bias", (experts,), QTYPE_F32, "router")
+        consumed.add(f"{t}.ffn.gate.bias_vl")
+        for part, source, shape in (("gate", "w1", (inter, dim)), ("up", "w3", (inter, dim)),
+                                    ("down", "w2", (dim, inter))):
+            regular(f"{t}.ffn_{part}_shexp.weight", f"{t}.ffn.shared_experts.{source}.weight",
+                    shape, QTYPE_Q8_0, "shared")
+            pattern = f"{t}.ffn.experts.{{expert}}.{source}.weight"
+            for expert in range(experts):
+                name = pattern.format(expert=expert)
+                if (db.info(name)["dtype"], db.info(name)["shape"]) != ("I8", [shape[0], shape[1] // 2]):
+                    raise ValueError(f"{name}: not a native FP4 expert")
+                consumed.update((name, scale_name(name)))
+            plan.append(TensorPlan(f"{t}.ffn_{part}_exps.weight", (*reversed(shape), experts), QTYPE_MXFP4,
+                                   "experts", source=pattern, expert_layer=stage, expert_part=part,
+                                   expert_count=experts))
+        if stage == 0:
+            regular(f"{t}.main_proj.weight", f"{t}.main_proj.weight", (dim, dim * targets), QTYPE_Q8_0, "dspark")
+            regular(f"{t}.main_norm.weight", f"{t}.main_norm.weight", (dim,), QTYPE_F32, "norm")
+        if stage == stages - 1:
+            regular(f"{t}.norm.weight", f"{t}.norm.weight", (dim,), QTYPE_F32, "norm")
+            regular(f"{t}.markov_head.markov_w1.weight", f"{t}.markov_head.embed.weight",
+                    (vocab, rank), QTYPE_F16, "dspark")
+            regular(f"{t}.markov_head.markov_w2.weight", f"{t}.markov_head.head.weight",
+                    (vocab, rank), QTYPE_F16, "dspark")
+            regular(f"{t}.confidence_head.proj.weight", f"{t}.confidence_head.proj.weight",
+                    (1, dim + rank), QTYPE_F32, "dspark")
+    draft = {name for name in db.tensors if name.startswith("mtp.")}
+    if consumed != draft:
+        raise ValueError(f"unclaimed draft tensors: {sorted(draft - consumed)[:10]}")
+    offset = 0
+    for item in plan:
+        item.offset = offset
+        item.nbytes = qtype_nbytes(item.qtype, item.shape)
+        offset += align(item.nbytes, GGUF_ALIGNMENT)
+    return plan
+
+
+def dspark_metadata(config, revision):
+    c = config["text_config"]
+    return [
+        kv_string("general.architecture", "deepseek41-dspark"),
+        kv_string("general.name", "DeepSeek V4.1 Flash DSpark"),
+        kv_string("general.source.url", "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash"),
+        kv_string("general.source.revision", revision),
+        kv_u32("general.alignment", GGUF_ALIGNMENT),
+        kv_u32("dspark.block_size", c["dspark_block_size"]),
+        kv_u32("dspark.markov_rank", c["dspark_markov_rank"]),
+        kv_u32("dspark.noise_token_id", c["dspark_noise_token_id"]),
+        kv_u32_array("dspark.target_layer_ids", c["dspark_target_layer_ids"]),
+        kv_u32("dspark.stage_count", c["num_nextn_predict_layers"]),
+        kv_u32("dspark.n_layers", c["num_hidden_layers"]),
+        kv_u32("dspark.expert_count", c["dspark_n_routed_experts"]),
+        kv_u32("dspark.expert_used_count", c["dspark_num_experts_per_tok"]),
+        kv_string("dspark.quantization", "native MXFP4 experts; Q8_0 attention/shared/main_proj; F16 Markov"),
+    ]
 
 
 class NativeQuantizer(Quantizer):
@@ -191,6 +306,26 @@ class NativeQuantizer(Quantizer):
         if not np.all(np.isfinite(result)):
             raise ValueError(f"{name}: nonfinite dequantized weight")
         return np.ascontiguousarray(result, dtype=np.float32)
+
+    def repack_mxfp4(self, db, name):
+        # The source stores consecutive E2M1 pairs per byte. A GGUF block keeps
+        # its UE8M0 scale, then values 0..15 in low nibbles and 16..31 in high.
+        np = self.np
+        info, sinfo = db.info(name), db.info(scale_name(name))
+        rows, packed = info["shape"]
+        if (info["dtype"], sinfo["dtype"]) != ("I8", "F8_E8M0") or packed % 16 or \
+                sinfo["shape"] != [rows, packed // 16]:
+            raise ValueError(f"{name}: not a native FP4 expert")
+        codes = np.frombuffer(db.read(name), dtype=np.uint8).reshape(rows, packed // 16, 16)
+        scales = np.frombuffer(db.read(scale_name(name)), dtype=np.uint8).reshape(rows, packed // 16)
+        if np.any(scales == 255):
+            raise ValueError(f"{name}: nonfinite scale")
+        values = np.empty((rows, packed // 16, 32), dtype=np.uint8)
+        values[..., 0::2], values[..., 1::2] = codes & 15, codes >> 4
+        blocks = np.empty((rows, packed // 16, 17), dtype=np.uint8)
+        blocks[..., 0] = scales
+        blocks[..., 1:] = values[..., :16] | (values[..., 16:] << 4)
+        return blocks.tobytes()
 
     def encode(self, array, qtype, imatrix=None):
         if qtype == QTYPE_F16 and self.np.any(self.np.abs(array) > 65504):
@@ -268,6 +403,8 @@ def write_gguf(args, plan, records, db):
                 write_engram(fp, item, db, quantizer.np)
             elif item.is_expert:
                 def convert(expert):
+                    if item.qtype == QTYPE_MXFP4:
+                        return quantizer.repack_mxfp4(db, item.source.format(expert=expert)), False
                     values = quantizer.to_f32(db, item.source.format(expert=expert))
                     importance = imatrix.expert(item.name, expert, item.shape[0], item.expert_count)
                     return quantizer.encode(values, item.qtype, importance), importance is None
@@ -299,6 +436,8 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--quant", choices=QUANTIZATION, default="q2")
+    parser.add_argument("--dspark-support", action="store_true",
+                        help="write the draft module (mtp.*) as a support GGUF instead of the text model")
     parser.add_argument("--imatrix")
     parser.add_argument("--threads", type=int, default=8)
     parser.add_argument("--resume", action="store_true")
@@ -310,12 +449,22 @@ def main():
         parser.error("source revision must be a full commit hash")
     if not 1 <= args.threads <= 32:
         parser.error("threads must be between 1 and 32")
-    config, records = metadata(args.hf, args.source_revision)
+    if args.dspark_support:
+        if args.imatrix:
+            parser.error("the draft module's native experts take no imatrix")
+        with open(os.path.join(args.hf, "config.json")) as fp:
+            config = json.load(fp)
+        records = dspark_metadata(config, args.source_revision)
+    else:
+        config, records = metadata(args.hf, args.source_revision)
     db = SourceDB(args.hf, index_validator=lambda _: None, scale_validator=validate_scales)
     try:
-        plan = build_plan(db, config, args.quant)
-        records.append(kv_string("deepseek41.quantization", QUANTIZATION[args.quant]))
-        records.append(kv_string("deepseek41.calibration", "imatrix" if args.imatrix else "weight-energy bootstrap"))
+        if args.dspark_support:
+            plan = build_dspark_plan(db, config)
+        else:
+            plan = build_plan(db, config, args.quant)
+            records.append(kv_string("deepseek41.quantization", QUANTIZATION[args.quant]))
+            records.append(kv_string("deepseek41.calibration", calibration(args.quant, args.imatrix)))
         if args.imatrix:
             records.append(kv_string("quantize.imatrix.file", os.path.basename(args.imatrix)))
         if args.dry_run:

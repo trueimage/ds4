@@ -2,7 +2,9 @@
 """Audit a completed V4.1 GGUF and sample its payloads against the source.
 
 Checks the complete tensor layout, then re-encodes selected expert tensors and
-samples native Engram rows. This is artifact validation, not inference QA.
+samples native Engram rows. Native MXFP4 experts are all compared byte for
+byte, and samples are decoded the way the runtime reads them. This is artifact
+validation, not inference QA.
 """
 import argparse
 import json
@@ -12,11 +14,20 @@ import random
 import sys
 
 from deepseek41_metadata import GGUF_ALIGNMENT
-from deepseek41_quantize import (SourceDB, NativeQuantizer, Imatrix, build_plan,
-                                  validate_scales, scale_name, QUANTIZATION)
-from glm53_quantize import (align, read_exact, read_u32, read_u64,
+from deepseek41_quantize import (SourceDB, NativeQuantizer, Imatrix, build_plan, build_dspark_plan,
+                                  calibration, validate_scales, scale_name, QUANTIZATION)
+from glm53_quantize import (QTYPE_MXFP4, align, read_exact, read_u32, read_u64,
                             read_gguf_string, skip_gguf_value)
 from glm53_validate_gguf import read_selected_metadata
+
+
+def mxfp4_to_f32(np, data, width):
+    """Decode GGUF MXFP4 as the runtime does, independently of the repack."""
+    blocks = np.frombuffer(data, dtype=np.uint8).reshape(-1, 17)
+    lut = np.array([0, .5, 1, 1.5, 2, 3, 4, 6, -0., -.5, -1, -1.5, -2, -3, -4, -6], np.float32)
+    values = np.concatenate([lut[blocks[:, 1:] & 15], lut[blocks[:, 1:] >> 4]], axis=1)
+    scales = np.ldexp(np.float32(1), blocks[:, 0].astype(np.int32) - 127)
+    return (values * scales[:, None]).reshape(-1, width)
 
 
 def check_payload(fp, offset, item, db, quantizer, imatrix):
@@ -36,13 +47,22 @@ def check_payload(fp, offset, item, db, quantizer, imatrix):
     elif item.is_expert:
         selected = {0, (item.expert_layer * 17 + 41) % item.expert_count, item.expert_count - 1}
         stride = item.nbytes // item.expert_count
-        for expert in sorted(selected):
-            values = quantizer.to_f32(db, item.source.format(expert=expert))
-            importance = imatrix.expert(item.name, expert, item.shape[0], item.expert_count)
-            expected = quantizer.encode(values, item.qtype, importance)
+        native = item.qtype == QTYPE_MXFP4
+        for expert in range(item.expert_count) if native else sorted(selected):
+            source = item.source.format(expert=expert)
+            if native:
+                expected = quantizer.repack_mxfp4(db, source)
+            else:
+                values = quantizer.to_f32(db, source)
+                importance = imatrix.expert(item.name, expert, item.shape[0], item.expert_count)
+                expected = quantizer.encode(values, item.qtype, importance)
             fp.seek(offset + expert * stride)
-            if len(expected) != stride or read_exact(fp, stride, item.name) != expected:
+            data = read_exact(fp, stride, item.name)
+            if len(expected) != stride or data != expected:
                 raise ValueError(f"{item.name}: encoded expert {expert} differs from source recipe")
+            if native and expert in selected and not quantizer.np.array_equal(
+                    mxfp4_to_f32(quantizer.np, data, item.shape[0]), quantizer.to_f32(db, source)):
+                raise ValueError(f"{item.name}: expert {expert} does not decode to the source weights")
     else:
         values = quantizer.to_f32(db, item.source)
         expected = quantizer.encode(values, item.qtype)
@@ -55,7 +75,15 @@ def validate(args):
     config = json.loads((Path(args.hf) / "config.json").read_text())
     db = SourceDB(args.hf, index_validator=lambda _: None, scale_validator=validate_scales)
     try:
-        plan = build_plan(db, config, args.quant)
+        dspark_support = getattr(args, "dspark_support", False)
+        plan = build_dspark_plan(db, config) if dspark_support else build_plan(db, config, args.quant)
+        if dspark_support:
+            expected = {"general.architecture": "deepseek41-dspark"}
+        else:
+            expected = {"general.architecture": "deepseek41",
+                        "deepseek41.quantization": QUANTIZATION[args.quant],
+                        "deepseek41.calibration": calibration(args.quant, args.imatrix)}
+        expected.update({"general.alignment": GGUF_ALIGNMENT, "general.source.revision": args.source_revision})
         with open(args.gguf, "rb") as fp:
             if read_exact(fp, 4, "magic") != b"GGUF" or read_u32(fp, "version") != 3:
                 raise ValueError("expected GGUF v3")
@@ -72,10 +100,6 @@ def validate(args):
                     metadata[key] = read_selected_metadata(fp, kind)
                 else:
                     skip_gguf_value(fp, kind)
-            expected = {"general.architecture": "deepseek41", "general.alignment": GGUF_ALIGNMENT,
-                        "general.source.revision": args.source_revision,
-                        "deepseek41.quantization": QUANTIZATION[args.quant],
-                        "deepseek41.calibration": "imatrix" if args.imatrix else "weight-energy bootstrap"}
             if metadata != expected:
                 raise ValueError(f"metadata mismatch: {metadata}")
             for item in plan:
@@ -111,6 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--gguf", required=True)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--quant", choices=QUANTIZATION, default="q2")
+    parser.add_argument("--dspark-support", action="store_true", help="audit a DSpark support GGUF")
     parser.add_argument("--imatrix")
     parser.add_argument("--payload", action="store_true")
     suffix = "dylib" if sys.platform == "darwin" else "so"

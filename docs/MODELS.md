@@ -56,7 +56,12 @@ are not interchangeable with it.
 | `ds41f-q4` | 483 GiB | 294 GiB |
 
 Both use imatrix-calibrated routed experts and include 189 GiB of Engram
-tables. Engram rows are read directly from the file as needed in every mode,
+tables. The released routed experts are already MXFP4, so a local
+[`--quant mxfp4` conversion](../gguf-tools/README.md#convert-deepseek-v41-flash)
+keeps them exactly: 467 GiB, 278 GiB of main weights, no imatrix. On an M3
+Ultra it decodes about 3% faster than Q4 and prefills long prompts 3% faster,
+but new chunks under 2,048 tokens 4-9% slower; see the
+[measurements](../speed-bench/ds41f-m3ultra-perf/mxfp4/README.md). Engram rows are read directly from the file as needed in every mode,
 never loaded as a resident table. Keep the GGUF on a fast local SSD.
 
 On one 128 GB Mac, use SSD streaming. Leave the expert cache budget automatic:
@@ -86,6 +91,10 @@ The download comes in two parts; the script joins and verifies them automaticall
 Allow another 37 GiB of free disk space while joining. Rerun the command to resume an
 interrupted download or join.
 
+For the M3 Ultra Q4 optimizations and their diagnostic rollback controls, see
+the [initial campaign's retained implementation and scope](../speed-bench/ds41f-m3ultra-perf/README.md#retained-implementation-and-scope)
+and the [fusion/indexer follow-up](../speed-bench/ds41f-m3ultra-perf/glm-transfer/README.md).
+
 Large SSD prefills process layers in wide batches. Metal overlaps computation
 with the next layer's reads; CUDA stages experts into its bounded device cache.
 Short appends keep using the expert cache.
@@ -94,8 +103,10 @@ Resident and TP inference also batch continued prefills automatically.
 For concurrent serving, see [session batching](SERVER.md#multiple-sessions).
 Each slot needs its own context memory; start with `--ctx 4096` before
 increasing both context and slot count. CUDA Q2 SSD mode batches up to eight
-decode rows; CUDA network TP currently serves sessions in order. DSpark,
-pipeline execution and ROCm are not implemented for V4.1; vision requires Metal.
+decode rows; CUDA network TP currently serves sessions in order. Pipeline
+execution and ROCm are not implemented for V4.1; vision requires Metal.
+[DSpark](SPECULATIVE_DECODING.md#deepseek-v41-flash-dspark) runs on resident
+single-device Metal only.
 
 Scalar, batched and tensor-parallel execution are not numerically identical.
 Q4 batched prefill shows a small probability-score loss on the short official
