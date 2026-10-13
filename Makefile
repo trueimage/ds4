@@ -303,6 +303,16 @@ tests/test_deepseek41_q4_tail: tests/test_deepseek41_q4_tail.o $(CORE_OBJS)
 test-deepseek41-q4-tail: tests/test_deepseek41_q4_tail
 	MTL_DEBUG_LAYER=1 ./tests/test_deepseek41_q4_tail
 
+tests/test_deepseek41_short_experts.o: tests/test_deepseek41_short_experts.c ds4_gpu.h
+	$(CC) $(filter-out -ffast-math,$(CFLAGS)) -I. -c -o $@ $<
+
+tests/test_deepseek41_short_experts: tests/test_deepseek41_short_experts.o $(CORE_OBJS)
+	$(CC) $(filter-out -ffast-math,$(CFLAGS)) -o $@ $^ $(METAL_LDLIBS)
+
+.PHONY: test-deepseek41-short-experts
+test-deepseek41-short-experts: tests/test_deepseek41_short_experts
+	MTL_DEBUG_LAYER=1 ./tests/test_deepseek41_short_experts
+
 tests/test_deepseek41_graph.o: tests/test_deepseek41_graph.c ds4.c ds4_gpu.h ds4_engram.h
 	$(CC) $(filter-out -ffast-math,$(CFLAGS)) -Wno-unused-function -I. -c -o $@ $<
 
@@ -970,7 +980,8 @@ endif
 # fused and original paths bit for bit, so `make test` notices a drift.
 ifeq ($(UNAME_S),Darwin)
 DEEPSEEK41_EXACT_DEFAULT_TESTS := tests/test_deepseek41_attention tests/test_deepseek41_fusions \
-	tests/test_deepseek41_topk tests/test_deepseek41_q4_tail tests/test_deepseek41_engram_admission
+	tests/test_deepseek41_topk tests/test_deepseek41_q4_tail tests/test_deepseek41_engram_admission \
+	tests/test_deepseek41_short_experts
 else
 DEEPSEEK41_EXACT_DEFAULT_TESTS :=
 endif
@@ -1378,6 +1389,25 @@ test-frontends: ds4_test ds4_agent_test test-web-recovery
 	./ds4_test --server
 	./ds4_agent_test
 
+tests/test_prompt_copy: tests/test_prompt_copy.c ds4_prompt_copy.h
+	$(CC) $(CFLAGS) -I. -o $@ $<
+
+.PHONY: test-prompt-copy
+test-prompt-copy: tests/test_prompt_copy
+	./tests/test_prompt_copy
+
+ifeq ($(UNAME_S),Darwin)
+tests/test_prompt_copy_live.o: tests/test_prompt_copy_live.c ds4.h
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
+
+tests/test_prompt_copy_live: tests/test_prompt_copy_live.o $(CORE_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(METAL_LDLIBS)
+
+.PHONY: test-prompt-copy-live
+test-prompt-copy-live: tests/test_prompt_copy_live
+	DS4_TEST_MODEL="$(DS4_TEST_MODEL)" ./tests/test_prompt_copy_live tests/prompt-copy-fixtures/*.txt
+endif
+
 .PHONY: test-web-recovery
 test-web-recovery: tests/test_web_recovery
 	python3 tests/test_web_recovery.py ./tests/test_web_recovery
@@ -1385,7 +1415,7 @@ test-web-recovery: tests/test_web_recovery
 tests/test_web_recovery: tests/test_web_recovery.c ds4_web.c ds4_web.h
 	$(CC) $(CFLAGS) -Wno-unused-function -o $@ tests/test_web_recovery.c
 
-test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test test-session-state test-linux-memory test-host-memory test-engram test-web-recovery \
+test: ds4_test ds4_agent_test ds4-eval q4k-dot-test mxfp4-dot-test test-session-state test-linux-memory test-host-memory test-engram test-web-recovery test-prompt-copy \
 	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args \
 	tests/test_deepseek4_vision_image tests/test_image_decode tests/test_prompt_prefix $(SAMPLING_TEST) $(GLM53_KDA_DEFAULT_TEST) \
 	$(DEEPSEEK41_EXACT_DEFAULT_TESTS) \
@@ -1468,6 +1498,9 @@ clean:
 	rm -f tests/test_metal_command_memory
 	rm -f tests/test_deepseek41_metal
 	rm -f tests/test_deepseek41_q4_tail
+	rm -f tests/test_deepseek41_short_experts
+	rm -f tests/test_prompt_copy
+	rm -f tests/test_prompt_copy_live
 	rm -f tests/test_glm53_router_shared tests/test_glm53_topk_fast tests/test_glm53_q8_inputs
 	rm -f tests/test_deepseek41_cuda
 	rm -f tests/test_cuda_q8_rows
@@ -1523,3 +1556,5 @@ clean:
 
 # The active tokenizer includes generated Unicode classes.
 ds4.o ds4_cpu.o ds4_cpu_test_hooks.o: ds4_qwen4_unicode.inc
+
+ds4.o ds4_cpu.o ds4_cpu_test_hooks.o ds4_cuda_test_hooks.o: ds4_prompt_copy.h

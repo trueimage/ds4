@@ -564,6 +564,9 @@ int ds4_session_eval_speculative_argmax(ds4_session *s, int first_token,
                                         int max_tokens, int eos_token,
                                         int *accepted, int accepted_cap,
                                         char *err, size_t errlen);
+/* Greedy prompt-copy without a separate drafter on the measured Metal path. Other
+ * models/backends and sessions carrying images retain their existing decode. */
+bool ds4_session_prompt_copy_supported(const ds4_session *s);
 int ds4_session_eval_speculative_argmax_ignoring_eos(
         ds4_session *s, int first_token, int max_tokens, int eos_token,
         ds4_think_mode think_mode,

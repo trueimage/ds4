@@ -135,3 +135,6 @@ __pycache__/
 /speed-bench/kvstore_write_bench
 /tests/test_glm_full_metal
 /tests/test_prompt_prefix
+/tests/test_prompt_copy
+/tests/test_prompt_copy_live
+/tests/test_deepseek41_short_experts

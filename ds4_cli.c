@@ -593,8 +593,10 @@ static int run_sampled_generation(ds4_engine *engine, const cli_config *cfg, con
     uint64_t rng = cfg->gen.seed ? cfg->gen.seed :
         ((uint64_t)time(NULL) ^ ((uint64_t)getpid() << 32) ^ (uint64_t)clock());
     int generated = 0;
+    const bool prompt_copy = cfg->gen.temperature <= 0.0f &&
+        ds4_session_prompt_copy_supported(session);
     const bool speculative_argmax = cfg->gen.temperature <= 0.0f &&
-        ((ds4_engine_mtp_draft_tokens(engine) > 1 &&
+        (((ds4_engine_mtp_draft_tokens(engine) > 1 || prompt_copy) &&
           getenv("DS4_MTP_SPEC_DISABLE") == NULL) ||
          cli_splitkv_spec_requested());
     const bool greedy_argmax = cfg->gen.temperature <= 0.0f &&
@@ -615,7 +617,8 @@ static int run_sampled_generation(ds4_engine *engine, const cli_config *cfg, con
 
         int toks[17];
         int ntok = 0;
-        if (ds4_engine_mtp_draft_tokens(engine) > 1 &&
+        const int block_start = ds4_session_pos(session);
+        if ((ds4_engine_mtp_draft_tokens(engine) > 1 || prompt_copy) &&
             getenv("DS4_MTP_SPEC_DISABLE") == NULL) {
             cli_dist_busy_set(cfg, true);
             ntok = ds4_session_eval_speculative(
@@ -653,7 +656,9 @@ static int run_sampled_generation(ds4_engine *engine, const cli_config *cfg, con
         }
 
         bool stop = false;
+        int kept = 0;
         for (int j = 0; j < ntok; j++) {
+            if (prompt_copy && cli_interrupt_requested()) { stop = true; break; }
             if (ds4_token_is_stop_for_think_mode(engine, toks[j], think_mode)) {
                 stop = true;
                 break;
@@ -664,8 +669,11 @@ static int run_sampled_generation(ds4_engine *engine, const cli_config *cfg, con
             fflush(stdout);
             free(piece);
             generated++;
+            kept++;
             if (generated >= max_tokens) break;
         }
+        if (prompt_copy && kept < ntok)
+            ds4_session_rewind(session, block_start + kept);
         if (stop) break;
     }
     const double t_decode1 = cli_now_sec();
@@ -1595,8 +1603,10 @@ static int run_chat_turn(ds4_engine *engine, cli_config *cfg, repl_chat *chat,
     uint64_t rng = cfg->gen.seed ? cfg->gen.seed :
         ((uint64_t)time(NULL) ^ ((uint64_t)getpid() << 32) ^ (uint64_t)clock());
     int generated = 0;
+    const bool prompt_copy = cfg->gen.temperature <= 0.0f &&
+        ds4_session_prompt_copy_supported(chat->session);
     const bool speculative_argmax = cfg->gen.temperature <= 0.0f &&
-        ((ds4_engine_mtp_draft_tokens(engine) > 1 &&
+        (((ds4_engine_mtp_draft_tokens(engine) > 1 || prompt_copy) &&
           getenv("DS4_MTP_SPEC_DISABLE") == NULL) ||
          cli_splitkv_spec_requested());
     const bool greedy_argmax = cfg->gen.temperature <= 0.0f &&
@@ -1621,7 +1631,8 @@ static int run_chat_turn(ds4_engine *engine, cli_config *cfg, repl_chat *chat,
 
         int toks[17];
         int ntok = 0;
-        if (ds4_engine_mtp_draft_tokens(engine) > 1 &&
+        const int block_start = ds4_session_pos(chat->session);
+        if ((ds4_engine_mtp_draft_tokens(engine) > 1 || prompt_copy) &&
             getenv("DS4_MTP_SPEC_DISABLE") == NULL) {
             cli_dist_busy_set(cfg, true);
             ntok = ds4_session_eval_speculative(
@@ -1657,7 +1668,9 @@ static int run_chat_turn(ds4_engine *engine, cli_config *cfg, repl_chat *chat,
         }
 
         bool stop = false;
+        int kept = 0;
         for (int j = 0; j < ntok; j++) {
+            if (prompt_copy && cli_interrupt_requested()) { stop = true; break; }
             if (ds4_token_is_stop_for_think_mode(engine, toks[j], think_mode)) {
                 stop = true;
                 break;
@@ -1669,8 +1682,11 @@ static int run_chat_turn(ds4_engine *engine, cli_config *cfg, repl_chat *chat,
             fflush(stdout);
             free(piece);
             generated++;
+            kept++;
             if (generated >= max_tokens) break;
         }
+        if (prompt_copy && kept < ntok)
+            ds4_session_rewind(chat->session, block_start + kept);
         if (stop) break;
     }
     const double t_decode1 = cli_now_sec();

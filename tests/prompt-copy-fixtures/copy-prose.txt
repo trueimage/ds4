@@ -1,0 +1,1 @@
+Explain why local inference latency varies during concurrent requests. Write approximately 250 words in clear prose, with concrete examples of how prompt processing and token generation interact. Do not repeat this prompt or quote code.

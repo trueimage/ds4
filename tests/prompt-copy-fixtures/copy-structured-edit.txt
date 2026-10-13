@@ -1,0 +1,38 @@
+Update only the retry_count of worker-beta from 2 to 4 in this JSON document. Return the complete document and nothing else. Preserve all other values, key order, indentation, and blank lines exactly. Do not add a code fence.
+
+{
+  "schema_version": 3,
+  "project": "local-batch-demo",
+  "defaults": {
+    "timeout_seconds": 30,
+    "retry_count": 2,
+    "queue_limit": 64
+  },
+  "workers": [
+    {
+      "name": "worker-alpha",
+      "enabled": true,
+      "timeout_seconds": 30,
+      "retry_count": 2,
+      "queue_limit": 64
+    },
+    {
+      "name": "worker-beta",
+      "enabled": true,
+      "timeout_seconds": 30,
+      "retry_count": 2,
+      "queue_limit": 64
+    },
+    {
+      "name": "worker-gamma",
+      "enabled": true,
+      "timeout_seconds": 30,
+      "retry_count": 2,
+      "queue_limit": 64
+    }
+  ],
+  "logging": {
+    "level": "info",
+    "include_timestamps": true
+  }
+}

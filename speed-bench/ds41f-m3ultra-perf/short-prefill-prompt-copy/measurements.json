@@ -1,0 +1,278 @@
+{
+  "date": "2026-10-12",
+  "main": "fc80bd695da76ee14bcb86820bf900a5cdfda806",
+  "branch": "f83ecfe3f28d919c32453ccd8f3104320aee93ac",
+  "hardware": "M3 Ultra, 80 GPU cores, 512 GiB",
+  "measurement_scope": "Matched isolated candidates before production integration; percentages are direct ratios and are not additive.",
+  "stock_rows": [
+    {
+      "model": "V4.1 Q4",
+      "scope": "Incremental prefill",
+      "main_tps": 476.8733231395407,
+      "branch_tps": 512.594690223329,
+      "branch_gain": 7.49074551887563,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    },
+    {
+      "model": "V4.1 Q4",
+      "scope": "Generation",
+      "main_tps": 17.542944628861495,
+      "branch_tps": 29.954642416180082,
+      "branch_gain": 70.75036745483978,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    },
+    {
+      "model": "V4.1 native MXFP4",
+      "scope": "Incremental prefill",
+      "main_tps": 499.80385856336756,
+      "branch_tps": 510.0209031651245,
+      "branch_gain": 2.044210829249038,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    },
+    {
+      "model": "V4.1 native MXFP4",
+      "scope": "Generation",
+      "main_tps": 18.350207608503464,
+      "branch_tps": 31.05873270009514,
+      "branch_gain": 69.25548398538315,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    },
+    {
+      "model": "GLM 5.3 Flash Q4_K",
+      "scope": "Incremental prefill",
+      "main_tps": 359.8277277492898,
+      "branch_tps": 417.40003908089284,
+      "branch_gain": 15.999965231060953,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    },
+    {
+      "model": "GLM 5.3 Flash Q4_K",
+      "scope": "Generation",
+      "main_tps": 20.794547825706854,
+      "branch_tps": 26.36276175232497,
+      "branch_gain": 26.777278223547228,
+      "candidate_tps": null,
+      "candidate_gain_main": null,
+      "candidate_gain_branch": null
+    }
+  ],
+  "experiment_rows": [
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "code / 128 fresh tokens",
+      "main_tps": 123.9689331916407,
+      "branch_tps": 152.5763727440786,
+      "candidate_tps": 156.9064423885206,
+      "branch_gain": 23.076297275394243,
+      "candidate_gain_main": 26.569164022701198,
+      "candidate_gain_branch": 2.8379686622285627,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "code / 256 fresh tokens",
+      "main_tps": 177.97996734658548,
+      "branch_tps": 217.3062576244203,
+      "candidate_tps": 221.2509124709568,
+      "branch_gain": 22.095908244130435,
+      "candidate_gain_main": 24.312255906929426,
+      "candidate_gain_branch": 1.8152513828452177,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "code / 512 fresh tokens",
+      "main_tps": 234.41416232390966,
+      "branch_tps": 276.15907760710587,
+      "candidate_tps": 280.8664593127974,
+      "branch_gain": 17.808188238010025,
+      "candidate_gain_main": 19.81633555258522,
+      "candidate_gain_branch": 1.7045906100500607,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "prose / 128 fresh tokens",
+      "main_tps": 130.86069661596028,
+      "branch_tps": 159.50158247688202,
+      "candidate_tps": 163.85004073049598,
+      "branch_gain": 21.886545465193997,
+      "candidate_gain_main": 25.20951283894679,
+      "candidate_gain_branch": 2.7262790663811876,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "prose / 256 fresh tokens",
+      "main_tps": 187.59531477037388,
+      "branch_tps": 225.41032548788732,
+      "candidate_tps": 227.7352893066606,
+      "branch_gain": 20.157758611296295,
+      "candidate_gain_main": 21.397109296370264,
+      "candidate_gain_branch": 1.0314362546351985,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E6 compact Q4 experts",
+      "model": "V4.1 Q4",
+      "case": "prose / 512 fresh tokens",
+      "main_tps": 243.76574754402736,
+      "branch_tps": 281.5168645509373,
+      "candidate_tps": 285.1603553588147,
+      "branch_gain": 15.48663722744379,
+      "candidate_gain_main": 16.98130612354014,
+      "candidate_gain_branch": 1.2942353608865753,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E2 MXFP4 compact pair + down culling",
+      "model": "V4.1 native MXFP4",
+      "case": "code / 128 fresh tokens",
+      "main_tps": 125.0453808492755,
+      "branch_tps": 126.15857368861921,
+      "candidate_tps": 156.3957141465116,
+      "branch_gain": 0.8902310759367316,
+      "candidate_gain_main": 25.071164631842336,
+      "candidate_gain_branch": 23.9675668278581,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E2 MXFP4 compact pair + down culling",
+      "model": "V4.1 native MXFP4",
+      "case": "code / 512 fresh tokens",
+      "main_tps": 237.49269866501965,
+      "branch_tps": 243.2013322872984,
+      "candidate_tps": 281.8008006830367,
+      "branch_gain": 2.403709105318952,
+      "candidate_gain_main": 18.656616505298572,
+      "candidate_gain_branch": 15.871404993020356,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E2 MXFP4 compact pair + down culling",
+      "model": "V4.1 native MXFP4",
+      "case": "prose / 128 fresh tokens",
+      "main_tps": 132.76414165000415,
+      "branch_tps": 134.01883619037324,
+      "candidate_tps": 161.21711363744066,
+      "branch_gain": 0.945055287350649,
+      "candidate_gain_main": 21.4312175214034,
+      "candidate_gain_branch": 20.294369224660635,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "E2 MXFP4 compact pair + down culling",
+      "model": "V4.1 native MXFP4",
+      "case": "prose / 512 fresh tokens",
+      "main_tps": 246.7196258535424,
+      "branch_tps": 253.23275162547174,
+      "candidate_tps": 287.4421466538815,
+      "branch_gain": 2.639889611293289,
+      "candidate_gain_main": 16.50558631460992,
+      "candidate_gain_branch": 13.509072112048525,
+      "exact": "Byte-exact input IDs, full logits and state across arms and process repeats"
+    },
+    {
+      "experiment": "R1 prompt-copy",
+      "model": "V4.1 Q4",
+      "case": "python-edit",
+      "main_tps": 17.686875705505408,
+      "branch_tps": 30.01928697725185,
+      "candidate_tps": 43.90979884156974,
+      "branch_gain": 69.7263410287195,
+      "candidate_gain_main": 148.26204227749452,
+      "candidate_gain_branch": 46.27195800767654,
+      "exact": "Byte-exact prompt/output IDs, full logits and prefix/final state across all arms and repeats"
+    },
+    {
+      "experiment": "R1 prompt-copy",
+      "model": "V4.1 Q4",
+      "case": "inference-prose",
+      "main_tps": 17.727374788730028,
+      "branch_tps": 30.0266961960457,
+      "candidate_tps": 30.004334805948428,
+      "branch_gain": 69.38038798127528,
+      "candidate_gain_main": 69.25424753259763,
+      "candidate_gain_branch": -0.07447169662381237,
+      "exact": "Byte-exact prompt/output IDs, full logits and prefix/final state across all arms and repeats"
+    },
+    {
+      "experiment": "R1 prompt-copy",
+      "model": "V4.1 Q4",
+      "case": "json-edit",
+      "main_tps": 17.771674852991225,
+      "branch_tps": 30.01397050280337,
+      "candidate_tps": 43.901507455817395,
+      "branch_gain": 68.88656106462354,
+      "candidate_gain_main": 147.03078251754164,
+      "candidate_gain_branch": 46.27024255826764,
+      "exact": "Byte-exact prompt/output IDs, full logits and prefix/final state across all arms and repeats"
+    },
+    {
+      "experiment": "R1 prompt-copy",
+      "model": "V4.1 Q4",
+      "case": "gardening-prose",
+      "main_tps": 17.841556539697244,
+      "branch_tps": 30.01727424505105,
+      "candidate_tps": 30.02385000239301,
+      "branch_gain": 68.24358445555454,
+      "candidate_gain_main": 68.28044086618965,
+      "candidate_gain_branch": 0.021906577153818496,
+      "exact": "Byte-exact prompt/output IDs, full logits and prefix/final state across all arms and repeats"
+    }
+  ],
+  "parity_rows": [
+    {
+      "scope": "V4.1 Q4 stock main / f83ecfe",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "903 full logit rows (116,739,840 float pairs), 896 evaluated IDs, 32,639 prefix IDs, 14 pre/post-generation states."
+    },
+    {
+      "scope": "V4.1 Q4 stock main / attention",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "903 full logit rows (116,739,840 float pairs), 896 evaluated IDs, 32,639 prefix IDs, 14 pre/post-generation states."
+    },
+    {
+      "scope": "V4.1 native MXFP4 stock main / f83ecfe",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "903 full logit rows (116,739,840 float pairs), 896 evaluated IDs, 32,639 prefix IDs, 14 pre/post-generation states."
+    },
+    {
+      "scope": "GLM 5.3 Flash Q4_K stock main / f83ecfe",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "645 full logit rows (99,897,600 float pairs), 640 evaluated IDs, 32,639 prefix IDs, 10 pre/post-generation states."
+    },
+    {
+      "scope": "E6 and E2 fresh prefill",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "360 frontiers: 60 references and 300 exact local logit/state comparisons; all 270 cross-process artifact comparisons pass across the ten cells."
+    },
+    {
+      "scope": "R1 prompt-copy",
+      "status": "PASS \u2014 byte-exact",
+      "detail": "All 96 artifact comparisons pass: 32 token, 32 full-logit and 32 state comparisons; 4,292 full logit row pairs."
+    }
+  ],
+  "limits": [
+    "These are direct workload-specific comparisons. Each candidate runs separately; the gains are not additive and do not measure a combined production build.",
+    "Two process blocks per arm describe observed variation, not statistical confidence. Desktop activity remained present; builds and our other heavy host work were excluded from clean timing.",
+    "Prompt-copy\u2019s new edit gain is about 46%, versus about 28% previously. The difference is localized to verification time, but its cause remains unresolved despite matching acceptance counts, timing boundaries and Metal executable text.",
+    "E2 results qualify fresh short prefill. The earlier scalar-decode timing caveat remains; this comparison does not establish zero decode cost.",
+    "Prompt-copy covers the four greedy fixtures and a generation-loop seam. Production EOS inside a proposal, stop strings, cancellation, errors, tool turns, sampling and HTTP latency remain outside this qualification."
+  ]
+}

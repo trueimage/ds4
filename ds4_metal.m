@@ -423,6 +423,7 @@ static id<MTLComputePipelineState> g_output_hc_weights4_pipeline;
 static uint32_t g_test_flags;
 static uint32_t g_test_glm53_prefill_dispatches;
 static uint32_t g_test_v41_q4_tail_dispatches;
+static uint32_t g_test_v41_short_expert_dispatches;
 static uint32_t g_test_v41_fusions_dispatches;
 static id<MTLBuffer> g_v41_router_top6_coverage;
 
@@ -446,6 +447,12 @@ uint32_t ds4_gpu_test_v41_shared_rows_take_dispatches(void) {
 uint32_t ds4_gpu_test_v41_q4_tail_take_dispatches(void) {
     const uint32_t result = g_test_v41_q4_tail_dispatches;
     g_test_v41_q4_tail_dispatches = 0;
+    return result;
+}
+
+uint32_t ds4_gpu_test_v41_short_experts_take_dispatches(void) {
+    const uint32_t result = g_test_v41_short_expert_dispatches;
+    g_test_v41_short_expert_dispatches = 0;
     return result;
 }
 
@@ -44503,6 +44510,21 @@ int ds4_gpu_routed_moe_batch_tensor(
                                          "DS4_METAL_DISABLE_V41_Q4_TAIL_CULL");
         if (use_v41_q4_tail_cull && (g_test_flags & DS4_GPU_TEST_V41_Q4_TAIL_CULL))
             g_test_v41_q4_tail_dispatches++;
+        /* Short resident V4.1 prefills on M3 Ultra benefit from the compact
+         * pair tile; MXFP4 also skips unused down-projection SIMDgroups.
+         * Keep the measured 128..512-row window separate from the established
+         * large-prefill defaults, especially their map and dequantization paths. */
+        const bool use_v41_short_experts = use_mm_id_pair_swiglu &&
+            n_tokens >= 128u && n_tokens <= 512u &&
+            ((n_total_expert == 384u && expert_in_dim == 5120u &&
+              expert_mid_dim == 2304u && out_dim == 5120u) ||
+             (g_test_flags & DS4_GPU_TEST_V41_SHORT_EXPERTS)) &&
+            ds4_gpu_dsv41_exact_admitted(DS4_GPU_TEST_V41_SHORT_EXPERTS,
+                                         "DS4_METAL_DISABLE_V41_SHORT_EXPERTS");
+        const bool use_v41_q4_compact_pair = use_v41_short_experts &&
+            gate_type == DS4_METAL_TENSOR_Q4_K && down_type == DS4_METAL_TENSOR_Q4_K;
+        const bool use_v41_mxfp4_short_experts = use_v41_short_experts &&
+            gate_type == DS4_METAL_TENSOR_MXFP4 && down_type == DS4_METAL_TENSOR_MXFP4;
         /*
          * The MXFP4 32x32 specialization uses two SIMDgroups and 8 KiB of
          * threadgroup memory, and exactly culls SIMDgroup 1 on at-most-16-row
@@ -44519,7 +44541,8 @@ int ds4_gpu_routed_moe_batch_tensor(
             gate_type == DS4_METAL_TENSOR_MXFP4 &&
             down_type == DS4_METAL_TENSOR_MXFP4 &&
             g_tp_split_world == 1 &&
-            (use_pre_m5_mxfp4_mm_id_pair_swiglu_compact_tile_default ||
+            (use_v41_mxfp4_short_experts ||
+             use_pre_m5_mxfp4_mm_id_pair_swiglu_compact_tile_default ||
              (g_test_flags & DS4_GPU_TEST_MXFP4_PAIR_COMPACT_TILE) != 0u);
         /*
          * Token-centric map construction for the compact resident pre-M5 MXFP4
@@ -44569,7 +44592,8 @@ int ds4_gpu_routed_moe_batch_tensor(
             gate_type == DS4_METAL_TENSOR_MXFP4 &&
             down_type == DS4_METAL_TENSOR_MXFP4 &&
             g_tp_split_world == 1 &&
-            (use_pre_m5_mxfp4_mm_id_down_tail_simdgroup_cull_default ||
+            (use_v41_mxfp4_short_experts ||
+             use_pre_m5_mxfp4_mm_id_down_tail_simdgroup_cull_default ||
              (g_test_flags & DS4_GPU_TEST_MXFP4_DOWN_TAIL_CULL) != 0u);
         /*
          * Exact half-result dequantization table for the resident MXFP4 down
@@ -44723,7 +44747,8 @@ int ds4_gpu_routed_moe_batch_tensor(
                 pair_swiglu_mm_pipeline =
                     ds4_gpu_get_pipeline(
                         gate_type == DS4_METAL_TENSOR_Q4_K ?
-                            (use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
+                            (use_v41_q4_compact_pair ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_compact_tail_cull" :
+                             use_v41_q4_tail_cull ? "kernel_mul_mm_id_q4_K_pair_swiglu_f16_tail_cull" :
                              "kernel_mul_mm_id_q4_K_pair_swiglu_f16") :
                         gate_type == DS4_METAL_TENSOR_MXFP4 ?
                             (use_mxfp4_mm_id_pair_swiglu_compact_tile ?
@@ -45122,7 +45147,7 @@ int ds4_gpu_routed_moe_batch_tensor(
                 };
                 ok = ok && ds4_gpu_encode_mul_mm_id_iq2_pair_swiglu_f16(cb,
                                                                    pair_swiglu_mm_pipeline,
-                                                                   use_mxfp4_mm_id_pair_swiglu_compact_tile,
+                                                                   use_v41_q4_compact_pair || use_mxfp4_mm_id_pair_swiglu_compact_tile,
                                                                    &gate_mm_args,
                                                                    &act_args,
                                                                    gate_buf,
@@ -45135,6 +45160,12 @@ int ds4_gpu_routed_moe_batch_tensor(
                                                                    ds4_gpu_tensor_offset(mid),
                                                                    weightsbuf,
                                                                    ds4_gpu_tensor_offset(weights));
+                if (ok && g_test_flags) {
+                    if (use_v41_q4_compact_pair)
+                        g_test_v41_short_expert_dispatches |= DS4_GPU_V41_SHORT_Q4_PAIR;
+                    if (use_v41_mxfp4_short_experts)
+                        g_test_v41_short_expert_dispatches |= DS4_GPU_V41_SHORT_MXFP4_PAIR;
+                }
                 DS4_METAL_PROFILE_MOE_STAGE("gate_up_fused");
             } else if (ok) {
                 ok = ds4_gpu_encode_mul_mm_id_mapped_tile_resources(cb,
@@ -45464,6 +45495,8 @@ int ds4_gpu_routed_moe_batch_tensor(
                                                        use_iq2_cached_batch ? stream_resources : NULL,
                                                        stream_resource_count, 2, stream_overflow_down,
                                                        packed_m32n128 ? 32u : 64u);
+                if (ok && use_v41_mxfp4_short_experts && g_test_flags)
+                    g_test_v41_short_expert_dispatches |= DS4_GPU_V41_SHORT_MXFP4_DOWN;
             } else if (use_iq2_cached_batch) {
                 ok = ds4_gpu_encode_mul_mv_addr_iq2(cb,
                     g_moe_mul_mv_addr_iq2_xxs_pipeline, &down_args,

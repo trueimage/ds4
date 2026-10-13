@@ -318,12 +318,20 @@ enum {
     DS4_GPU_TEST_V41_FUSIONS = 1u << 10,
     /* One weight read for all rows of a small V4.1 batch. */
     DS4_GPU_TEST_V41_SHARED_ROWS = 1u << 11,
+    DS4_GPU_TEST_V41_SHORT_EXPERTS = 1u << 12,
 };
 void ds4_gpu_test_set_flags(uint32_t flags);
 /* Count V4.1 Q4 tail-cull calls only while its test flag is enabled. */
 uint32_t ds4_gpu_test_v41_q4_tail_take_dispatches(void);
 uint32_t ds4_gpu_test_v41_fusions_take_dispatches(void);
 uint32_t ds4_gpu_test_v41_shared_rows_take_dispatches(void);
+enum {
+    DS4_GPU_V41_SHORT_Q4_PAIR = 1u << 0,
+    DS4_GPU_V41_SHORT_MXFP4_PAIR = 1u << 1,
+    DS4_GPU_V41_SHORT_MXFP4_DOWN = 1u << 2,
+};
+/* Successful short-expert component encodes, recorded only during GPU tests. */
+uint32_t ds4_gpu_test_v41_short_experts_take_dispatches(void);
 
 enum {
     DS4_GPU_GLM53_PREFILL_QK_LOW = 1u << 0,

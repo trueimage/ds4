@@ -1,0 +1,26 @@
+Edit the Python file below: rename only the function translate to translate_points. Return the complete resulting file and nothing else; preserve every other line exactly.
+
+```python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
+
+def bounding_box(points):
+    if not points:
+        raise ValueError("points must not be empty")
+    left = min(point.x for point in points)
+    right = max(point.x for point in points)
+    bottom = min(point.y for point in points)
+    top = max(point.y for point in points)
+    return (Point(left, bottom), Point(right, top))
+
+def translate(points, dx, dy):
+    return [Point(point.x + dx, point.y + dy) for point in points]
+
+def center(points):
+    lower, upper = bounding_box(points)
+    return Point((lower.x + upper.x) / 2, (lower.y + upper.y) / 2)
+```

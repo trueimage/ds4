@@ -14055,7 +14055,9 @@ decode_again:
         int ntok = 0;
         const int block_start = ds4_session_pos(slot->session);
         if (!s->batched_mode &&
-            ds4_engine_mtp_draft_tokens(s->engine) > 1 &&
+            (ds4_engine_mtp_draft_tokens(s->engine) > 1 ||
+             (ds4_session_prompt_copy_supported(slot->session) &&
+              payload_temperature <= 0.0f && !j->req.ignore_eos)) &&
             getenv("DS4_MTP_SPEC_DISABLE") == NULL)
         {
             if (j->req.ignore_eos) {

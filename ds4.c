@@ -46,6 +46,7 @@
 #include "ds4_distributed.h"
 #include "ds4_image.h"
 #include "ds4_engram.h"
+#include "ds4_prompt_copy.h"
 #include "ds4_tp.h"
 #if !defined(DS4_NO_GPU) && !defined(DS4_ROCM_BUILD)
 #define DS4_HAS_DEEPSEEK41_GPU 1
@@ -42172,6 +42173,7 @@ typedef struct ds41_spec {
     const uint32_t *target_layers;
     uint32_t target_layer_count;
     uint32_t pos, rows;
+    ds4_engram_history initial_history;
     ds4_engram_history history[DS4_TP_BATCH_MAX_ROWS];
 } ds41_spec;
 
@@ -42271,9 +42273,11 @@ static bool ds41_spec_layer_pairs(const ds41_gpu_graph *g, const ds41_spec *spec
     return ok;
 }
 
-/* Keep the first `keep` rows of a verified suffix. The caller owns the commands. */
-static bool ds41_spec_commit(ds41_gpu_graph *g, const ds41_spec *spec, uint32_t keep) {
-    if (!keep || keep > spec->rows || g->pos != spec->pos) return false;
+/* Restore a prefix of the most recent verified suffix, including its start.
+ * The caller validates ownership/lifetime and owns the commands. Compressed
+ * rows beyond the restored position are unreachable and overwritten on reuse. */
+static bool ds41_spec_restore(ds41_gpu_graph *g, const ds41_spec *spec, uint32_t keep) {
+    if (keep > spec->rows) return false;
     bool ok = true;
     for (uint32_t il = 0; ok && il < DS4_N_LAYER; il++) {
         for (uint32_t i = keep; ok && i < spec->rows; i++)
@@ -42282,16 +42286,24 @@ static bool ds41_spec_commit(ds41_gpu_graph *g, const ds41_spec *spec, uint32_t 
                 ((uint64_t)il * DS4_TP_BATCH_MAX_ROWS + i) * DS41_SPEC_ROW_BYTES, DS41_SPEC_ROW_BYTES);
     }
     /* The retained pooling input is the last even position's, live or not. */
-    const uint32_t last = spec->pos + keep - 1u, even = last & ~1u;
-    const uint32_t slot = even >= spec->pos ? 1u + (even - spec->pos) : 0u;
+    const uint32_t even = keep ? (spec->pos + keep - 1u) & ~1u : 0u;
+    const uint32_t slot = keep && even >= spec->pos ? 1u + (even - spec->pos) : 0u;
     for (uint32_t owner = 0; ok && keep < spec->rows && owner < 3u; owner++) {
         const uint64_t at = ((uint64_t)owner * (1u + DS4_TP_BATCH_MAX_ROWS) + slot) * 2u * DS41_SPEC_ROW_BYTES;
         ok = ds4_gpu_tensor_copy(g->previous_kv[owner], 0, spec->pair, at, DS41_SPEC_ROW_BYTES) &&
             ds4_gpu_tensor_copy(g->previous_score[owner], 0, spec->pair,
                                 at + DS41_SPEC_ROW_BYTES, DS41_SPEC_ROW_BYTES);
     }
-    if (ok) { g->history = spec->history[keep - 1u]; g->pos = spec->pos + keep; }
+    if (ok) {
+        g->history = keep ? spec->history[keep - 1u] : spec->initial_history;
+        g->pos = spec->pos + keep;
+    }
     return ok;
+}
+
+/* Initial commits require at least the caller's already-selected token. */
+static bool ds41_spec_commit(ds41_gpu_graph *g, const ds41_spec *spec, uint32_t keep) {
+    return keep && g->pos == spec->pos && ds41_spec_restore(g, spec, keep);
 }
 
 /* The M3 Ultra exact paths were measured on two configurations: resident,
@@ -43402,6 +43414,7 @@ static DS4_MAYBE_UNUSED bool ds41_graph_verify(ds41_gpu_graph *g, const ds4_mode
     for (uint32_t i = 0; i < count; i++) graphs[i] = g;
     spec->pos = g->pos;
     spec->rows = count;
+    spec->initial_history = g->history;
     bool ok = ds4_gpu_begin_commands() && ds41_graph_step_batch_spec(graphs, tokens,
         (int)count, count, m, w, spec);
     if (ok) ok = ds4_gpu_end_commands() != 0;
@@ -62472,6 +62485,10 @@ struct ds4_session {
     ds41_draft ds41_draft;       /* DSpark windows; allocated by the first cycle */
     bool ds41_draft_ready;
     int ds41_draft_tail[4];      /* the tokens under the windows' newest positions */
+    ds41_spec copy_spec;        /* session-owned: another session may run before rewind */
+    float *copy_initial_logits;
+    int copy_end;               /* zero retires the recent-block rewind */
+    unsigned copy_misses, copy_quiet;
 #endif
     ds4_gpu_graph graph;
     ds4_glm_gpu_graph glm_graph;
@@ -65542,6 +65559,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
         payload_set_err(err, errlen, "invalid session payload load");
         return 1;
     }
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    s->copy_end = 0;
+    s->copy_misses = s->copy_quiet = 0;
+#endif
     if (s->distributed) {
         return ds4_dist_session_load_payload(s->distributed, s, fp, payload_bytes, err, errlen);
     }
@@ -67418,6 +67439,8 @@ int ds4_engine_generate_argmax(
             int n_generated = 0;
             const double t_decode0 = now_sec();
             const bool greedy_top1 = metal_graph_tp_env_flag("DS4_CUDA_GREEDY_TOP1", true);
+            const bool prompt_copy = ds4_session_prompt_copy_supported(s) &&
+                getenv("DS4_MTP_SPEC_DISABLE") == NULL;
             int token = ds4_session_argmax(s);
             for (int i = 0; i < n_predict && ds4_session_pos(s) < ctx_size; i++) {
                 if (token < 0) {
@@ -67426,6 +67449,32 @@ int ds4_engine_generate_argmax(
                     break;
                 }
                 if (ds4_token_is_stop(e, token)) break;
+                /* Ordinary greedy CLI generation arrives here, without the
+                 * sampled frontend. Reserve its final output token so the
+                 * existing last-token/no-eval contract remains intact. */
+                int copy_room = n_predict - i - 1;
+                if (copy_room > ctx_size - ds4_session_pos(s) - 1)
+                    copy_room = ctx_size - ds4_session_pos(s) - 1;
+                if (prompt_copy && copy_room >= 3) {
+                    int accepted[8];
+                    int n = ds4_session_eval_speculative_argmax(s, token,
+                        copy_room, ds4_token_eos(e), accepted, 8, err, sizeof(err));
+                    if (n <= 0) {
+                        fprintf(stderr, "ds4: prompt-copy decode failed: %s\n", err);
+                        rc = 1;
+                        break;
+                    }
+                    bool stop = false;
+                    for (int j = 0; j < n; j++) {
+                        if (ds4_token_is_stop(e, accepted[j])) { stop = true; break; }
+                        if (emit) emit(emit_ud, accepted[j]);
+                        n_generated++;
+                    }
+                    if (stop) break;
+                    i += n - 1;
+                    token = ds4_session_argmax(s);
+                    continue;
+                }
                 if (emit) emit(emit_ud, token);
                 n_generated++;
                 if (i == n_predict - 1 || ds4_session_pos(s) + 1 >= ctx_size) break;
@@ -75995,6 +76044,8 @@ void ds4_session_free(ds4_session *s) {
         if (s->ds41_graph_ready) {
             s->engine->ds41_session_bytes -= s->ds41_graph.allocation_bytes;
             if (s->ds41_draft_ready) ds41_draft_free(&s->ds41_draft);
+            ds41_spec_free(&s->copy_spec);
+            free(s->copy_initial_logits);
             ds41_graph_free(&s->ds41_graph);
         } else
 #endif
@@ -77959,6 +78010,10 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
         snprintf(err, errlen, "missing session or prompt");
         return 1;
     }
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    s->copy_end = 0;
+    s->copy_misses = s->copy_quiet = 0;
+#endif
     if (prompt->len <= 0) {
         snprintf(err, errlen, "empty prompt");
         return 1;
@@ -80151,6 +80206,9 @@ static void ds4_session_prepare_support_draft(ds4_session *s,
 static int ds4_session_eval_internal(ds4_session *s, int token, bool probe_mtp,
                                      char *err, size_t errlen) {
     if (!s) return 1;
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    s->copy_end = 0;
+#endif
 #ifndef DS4_NO_GPU
     s->dspark_rewind_end = 0;
 #endif
@@ -87179,7 +87237,135 @@ static int ds4_sessions_eval_batch_with_prefill_cuda(
     return rc;
 }
 
+/* Prompt lookup needs no drafter weights. Keep its measured release scope
+ * separate from DSpark, SSD streaming, batching and other accelerator paths. */
+bool ds4_session_prompt_copy_supported(const ds4_session *s) {
+#if defined(__APPLE__) && defined(DS4_HAS_DEEPSEEK41_GPU)
+    return s && s->engine && ds4_session_is_ds41(s) && !s->engine->dspark &&
+        !s->engine->directional_steering_dirs &&
+        s->engine->backend == DS4_BACKEND_METAL &&
+        !s->engine->tp.active && !s->distributed && !s->checkpoint_image_count &&
+        s->ds41_graph_ready && ds4_gpu_device_is_m3_ultra() &&
+        ds41_measured_config(&s->ds41_graph, &s->engine->weights) &&
+        s->engine->weights.layer[0].ffn_gate_exps->type == DS4_TENSOR_Q4_K &&
+        getenv("DS4_METAL_DISABLE_V41_PROMPT_COPY") == NULL;
+#else
+    (void)s;
+    return false;
+#endif
+}
+
 #ifdef DS4_HAS_DEEPSEEK41_GPU
+static int ds41_prompt_copy_cycle(ds4_session *s, int first_token, int max_tokens,
+                                   int *accepted, int accepted_cap,
+                                   char *err, size_t errlen) {
+    ds41_gpu_graph *g = &s->ds41_graph;
+    ds41_spec *spec = &s->copy_spec;
+    s->copy_end = 0;
+    if (!accepted || accepted_cap <= 0 || max_tokens <= 0) return 0;
+    if (ds4_session_cancelled(s)) {
+        payload_set_err(err, errlen, "interrupted");
+        return -1;
+    }
+    if (!s->checkpoint_valid || !g->valid || g->pos > g->ctx ||
+        g->pos != (uint32_t)s->checkpoint.len) {
+        payload_set_err(err, errlen, "prompt-copy decode requires a synchronized checkpoint");
+        return -1;
+    }
+    int room = max_tokens < accepted_cap ? max_tokens : accepted_cap;
+    if ((uint32_t)room > g->ctx - g->pos) room = (int)(g->ctx - g->pos);
+    if (room <= 0) return 0;
+    int tokens[8] = {first_token};
+    int count = 1;
+    if (s->copy_quiet) s->copy_quiet--;
+    else count = ds4_prompt_copy_propose(s->checkpoint.v, s->checkpoint.len,
+                                         first_token, tokens, room);
+    /* The frontend owns EOS and reasoning transitions. Leave control tokens
+     * for its next ordinary selection instead of evaluating past a boundary. */
+    for (int i = 1; i < count; i++) {
+        if (ds4_token_is_stop(s->engine, tokens[i]) ||
+            ds4_token_is_thinking_control(s->engine, tokens[i])) {
+            count = i;
+            break;
+        }
+    }
+    if (count > 1 && !spec->logits) {
+        if (!ds41_spec_alloc(spec, NULL, 0)) count = 1;
+        else {
+            s->copy_initial_logits = malloc((size_t)DS4_N_VOCAB * sizeof(float));
+            if (!s->copy_initial_logits) {
+                ds41_spec_free(spec);
+                count = 1;
+            }
+        }
+    }
+    if (count == 1) {
+        if (ds4_session_eval(s, first_token, err, errlen) != 0) return -1;
+        accepted[0] = first_token;
+        return 1;
+    }
+    memcpy(s->copy_initial_logits, s->logits, (size_t)DS4_N_VOCAB * sizeof(float));
+    if (!ds41_graph_verify(g, &s->engine->model, &s->engine->weights,
+                           tokens, (uint32_t)count, spec)) goto failed;
+    const float *rows = ds4_gpu_tensor_contents(spec->logits);
+    if (!rows || ds4_session_cancelled(s)) goto failed;
+    int keep = 1;
+    while (keep < count && sample_argmax(rows + (size_t)(keep - 1) * DS4_N_VOCAB,
+                                        DS4_N_VOCAB) == tokens[keep]) keep++;
+    if (!ds4_gpu_begin_commands() || !ds41_spec_commit(g, spec, (uint32_t)keep) ||
+        !ds4_gpu_end_commands()) goto failed;
+    memcpy(s->logits, rows + (size_t)(keep - 1) * DS4_N_VOCAB,
+           (size_t)DS4_N_VOCAB * sizeof(float));
+    for (int i = 0; i < keep; i++) {
+        token_vec_push(&s->checkpoint, tokens[i]);
+        accepted[i] = tokens[i];
+    }
+    s->checkpoint_valid = true;
+    s->mtp_draft_valid = false;
+    s->copy_end = s->checkpoint.len;
+    if (getenv("DS4_PROMPT_COPY_LOG"))
+        fprintf(stderr, "ds4: prompt-copy pos=%u proposed=%d accepted=%d\n",
+                spec->pos, count, keep);
+    if (keep == 1) {
+        if (++s->copy_misses >= 4) { s->copy_quiet = 8; s->copy_misses = 0; }
+    } else s->copy_misses = 0;
+    return keep;
+
+failed:
+    /* Verification mutates raw slots before commit. Never fall through to
+     * scalar decode after a failed/cancelled pass over those slots. */
+    if (ds4_gpu_commands_active()) (void)ds4_gpu_end_commands();
+    g->valid = false;
+    s->checkpoint_valid = false;
+    payload_set_err(err, errlen, ds4_session_cancelled(s) ?
+                    "interrupted" : "V4.1 prompt-copy verification failed");
+    return -1;
+}
+
+static bool ds41_prompt_copy_rewind(ds4_session *s, int pos) {
+    ds41_gpu_graph *g = &s->ds41_graph;
+    const ds41_spec *spec = &s->copy_spec;
+    if (!s->checkpoint_valid || !g->valid || !s->copy_end ||
+        s->copy_end != s->checkpoint.len || g->pos != (uint32_t)s->copy_end ||
+        pos < 0 || (uint32_t)pos < spec->pos || pos >= s->copy_end) return false;
+    const uint32_t keep = (uint32_t)pos - spec->pos;
+    const float *rows = ds4_gpu_tensor_contents(spec->logits);
+    if (!rows || !ds4_gpu_begin_commands() || !ds41_spec_restore(g, spec, keep) ||
+        !ds4_gpu_end_commands()) {
+        if (ds4_gpu_commands_active()) (void)ds4_gpu_end_commands();
+        g->valid = false;
+        s->checkpoint_valid = false;
+        s->copy_end = 0;
+        return false;
+    }
+    memcpy(s->logits, keep ? rows + (size_t)(keep - 1u) * DS4_N_VOCAB :
+           s->copy_initial_logits, (size_t)DS4_N_VOCAB * sizeof(float));
+    s->checkpoint.len = pos;
+    s->copy_end = pos;
+    s->mtp_draft_valid = false;
+    return true;
+}
+
 /* The windows follow the session only while every position arrives through
  * this cycle. After a prefill, a restore or an ordinary step they describe
  * another history; start them again rather than draft from it. */
@@ -87339,6 +87525,9 @@ static int ds4_session_eval_speculative_argmax_impl(
         if (s->engine->dspark && s->engine->support_kind == DS4_SUPPORT_DSPARK)
             return ds4_session_ds41_spec_cycle(s, first_token, max_tokens, eos_token, ignore_eos,
                                                accepted, accepted_cap, err, errlen);
+        if (!ignore_eos && ds4_session_prompt_copy_supported(s))
+            return ds41_prompt_copy_cycle(s, first_token, max_tokens,
+                                           accepted, accepted_cap, err, errlen);
         if (!accepted || accepted_cap <= 0) return 0;
         if (ds4_session_eval(s, first_token, err, errlen) != 0) return -1;
         accepted[0] = first_token;
@@ -88345,6 +88534,10 @@ int ds4_session_eval_speculative(ds4_session *s, int first_token,
 
 void ds4_session_invalidate(ds4_session *s) {
     if (!s) return;
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    s->copy_end = 0;
+    s->copy_misses = s->copy_quiet = 0;
+#endif
     if (ds4_session_tp_leader(s) &&
         !ds4_tp_failed(s->engine->tp.ctx)) {
         (void)ds4_tp_send_invalidate(s->engine->tp.ctx, s->tp_session_id);
@@ -88459,6 +88652,10 @@ bool ds4_session_rewind_speculative(ds4_session *s, int pos) {
     (void)s; (void)pos;
     return false;
 #else
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    if (s && s->engine && ds4_session_is_ds41(s) && ds41_prompt_copy_rewind(s, pos))
+        return true;
+#endif
     return s && s->engine && pos >= 0 && dspark_rewind_recent(s, pos);
 #endif
 }
@@ -88468,6 +88665,9 @@ void ds4_session_rewind(ds4_session *s, int pos) {
     if (pos < 0) pos = 0;
     if (pos >= s->checkpoint.len) return;
     if (ds4_session_rewind_speculative(s, pos)) return;
+#ifdef DS4_HAS_DEEPSEEK41_GPU
+    s->copy_end = 0;
+#endif
     if (ds4_session_tp_leader(s) &&
         !ds4_tp_failed(s->engine->tp.ctx)) {
         if (!ds4_tp_send_rewind(s->engine->tp.ctx, s->tp_session_id, pos))
